@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npx create-next-app:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "mcp__stitch__get_screen",
+      "Bash(curl -L \"https://lh3.googleusercontent.com/aida/ADBb0uj6mxEfmmbjEDStCup8n5mn_8uHYzee3deT8tropIeOI4KeUxXwXshaGirRmvzqYLvAclysAbWRpZuV_xpjFYELPu2Yp2O9hXLbiuxt5cRK5XTr65_H7zJCWaPcATDS7jIkQGcP0yPmObSGt6geIEC1Plgx_bbqhhuSIRJfscsq1ZYtLNO_SvJnQ4FfKJNoCWByWV5d_NAmZFX2Ber_xN_YDac72arwmlsz-FRNs05QPcCmpsivl7e-JCAF\" -o /tmp/turfin-login-screen.png)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []
