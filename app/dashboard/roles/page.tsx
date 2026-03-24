@@ -581,7 +581,9 @@ export default function RolesPage() {
 
                           {/* Actions */}
                           {isCurrentUser ? (
-                            <Lock size={14} className="text-gray-300 shrink-0" title="Cannot change your own role" />
+                            <span title="Cannot change your own role" className="shrink-0">
+                              <Lock size={14} className="text-gray-300" />
+                            </span>
                           ) : (
                             <div className="flex items-center gap-1 shrink-0">
                               <button

@@ -481,7 +481,7 @@ export default function UsersPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <button onClick={() => { setSelected(u); setDetailTab("profile"); }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="View"><Eye size={14} /></button>
-                      <button onClick={() => { setMsgModal(u); setMsgSubject(""); setMsgBody(""); }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Send Message"><PaperPlaneTilt size={14} /></button>
+                      <button onClick={() => { setMsgModal(u); }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Send Message"><PaperPlaneTilt size={14} /></button>
                       <div className="relative">
                         <button onClick={() => setActionMenu(actionMenu === u.id ? null : u.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"><DotsThreeVertical size={14} /></button>
                         {actionMenu === u.id && (

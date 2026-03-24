@@ -48,7 +48,7 @@ const KYC_DOCS = [
   { key: "businessReg",   label: "Business Registration", hint: "Incorporation cert / Partnership deed" },
   { key: "gstCert",       label: "GST Certificate",       hint: "If GST registered" },
   { key: "bankStatement", label: "Cancelled Cheque",      hint: "For bank account verification" },
-];
+ ] as const;
 
 const kycCfg: Record<KycStatus, { label: string; cls: string; icon: React.ElementType; dot: string }> = {
   "verified":    { label: "Verified",    cls: "bg-green-50 text-green-700", icon: CheckCircle,    dot: "bg-green-500"  },
@@ -80,6 +80,32 @@ const INIT_FORM = {
   idProof: "", addressProof: "", businessReg: "", gstCert: "", bankStatement: "",
 };
 
+type FormData = typeof INIT_FORM;
+type FormStringKey = Exclude<keyof FormData, "sports" | "facilities">;
+type KycDocKey = typeof KYC_DOCS[number]["key"];
+
+const BUSINESS_FIELDS = [
+  { key: "ownerName", label: "Owner Full Name *", placeholder: "Full name", type: "text" },
+  { key: "email", label: "Email *", placeholder: "owner@email.com", type: "email" },
+  { key: "phone", label: "Phone *", placeholder: "+91 XXXXX XXXXX", type: "text" },
+  { key: "whatsapp", label: "WhatsApp", placeholder: "+91 XXXXX XXXXX", type: "text" },
+  { key: "gst", label: "GST Number", placeholder: "22AAAAA0000A1Z5", type: "text" },
+  { key: "regNo", label: "Business Reg. No.", placeholder: "Optional", type: "text" },
+] as const satisfies ReadonlyArray<{ key: FormStringKey; label: string; placeholder: string; type: string }>;
+
+const ADDRESS_FIELDS = [
+  { key: "address1", label: "Address Line 1 *", placeholder: "Building, Street" },
+  { key: "address2", label: "Address Line 2", placeholder: "Landmark, Area (optional)" },
+] as const satisfies ReadonlyArray<{ key: FormStringKey; label: string; placeholder: string }>;
+
+const BANK_FIELDS = [
+  { key: "bankName", label: "Bank Name *", placeholder: "HDFC Bank", mono: false },
+  { key: "accountHolder", label: "Account Holder *", placeholder: "Full name as per bank", mono: false },
+  { key: "accountNo", label: "Account Number *", placeholder: "XXXXXXXXXXXX", mono: true },
+  { key: "ifsc", label: "IFSC Code *", placeholder: "HDFC0001234", mono: true },
+  { key: "upi", label: "UPI ID", placeholder: "name@upi", mono: false },
+] as const satisfies ReadonlyArray<{ key: FormStringKey; label: string; placeholder: string; mono: boolean }>;
+
 function avatar(name: string) {
   return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
@@ -96,7 +122,7 @@ export default function VendorsPage() {
   // Onboard modal
   const [showOnboard, setShowOnboard] = useState(false);
   const [onboardStep, setOnboardStep] = useState(1);
-  const [formData, setFormData]       = useState({ ...INIT_FORM });
+  const [formData, setFormData]       = useState<FormData>({ ...INIT_FORM });
 
   // Edit modal
   const [editVendor, setEditVendor]   = useState<Vendor | null>(null);
@@ -134,7 +160,8 @@ export default function VendorsPage() {
   }
 
   // Onboard form
-  const setField = (key: string, val: unknown) => setFormData(p => ({ ...p, [key]: val }));
+  const setField = <K extends keyof FormData>(key: K, val: FormData[K]) =>
+    setFormData(p => ({ ...p, [key]: val }));
   const toggleArr = (key: "sports" | "facilities", val: string) =>
     setFormData(p => {
       const arr = p[key] as string[];
@@ -534,10 +561,10 @@ export default function VendorsPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {[{ key: "ownerName", label: "Owner Full Name *", placeholder: "Full name", type: "text" }, { key: "email", label: "Email *", placeholder: "owner@email.com", type: "email" }, { key: "phone", label: "Phone *", placeholder: "+91 XXXXX XXXXX", type: "text" }, { key: "whatsapp", label: "WhatsApp", placeholder: "+91 XXXXX XXXXX", type: "text" }, { key: "gst", label: "GST Number", placeholder: "22AAAAA0000A1Z5", type: "text" }, { key: "regNo", label: "Business Reg. No.", placeholder: "Optional", type: "text" }].map(({ key, label, placeholder, type }) => (
+                    {BUSINESS_FIELDS.map(({ key, label, placeholder, type }) => (
                       <div key={key}>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
-                        <input type={type} value={(formData as Record<string, string>)[key]} onChange={e => setField(key, e.target.value)}
+                        <input type={type} value={formData[key]} onChange={e => setField(key, e.target.value)}
                           className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder={placeholder} />
                       </div>
                     ))}
@@ -547,10 +574,10 @@ export default function VendorsPage() {
 
               {onboardStep === 2 && (
                 <div className="space-y-4">
-                  {[{ key: "address1", label: "Address Line 1 *", placeholder: "Building, Street" }, { key: "address2", label: "Address Line 2", placeholder: "Landmark, Area (optional)" }].map(({ key, label, placeholder }) => (
+                  {ADDRESS_FIELDS.map(({ key, label, placeholder }) => (
                     <div key={key}>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
-                      <input value={(formData as Record<string, string>)[key]} onChange={e => setField(key, e.target.value)}
+                      <input value={formData[key]} onChange={e => setField(key, e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder={placeholder} />
                     </div>
                   ))}
@@ -637,10 +664,10 @@ export default function VendorsPage() {
                     <p className="text-xs text-amber-700 font-medium">Banking details are encrypted and stored securely. Used for vendor payouts only.</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {[{ key: "bankName", label: "Bank Name *", placeholder: "HDFC Bank", mono: false }, { key: "accountHolder", label: "Account Holder *", placeholder: "Full name as per bank", mono: false }, { key: "accountNo", label: "Account Number *", placeholder: "XXXXXXXXXXXX", mono: true }, { key: "ifsc", label: "IFSC Code *", placeholder: "HDFC0001234", mono: true }, { key: "upi", label: "UPI ID", placeholder: "name@upi", mono: false }].map(({ key, label, placeholder, mono }) => (
+                    {BANK_FIELDS.map(({ key, label, placeholder, mono }) => (
                       <div key={key}>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
-                        <input value={(formData as Record<string, string>)[key]} onChange={e => setField(key, key === "ifsc" ? e.target.value.toUpperCase() : e.target.value)}
+                        <input value={formData[key]} onChange={e => setField(key, key === "ifsc" ? e.target.value.toUpperCase() : e.target.value)}
                           className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] ${mono ? "font-mono" : ""}`} placeholder={placeholder} />
                       </div>
                     ))}
@@ -671,7 +698,7 @@ export default function VendorsPage() {
                     <h3 className="text-sm font-bold text-gray-800 mb-3">Upload KYC Documents</h3>
                     <div className="space-y-2.5">
                       {KYC_DOCS.map(({ key, label, hint }) => {
-                        const uploaded = !!(formData as Record<string, string>)[key];
+                        const uploaded = !!formData[key as KycDocKey];
                         return (
                           <div key={key} className="border border-dashed border-gray-200 rounded-xl p-3.5 flex items-center justify-between hover:border-[#8a9e60] transition-colors group cursor-pointer">
                             <div><p className="text-xs font-semibold text-gray-700">{label}</p><p className="text-[10px] text-gray-400 mt-0.5">{hint}</p></div>
