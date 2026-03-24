@@ -41,7 +41,7 @@ const SPORTS_LIST    = ["Football", "Cricket", "Tennis", "Badminton", "Basketbal
 const FACILITIES_LIST= ["Parking", "Floodlights", "Changing Rooms", "Cafeteria", "Equipment Rental", "First Aid", "WiFi", "CCTV"];
 const SURFACE_LIST   = ["Natural Grass", "Artificial Turf", "Hard Court", "Clay"];
 const STATES_LIST    = ["Maharashtra", "Karnataka", "Delhi", "Gujarat", "Tamil Nadu", "Telangana", "West Bengal", "Rajasthan", "Uttar Pradesh", "Punjab"];
-const STEP_LABELS    = ["Business Info", "Location", "Turf Details", "Banking", "KYC & Review"];
+const STEP_LABELS    = ["Business Info", "Location", "Banking", "KYC & Review"];
 const KYC_DOCS = [
   { key: "idProof",       label: "Identity Proof",        hint: "Aadhaar / Passport / Driving License" },
   { key: "addressProof",  label: "Address Proof",         hint: "Utility bill / Bank statement" },
@@ -606,59 +606,6 @@ export default function VendorsPage() {
               )}
 
               {onboardStep === 3 && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Number of Fields *</label>
-                      <input type="number" min={1} value={formData.fieldCount} onChange={e => setField("fieldCount", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Surface Type *</label>
-                      <select value={formData.surface} onChange={e => setField("surface", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white">
-                        {SURFACE_LIST.map(s => <option key={s}>{s}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Sports Offered *</label>
-                    <div className="flex flex-wrap gap-2">
-                      {SPORTS_LIST.map(s => {
-                        const sel = formData.sports.includes(s);
-                        return <button key={s} onClick={() => toggleArr("sports", s)} className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors" style={sel ? { backgroundColor: "#8a9e60", color: "white", borderColor: "transparent" } : { borderColor: "#e5e7eb", color: "#6b7280" }}>{s}</button>;
-                      })}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Weekday Hours</label>
-                      <div className="flex gap-2 items-center">
-                        <input type="time" value={formData.weekdayFrom} onChange={e => setField("weekdayFrom", e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#8a9e60]" />
-                        <span className="text-gray-400 text-xs shrink-0">to</span>
-                        <input type="time" value={formData.weekdayTo} onChange={e => setField("weekdayTo", e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#8a9e60]" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Weekend Hours</label>
-                      <div className="flex gap-2 items-center">
-                        <input type="time" value={formData.weekendFrom} onChange={e => setField("weekendFrom", e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#8a9e60]" />
-                        <span className="text-gray-400 text-xs shrink-0">to</span>
-                        <input type="time" value={formData.weekendTo} onChange={e => setField("weekendTo", e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#8a9e60]" />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Facilities Available</label>
-                    <div className="flex flex-wrap gap-2">
-                      {FACILITIES_LIST.map(f => {
-                        const sel = formData.facilities.includes(f);
-                        return <button key={f} onClick={() => toggleArr("facilities", f)} className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors" style={sel ? { backgroundColor: "#8a9e60", color: "white", borderColor: "transparent" } : { borderColor: "#e5e7eb", color: "#6b7280" }}>{f}</button>;
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {onboardStep === 4 && (
                 <div className="space-y-4">
                   <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg">
                     <p className="text-xs text-amber-700 font-medium">Banking details are encrypted and stored securely. Used for vendor payouts only.</p>
@@ -692,7 +639,7 @@ export default function VendorsPage() {
                 </div>
               )}
 
-              {onboardStep === 5 && (
+              {onboardStep === 4 && (
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-sm font-bold text-gray-800 mb-3">Upload KYC Documents</h3>
@@ -721,7 +668,7 @@ export default function VendorsPage() {
                   <div>
                     <h3 className="text-sm font-bold text-gray-800 mb-3">Review Summary</h3>
                     <div className="bg-gray-50 rounded-xl p-4 space-y-2.5">
-                      {[["Business", formData.businessName || "—"], ["Type", formData.businessType], ["Owner", formData.ownerName || "—"], ["Email", formData.email || "—"], ["Phone", formData.phone || "—"], ["Location", [formData.city, formData.state].filter(Boolean).join(", ") || "—"], ["Fields", formData.fieldCount], ["Sports", formData.sports.join(", ") || "—"], ["Surface", formData.surface], ["Bank", formData.bankName || "—"], ["Commission", `${formData.commission}%`], ["Payout", formData.payoutCycle]].map(([k, val]) => (
+                      {[["Business", formData.businessName || "—"], ["Type", formData.businessType], ["Owner", formData.ownerName || "—"], ["Email", formData.email || "—"], ["Phone", formData.phone || "—"], ["Location", [formData.city, formData.state].filter(Boolean).join(", ") || "—"], ["Bank", formData.bankName || "—"], ["Commission", `${formData.commission}%`], ["Payout", formData.payoutCycle]].map(([k, val]) => (
                         <div key={k} className="flex items-start justify-between text-xs">
                           <span className="text-gray-400 shrink-0 mr-3">{k}</span>
                           <span className="font-medium text-gray-700 text-right">{val}</span>
@@ -739,10 +686,10 @@ export default function VendorsPage() {
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-white transition-colors bg-white">
                 <ArrowLeft size={15} />{onboardStep === 1 ? "Cancel" : "Back"}
               </button>
-              <button onClick={() => onboardStep < 5 ? setOnboardStep(s => s + 1) : closeOnboard()}
+              <button onClick={() => onboardStep < 4 ? setOnboardStep(s => s + 1) : closeOnboard()}
                 className="flex items-center gap-2 px-6 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90"
                 style={{ backgroundColor: "#8a9e60" }}>
-                {onboardStep === 5 ? "Submit & Onboard" : "Continue"}{onboardStep < 5 && <CaretRight size={15} />}
+                {onboardStep === 4 ? "Submit & Onboard" : "Continue"}{onboardStep < 4 && <CaretRight size={15} />}
               </button>
             </div>
           </div>
