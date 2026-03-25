@@ -1,0 +1,16 @@
+[  927607ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/13_u_next_dist_0qnxpj7._.js:2431
+[  928618ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/dashboard/vendors:0
+[  929017ms] ReferenceError: NotificationPanel is not defined
+    at DashboardLayout (http://localhost:3000/_next/static/chunks/Desktop_Codes_turfin-admin-portal_app_dashboard_layout_tsx_0ps-s6a._.js:416:267)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:15037:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:4620:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:6081:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:6691:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:9555:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:9449:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:9433:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:9098:47)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_react-dom_0_mjusd._.js:10255:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/13_u_next_dist_compiled_0w2g3r6._.js:2647:64)
+[  942139ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/13_u_next_dist_0qnxpj7._.js:2431

@@ -3,11 +3,15 @@
 import {
   House, CalendarBlank, Users, ChartLineUp, Gear,
   MapPin, Handshake, SignOut, List, X, Bell, MagnifyingGlass, Key, BellRinging,
+  DeviceMobile, Scroll,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import NotificationPanel from "./components/NotificationPanel";
+import { AuditLogProvider } from "./audit-log-context";
 
 const navItems = [
+  { label: "Audit Log", icon: Scroll,        href: "/dashboard/audit"     },
   { label: "Dashboard", icon: House,         href: "/dashboard"           },
   { label: "Bookings",  icon: CalendarBlank, href: "/dashboard/bookings"  },
   { label: "Vendors",   icon: Handshake,     href: "/dashboard/vendors"   },
@@ -15,6 +19,7 @@ const navItems = [
   { label: "Users",     icon: Users,         href: "/dashboard/users"     },
   { label: "Analytics",      icon: ChartLineUp,   href: "/dashboard/analytics"      },
   { label: "Notifications",  icon: BellRinging,   href: "/dashboard/notifications"  },
+  { label: "App Management", icon: DeviceMobile,  href: "/dashboard/app-management" },
   { label: "Roles",          icon: Key,           href: "/dashboard/roles",  restricted: true },
   { label: "Settings",  icon: Gear,          href: "/dashboard/settings"  },
 ];
@@ -25,6 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router   = useRouter();
 
   return (
+    <AuditLogProvider>
     <div className="flex h-screen bg-gray-50 overflow-hidden">
 
       {/* Sidebar */}
@@ -73,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 shrink-0">
           <div>
             <h1 className="text-lg font-semibold text-gray-800 capitalize">
-              {navItems.find(n => n.href === pathname)?.label ?? "Dashboard"}
+              {pathname === "/dashboard/audit" ? "Audit Log" : (navItems.find(n => n.href === pathname)?.label ?? "Dashboard")}
             </h1>
             <p className="text-xs text-gray-400">Saturday, March 21, 2026</p>
           </div>
@@ -82,10 +88,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <MagnifyingGlass size={15} />
               <span>Search...</span>
             </div>
-            <button className="relative text-gray-400 hover:text-gray-600">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+            <button
+              onClick={() => router.push("/dashboard/audit")}
+              title="Audit Log"
+              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors
+                ${pathname === "/dashboard/audit" ? "bg-[#8a9e60]/10 text-[#8a9e60]" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"}`}
+            >
+              <Scroll size={15} weight={pathname === "/dashboard/audit" ? "fill" : "regular"} />
+              <span className="text-[10px]">Audit</span>
             </button>
+            <NotificationPanel />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#8a9e60" }}>
                 AD
@@ -104,5 +116,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </div>
+    </AuditLogProvider>
   );
 }

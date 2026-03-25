@@ -514,7 +514,7 @@ export default function VendorsPage() {
               <div className="flex items-start justify-between mb-5">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Onboard New Vendor</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Step {onboardStep} of 5 — {STEP_LABELS[onboardStep - 1]}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Step {onboardStep} of {STEP_LABELS.length} — {STEP_LABELS[onboardStep - 1]}</p>
                 </div>
                 <button onClick={closeOnboard} className="text-gray-400 hover:text-gray-600 mt-1"><X size={20} /></button>
               </div>
