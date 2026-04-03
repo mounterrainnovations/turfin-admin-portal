@@ -1,0 +1,1142 @@
+{
+  "info": {
+    "_postman_id": "4b684281-792b-4770-9831-29471181816e",
+    "name": "TurfIn Backend API",
+    "description": "API collection for the TurfIn Backend Monolith. Built with NestJS and Drizzle ORM.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Public authentication flows plus authenticated token revocation. Use these requests to create accounts, sign in, rotate JWTs, and sign out.",
+      "item": [
+        {
+          "name": "Signup (End User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\",\n    \"role\": \"end_user\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"displayName\": \"JohnD\",\n    \"gender\": \"male\",\n    \"dateOfBirth\": \"1995-05-15\",\n    \"city\": \"Kochi\",\n    \"state\": \"Kerala\",\n    \"preferredSports\": [\"football\", \"cricket\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
+            },
+            "description": "Register a new end_user account. Creates auth identity + user profile in a single step."
+          },
+          "response": []
+        },
+        {
+          "name": "Signup (Vendor Owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"vendor@example.com\",\n    \"password\": \"password123\",\n    \"role\": \"vendor_owner\",\n    \"vendorProfile\": {\n        \"businessName\": \"Acme Turf Fields\",\n        \"businessType\": \"company\",\n        \"ownerFullName\": \"John Vendor\",\n        \"address\": {\n            \"addressLineOne\": \"123 Stadium Drive\",\n            \"addressLineTwo\": \"Near Central Park\",\n            \"city\": \"Mumbai\",\n            \"state\": \"Maharashtra\",\n            \"pinCode\": \"400001\",\n            \"googleMapsLink\": \"https://maps.google.com/?q=123+Stadium+Drive\"\n        },\n        \"bankingDetails\": {\n            \"bankName\": \"HDFC Bank\",\n            \"accountHolderName\": \"John Vendor\",\n            \"accountNumber\": \"123456789012\",\n            \"ifsc\": \"HDFC0001234\",\n            \"upiId\": \"john@upi\"\n        }\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
+            },
+            "description": "Register a new vendor_owner account. Creates auth identity + vendor profile + empty KYC record in a single atomic transaction."
+          },
+          "response": []
+        },
+        {
+          "name": "Signin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signin"]
+            },
+            "description": "Login with email + password."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", jsonData.data.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Rotate access + refresh tokens."
+          },
+          "response": []
+        },
+        {
+          "name": "Signout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/signout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signout"]
+            },
+            "description": "Revoke refresh token (logout)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Super admin delegated operations. These endpoints act on explicit vendor or turf identifiers and should never rely on the currently signed-in vendor context.",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "List end-user profiles with pagination metadata. Requires a super_admin bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "List Vendors",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vendors?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "vendors"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "List vendor profiles with pagination metadata. Requires a super_admin bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "Onboard Vendor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.vendorId) {",
+                  "    pm.collectionVariables.set(\"vendorId\", jsonData.data.vendorId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"new_vendor@example.com\",\n    \"password\": \"secure_pass_123\",\n    \"vendorProfile\": {\n        \"businessName\": \"Premier Sports Hub\",\n        \"businessType\": \"company\",\n        \"ownerFullName\": \"Jane Admin-Vendor\",\n        \"address\": {\n            \"addressLineOne\": \"456 Admin Plaza\",\n            \"city\": \"Kochi\",\n            \"state\": \"Kerala\",\n            \"pinCode\": \"682002\"\n        },\n        \"bankingDetails\": {\n            \"bankName\": \"SBI\",\n            \"accountHolderName\": \"Premier Sports\",\n            \"accountNumber\": \"0987654321\",\n            \"ifsc\": \"SBIN0004567\"\n        }\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/onboard-vendor",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "onboard-vendor"]
+            },
+            "description": "Create a vendor_owner identity, vendor profile, and empty KYC record in one transaction. Use this when ops/admin creates the vendor directly."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Turf for Vendor (Override)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"turfId\", jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Elite Admin Turf\",\n    \"sports\": [\"football\"],\n    \"surfaceType\": \"artificial_turf\",\n    \"address\": {\n        \"addressLineOne\": \"Sports City Complex\",\n        \"city\": \"Kochi\",\n        \"state\": \"Kerala\",\n        \"pinCode\": \"682001\"\n    },\n    \"weekdayOpen\": \"06:00\",\n    \"weekdayClose\": \"23:00\",\n    \"weekendOpen\": \"05:00\",\n    \"weekendClose\": \"23:59\",\n    \"standardPricePaise\": 120000,\n    \"amenities\": [\"parking\", \"drinking_water\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/vendors/:vendorId/turfs",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "vendors", ":vendorId", "turfs"],
+              "variable": [
+                {
+                  "key": "vendorId",
+                  "value": "{{vendorId}}"
+                }
+              ]
+            },
+            "description": "Create a turf on behalf of a vendor using an explicit vendorId. This also initializes the turf document record with not_started status."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Turf by ID (Delegated)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/turfs/:turfId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "turfs", ":turfId"],
+              "variable": [
+                {
+                  "key": "turfId",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Fetch any turf by id through the admin delegated route. This bypasses vendor self-scope and is intended for backoffice tooling."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Vendor KYC (Override)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\",\n        \"addressProof\": \"https://storage.example.com/docs/addr.pdf\",\n        \"businessRegistration\": \"https://storage.example.com/docs/biz.pdf\",\n        \"gstCertificate\": \"https://storage.example.com/docs/gst.pdf\",\n        \"cancelledCheque\": \"https://storage.example.com/docs/cheque.pdf\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/vendors/:vendorId/kyc",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "vendors", ":vendorId", "kyc"],
+              "variable": [
+                {
+                  "key": "vendorId",
+                  "value": "{{vendorId}}"
+                }
+              ]
+            },
+            "description": "Submit or replace vendor KYC documents through the admin delegated route. Useful when operations uploads documents on the vendor's behalf."
+          },
+          "response": []
+        },
+        {
+          "name": "Review Vendor KYC",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"verified\",\n    \"reviewerNotes\": \"Approved by Admin.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/vendors/:vendorId/kyc/review",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "vendors", ":vendorId", "kyc", "review"],
+              "variable": [
+                {
+                  "key": "vendorId",
+                  "value": "{{vendorId}}"
+                }
+              ]
+            },
+            "description": "Review a vendor's KYC submission. Setting status to verified activates the vendor; rejected or in_review keeps the vendor pending."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Turf Documents (Override)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"documents\": {\n        \"propertyDocument\": \"https://storage.com/docs/prop.pdf\",\n        \"municipalNoc\": \"https://storage.com/docs/noc.pdf\",\n        \"liabilityInsurance\": \"https://storage.com/docs/insurance.pdf\",\n        \"fieldPhotos\": [\"https://storage.com/img1.jpg\", \"https://storage.com/img2.jpg\"]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/turfs/:turfId/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "turfs", ":turfId", "documents"],
+              "variable": [
+                {
+                  "key": "turfId",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Submit or merge turf verification documents through the admin delegated route. Completeness can automatically move the document status to pending."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Turf Documents Status (Delegated)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/turfs/:turfId/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "turfs", ":turfId", "documents"],
+              "variable": [
+                {
+                  "key": "turfId",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Read turf document status and stored document URLs through the admin delegated route."
+          },
+          "response": []
+        },
+        {
+          "name": "Review Turf Documents",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"verified\",\n    \"reviewerNotes\": \"Turf docs look solid.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/turfs/:turfId/documents/review",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "turfs", ":turfId", "documents", "review"],
+              "variable": [
+                {
+                  "key": "turfId",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Review turf verification documents. Setting status to verified activates the turf; rejected or in_review keeps the turf pending."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Authenticated end-user profile operations. These routes operate on the signed-in identity, except the explicit admin-only lookup by user id.",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Retrieve current logged-in user profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"displayName\": \"Johnny\",\n    \"whatsapp\": \"+919876543210\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Update specific fields of the user profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete My Account",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Soft-delete current user's account."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Get any user by ID (Super Admin Role Required)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vendors",
+      "description": "Vendor-owner self-service profile endpoints. These infer the vendor from the authenticated identity instead of requiring a vendorId path param.",
+      "item": [
+        {
+          "name": "Get My Vendor Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vendors/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["vendors", "me"]
+            },
+            "description": "Retrieve the vendor profile of the currently authenticated vendor_owner."
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Vendor Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"businessName\": \"Acme Turf Fields Updated\",\n    \"ownerFullName\": \"John V. Updated\",\n    \"address\": {\n        \"addressLineOne\": \"456 New Stadium Road\",\n        \"city\": \"Pune\",\n        \"state\": \"Maharashtra\",\n        \"pinCode\": \"411001\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vendors/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["vendors", "me"]
+            },
+            "description": "Partially update vendor profile fields."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "KYC",
+      "description": "Vendor-owner KYC self-service endpoints. Admin delegated KYC routes live under the Admin folder.",
+      "item": [
+        {
+          "name": "Submit Vendor KYC",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\",\n        \"addressProof\": \"https://storage.example.com/docs/addr.pdf\",\n        \"businessRegistration\": \"https://storage.example.com/docs/biz.pdf\",\n        \"gstCertificate\": \"https://storage.example.com/docs/gst.pdf\",\n        \"cancelledCheque\": \"https://storage.example.com/docs/cheque.pdf\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kyc/me/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["kyc", "me", "submit"]
+            },
+            "description": "Submit KYC documents for the authenticated vendor."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My KYC Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/kyc/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["kyc", "me"]
+            },
+            "description": "Retrieve own KYC status."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Turfs",
+      "description": "Vendor-owner turf CRUD. These routes are self-scoped to the authenticated vendor and return turf records wrapped in the standard response envelope.",
+      "item": [
+        {
+          "name": "Create Turf",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"turfId\", jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Champions Arena\",\n    \"sports\": [\"football\", \"cricket\"],\n    \"surfaceType\": \"artificial_turf\",\n    \"address\": {\n        \"addressLineOne\": \"Stadium Complex\",\n        \"city\": \"Kochi\",\n        \"state\": \"Kerala\",\n        \"pinCode\": \"682001\"\n    },\n    \"weekdayOpen\": \"06:00\",\n    \"weekdayClose\": \"23:00\",\n    \"weekendOpen\": \"05:00\",\n    \"weekendClose\": \"23:59\",\n    \"standardPricePaise\": 150000,\n    \"amenities\": [\"parking\", \"changing_room\", \"drinking_water\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/turfs",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs"]
+            },
+            "description": "Create a new turf field (Vendor only)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Turfs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/turfs/my-turfs",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs", "my-turfs"]
+            },
+            "description": "Get all turfs owned by the current vendor."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Turf by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/turfs/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Get basic turf details by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Turf",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Champions Arena Updated\",\n    \"standardPricePaise\": 160000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/turfs/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Partially update turf details."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Turf",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/turfs/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Soft-delete a turf."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Turf Documents",
+      "description": "Vendor-owner turf verification document endpoints. Admin delegated document routes live under the Admin folder.",
+      "item": [
+        {
+          "name": "Update Turf Documents",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"documents\": {\n        \"propertyDocument\": \"https://storage.com/docs/prop.pdf\",\n        \"municipalNoc\": \"https://storage.com/docs/noc.pdf\",\n        \"fieldPhotos\": [\"https://storage.com/img1.jpg\", \"https://storage.com/img2.jpg\"]\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/turfs/:turfId/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs", ":turfId", "documents"],
+              "variable": [
+                {
+                  "key": "turfId",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Submit or update documents for a specific turf field."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Documents Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/turfs/:turfId/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs", ":turfId", "documents"],
+              "variable": [
+                {
+                  "key": "turfId",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Get current status and metadata of turf documents."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "description": "Public operational health endpoints for backend and database availability checks.",
+      "item": [
+        {
+          "name": "Server Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/server",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "server"]
+            },
+            "description": "Basic server health check."
+          },
+          "response": []
+        },
+        {
+          "name": "Database Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/database",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "database"]
+            },
+            "description": "Check database connectivity health."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vendorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "turfId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
