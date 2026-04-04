@@ -261,6 +261,130 @@
           "response": []
         },
         {
+          "name": "List Turfs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/turfs?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "turfs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "List all turf profiles across all vendors with pagination metadata. Requires a super_admin bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vendor by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vendors/:vendorId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "vendors", ":vendorId"],
+              "variable": [
+                {
+                  "key": "vendorId",
+                  "value": "{{vendorId}}"
+                }
+              ]
+            },
+            "description": "Fetch a specific vendor profile by its ID. Requires a super_admin bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", ":userId"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Fetch a specific user profile by its ID. Moved from /users/:id to /admin/users/:userId."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Vendor",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vendors/:vendorId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "vendors", ":vendorId"],
+              "variable": [
+                {
+                  "key": "vendorId",
+                  "value": "{{vendorId}}"
+                }
+              ]
+            },
+            "description": "Soft-delete a vendor profile. This sets the deletedAt timestamp and suspends the vendor."
+          },
+          "response": []
+        },
+        {
           "name": "Onboard Vendor",
           "event": [
             {
@@ -403,11 +527,11 @@
                 }
               ]
             },
-            "method": "POST",
+            "method": "PATCH",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\",\n        \"addressProof\": \"https://storage.example.com/docs/addr.pdf\",\n        \"businessRegistration\": \"https://storage.example.com/docs/biz.pdf\",\n        \"gstCertificate\": \"https://storage.example.com/docs/gst.pdf\",\n        \"cancelledCheque\": \"https://storage.example.com/docs/cheque.pdf\"\n    }\n}",
+              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\"\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -425,7 +549,7 @@
                 }
               ]
             },
-            "description": "Submit or replace vendor KYC documents through the admin delegated route. Useful when operations uploads documents on the vendor's behalf."
+            "description": "Submit or partially update vendor KYC documents through the admin delegated route."
           },
           "response": []
         },
@@ -662,36 +786,6 @@
             "description": "Soft-delete current user's account."
           },
           "response": []
-        },
-        {
-          "name": "Get User by ID",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/users/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "{{userId}}"
-                }
-              ]
-            },
-            "description": "Get any user by ID (Super Admin Role Required)."
-          },
-          "response": []
         }
       ]
     },
@@ -763,7 +857,7 @@
       "description": "Vendor-owner KYC self-service endpoints. Admin delegated KYC routes live under the Admin folder.",
       "item": [
         {
-          "name": "Submit Vendor KYC",
+          "name": "Update Vendor KYC",
           "request": {
             "auth": {
               "type": "bearer",
@@ -775,11 +869,11 @@
                 }
               ]
             },
-            "method": "POST",
+            "method": "PATCH",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\",\n        \"addressProof\": \"https://storage.example.com/docs/addr.pdf\",\n        \"businessRegistration\": \"https://storage.example.com/docs/biz.pdf\",\n        \"gstCertificate\": \"https://storage.example.com/docs/gst.pdf\",\n        \"cancelledCheque\": \"https://storage.example.com/docs/cheque.pdf\"\n    }\n}",
+              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id_new.pdf\"\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -791,7 +885,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["kyc", "me", "submit"]
             },
-            "description": "Submit KYC documents for the authenticated vendor."
+            "description": "Partially update KYC documents for the authenticated vendor."
           },
           "response": []
         },
