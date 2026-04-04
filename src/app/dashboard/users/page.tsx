@@ -1,15 +1,15 @@
 "use client";
 
 import {
-  Users, UserCircle, Envelope, Phone, MapPin, CalendarBlank,
-  CheckCircle, XCircle, WarningCircle, ClockCountdown,
-  MagnifyingGlass, DotsThreeVertical, X, Eye,
+  Users, Envelope, Phone, MapPin, CalendarBlank,
+  CheckCircle, XCircle, MagnifyingGlass, DotsThreeVertical, X, Eye,
   PaperPlaneTilt, Prohibit, ArrowCounterClockwise,
-  ShieldCheck, CurrencyDollar, SoccerBall, Star,
-  Trash, CaretDown, ArrowUpRight, ArrowDownRight,
-  ChartLineUp, ArrowLeft,
+  CurrencyDollar, SoccerBall, Star,
+  Trash, ArrowUpRight, ArrowLeft,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useUsersList } from "@/domains/users/api";
+import { UserProfile } from "@/domains/users/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type UserStatus = "active" | "inactive" | "banned";
@@ -29,36 +29,33 @@ interface RecentBooking {
   amount: number; status: "completed" | "cancelled" | "upcoming" | "no-show";
 }
 
-// ── Mock Data ──────────────────────────────────────────────────────────────────
-const SEED: AppUser[] = [
-  { id: "USR-001", name: "Marco Rossi",    email: "marco@example.com",  phone: "+91 98001 11001", city: "Mumbai",    state: "Maharashtra", status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Dec 2024", lastActive: "2h ago",  bookings: 23, completed: 20, cancelled: 2, noShows: 1, totalSpent: 34500, favSport: "Football",  favVendor: "Riaz Sports Complex", source: "Google"   },
-  { id: "USR-002", name: "Sara Bianchi",   email: "sara@example.com",   phone: "+91 98002 22002", city: "Pune",      state: "Maharashtra", status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Jan 2025", lastActive: "1d ago",  bookings: 15, completed: 14, cancelled: 1, noShows: 0, totalSpent: 18200, favSport: "Badminton", favVendor: "GreenZone FC",         source: "Organic"  },
-  { id: "USR-003", name: "Luca Ferretti",  email: "luca@example.com",   phone: "+91 98003 33003", city: "Bangalore", state: "Karnataka",   status: "inactive", emailVerified: true,  phoneVerified: false, joined: "Nov 2024", lastActive: "45d ago", bookings: 8,  completed: 5,  cancelled: 3, noShows: 0, totalSpent: 9600,  favSport: "Cricket",   favVendor: "Arena Sports Hub",    source: "Referral" },
-  { id: "USR-004", name: "Anna Conti",     email: "anna@example.com",   phone: "+91 98004 44004", city: "Delhi",     state: "Delhi",       status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Oct 2024", lastActive: "3h ago",  bookings: 31, completed: 27, cancelled: 3, noShows: 1, totalSpent: 47800, favSport: "Tennis",    favVendor: "Arena Sports Hub",    source: "Google"   },
-  { id: "USR-005", name: "Davide Greco",   email: "davide@example.com", phone: "+91 98005 55005", city: "Chennai",   state: "Tamil Nadu",  status: "banned",   emailVerified: true,  phoneVerified: true,  joined: "Feb 2025", lastActive: "15d ago", bookings: 2,  completed: 0,  cancelled: 2, noShows: 2, totalSpent: 2400,  favSport: "Football",  favVendor: "ProFields Co.",        source: "Organic",  banReason: "Repeated no-shows and fraudulent refund claims." },
-  { id: "USR-006", name: "Priya Kapoor",   email: "priya@example.com",  phone: "+91 98006 66006", city: "Mumbai",    state: "Maharashtra", status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Jan 2025", lastActive: "5h ago",  bookings: 19, completed: 18, cancelled: 1, noShows: 0, totalSpent: 28700, favSport: "Badminton", favVendor: "ProFields Co.",        source: "Referral" },
-  { id: "USR-007", name: "Rahul Sharma",   email: "rahul@example.com",  phone: "+91 98007 77007", city: "Hyderabad", state: "Telangana",   status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Sep 2024", lastActive: "1h ago",  bookings: 45, completed: 42, cancelled: 2, noShows: 1, totalSpent: 68500, favSport: "Cricket",   favVendor: "Sunrise Turfs",       source: "Google"   },
-  { id: "USR-008", name: "Meera Nair",     email: "meera@example.com",  phone: "+91 98008 88008", city: "Kolkata",   state: "West Bengal", status: "inactive", emailVerified: false, phoneVerified: true,  joined: "Mar 2025", lastActive: "20d ago", bookings: 3,  completed: 2,  cancelled: 1, noShows: 0, totalSpent: 3200,  favSport: "Volleyball",favVendor: "Elite Sports Arena",  source: "Organic"  },
-  { id: "USR-009", name: "Arjun Patel",    email: "arjun@example.com",  phone: "+91 98009 99009", city: "Ahmedabad", state: "Gujarat",     status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Dec 2024", lastActive: "12h ago", bookings: 12, completed: 11, cancelled: 1, noShows: 0, totalSpent: 15600, favSport: "Football",  favVendor: "Premier Grounds",     source: "Referral" },
-  { id: "USR-010", name: "Zara Khan",      email: "zara@example.com",   phone: "+91 98010 00010", city: "Delhi",     state: "Delhi",       status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Nov 2024", lastActive: "30m ago", bookings: 27, completed: 25, cancelled: 2, noShows: 0, totalSpent: 41200, favSport: "Tennis",    favVendor: "Arena Sports Hub",    source: "Google"   },
-];
+// ── Mapping ──────────────────────────────────────────────────────────────────
+function mapBackendUser(u: UserProfile): AppUser {
+  return {
+    id: u.id,
+    name: `${u.firstName} ${u.lastName}`.trim(),
+    email: u.email,
+    phone: "N/A", // Backend DTO in docs didn't show phone, though identity might have it
+    city: u.city,
+    state: u.state,
+    status: "active", // Default since we don't have it on UserProfile yet
+    emailVerified: true, // Assuming for now
+    phoneVerified: false,
+    joined: new Date(u.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+    lastActive: u.lastActiveAt ? new Date(u.lastActiveAt).toLocaleString() : "Never",
+    // These metrics aren't in the base profile yet, so we'll default to 0 for now
+    bookings: 0,
+    completed: 0,
+    cancelled: 0,
+    noShows: 0,
+    totalSpent: 0,
+    favSport: u.preferredSports?.[0] || "N/A",
+    favVendor: "N/A",
+    source: "Direct",
+  };
+}
 
-const RECENT_BOOKINGS: Record<string, RecentBooking[]> = {
-  "USR-001": [
-    { id: "#BK-0041", field: "Turf Arena A",  vendor: "Riaz Sports Complex", date: "Mar 20, 2025", sport: "Football",  amount: 1800, status: "completed" },
-    { id: "#BK-0031", field: "Green Zone B",  vendor: "GreenZone FC",        date: "Mar 15, 2025", sport: "Football",  amount: 1400, status: "completed" },
-    { id: "#BK-0019", field: "Premier Court", vendor: "Arena Sports Hub",    date: "Mar 08, 2025", sport: "Cricket",   amount: 2200, status: "cancelled" },
-    { id: "#BK-0008", field: "Turf Arena A",  vendor: "Riaz Sports Complex", date: "Mar 01, 2025", sport: "Football",  amount: 1800, status: "completed" },
-  ],
-  "USR-007": [
-    { id: "#BK-0055", field: "Sunrise Main",  vendor: "Sunrise Turfs",       date: "Mar 21, 2025", sport: "Cricket",   amount: 2000, status: "upcoming"  },
-    { id: "#BK-0048", field: "Sunrise Main",  vendor: "Sunrise Turfs",       date: "Mar 18, 2025", sport: "Cricket",   amount: 2000, status: "completed" },
-    { id: "#BK-0040", field: "Arena C",       vendor: "Arena Sports Hub",    date: "Mar 12, 2025", sport: "Football",  amount: 1600, status: "completed" },
-    { id: "#BK-0033", field: "Sunrise Main",  vendor: "Sunrise Turfs",       date: "Mar 06, 2025", sport: "Cricket",   amount: 2000, status: "no-show"   },
-  ],
-};
-
-// ── Config ─────────────────────────────────────────────────────────────────────
+// ── Config & Helpers ───────────────────────────────────────────────────────────
 const statusCfg: Record<UserStatus, { label: string; cls: string; dot: string }> = {
   active:   { label: "Active",   cls: "bg-green-50 text-green-700", dot: "bg-green-500"  },
   inactive: { label: "Inactive", cls: "bg-gray-100 text-gray-500",  dot: "bg-gray-400"   },
@@ -79,14 +76,23 @@ const sportColor: Record<string, string> = {
   Volleyball: "bg-pink-50 text-pink-600", Kabaddi: "bg-lime-50 text-lime-700",
 };
 
+const RECENT_BOOKINGS: Record<string, RecentBooking[]> = {
+  // Keeping this as a placeholder until bookings are integrated
+};
+
 function avatar(name: string) {
+  if (!name) return "??";
   return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
 function avatarColor(id: string): string {
   const colors = ["#8a9e60", "#6e8245", "#c4953a", "#6b7a96", "#7a6e9e", "#9e6e6e", "#6e9e8a"];
-  const i = parseInt(id.replace("USR-", "")) % colors.length;
-  return colors[i];
+  // Simple hash for string ID
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
 }
 
 function cancellationRate(u: AppUser): number {
@@ -286,7 +292,8 @@ function EmailModal({ user, onClose }: { user: AppUser; onClose: () => void }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function UsersPage() {
-  const [users, setUsers]             = useState<AppUser[]>([...SEED]);
+  const { data: rawUsers, isLoading } = useUsersList();
+  
   const [search, setSearch]           = useState("");
   const [activeTab, setActiveTab]     = useState<"all" | UserStatus>("all");
   const [selectedUser, setSelected]   = useState<AppUser | null>(null);
@@ -303,6 +310,11 @@ export default function UsersPage() {
   // Toast
   const [toast, setToast]             = useState<{ msg: string; ok: boolean } | null>(null);
 
+  // Map backend users to AppUser interface
+  const users = useMemo(() => {
+    return (rawUsers || []).map(mapBackendUser);
+  }, [rawUsers]);
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const filtered = users.filter(u => {
     const matchTab = activeTab === "all" || u.status === activeTab;
@@ -314,7 +326,7 @@ export default function UsersPage() {
 
   const totalRevenue  = users.reduce((s, u) => s + u.totalSpent, 0);
   const activeCount   = users.filter(u => u.status === "active").length;
-  const newThisMonth  = users.filter(u => u.joined.includes("Mar 2025")).length;
+  const newThisMonth  = users.filter(u => u.joined.includes(new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }))).length;
   const avgSpend      = users.length ? Math.round(totalRevenue / users.length) : 0;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -325,22 +337,18 @@ export default function UsersPage() {
 
   function handleBan() {
     if (!banModal) return;
-    const isBanned = banModal.status === "banned";
-    setUsers(us => us.map(u => u.id === banModal.id
-      ? { ...u, status: (isBanned ? "active" : "banned") as UserStatus, banReason: isBanned ? undefined : banReason }
-      : u));
-    if (selectedUser?.id === banModal.id)
-      setSelected(p => p ? { ...p, status: isBanned ? "active" : "banned", banReason: isBanned ? undefined : banReason } : p);
-    showToast(isBanned ? `${banModal.name} has been unbanned.` : `${banModal.name} has been banned.`, isBanned);
+    showToast(`Status update for ${banModal.name} will be available in the next phase.`, false);
     setBanModal(null);
     setBanReason("");
   }
 
   function handleDelete(u: AppUser) {
-    setUsers(us => us.filter(x => x.id !== u.id));
-    if (selectedUser?.id === u.id) setSelected(null);
-    showToast(`${u.name} has been removed.`, false);
+    showToast(`Delete action for ${u.name} is not implemented in this phase.`, false);
     setActionMenu(null);
+  }
+
+  if (isLoading) {
+    return <div className="p-10 text-center text-gray-400">Loading users...</div>;
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -351,8 +359,8 @@ export default function UsersPage() {
       <div className="grid grid-cols-4 gap-4">
         {[
           { label: "Total Users",      value: String(users.length),                        sub: "All registered",    icon: Users,         color: "#8a9e60" },
-          { label: "Active Users",     value: String(activeCount),                          sub: "Booked recently",   icon: CheckCircle,   color: "#6e8245" },
-          { label: "New This Month",   value: String(newThisMonth),                         sub: "Mar 2025",          icon: ArrowUpRight,  color: "#8a9e60" },
+          { label: "Active Users",     value: String(activeCount),                          sub: "Currently active",  icon: CheckCircle,   color: "#6e8245" },
+          { label: "New This Month",   value: String(newThisMonth),                         sub: "Current month",     icon: ArrowUpRight,  color: "#8a9e60" },
           { label: "Avg. User Spend",  value: `₹${avgSpend.toLocaleString("en-IN")}`,       sub: "Per user lifetime", icon: CurrencyDollar,color: "#c4953a" },
         ].map(({ label, value, sub, icon: Icon, color }) => (
           <div key={label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
