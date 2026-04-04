@@ -7,14 +7,27 @@ interface UserListParams {
   limit?: number;
 }
 
-export async function fetchUsers({ page = 1, limit = 10 }: UserListParams = {}) {
-  // Returns { data: UserProfile[], meta: { page, limit, total } }
-  return api.get<UserProfile[]>(`/admin/users?page=${page}&limit=${limit}`);
-}
+export const usersApi = {
+  fetchUsers: async ({ page = 1, limit = 10 }: UserListParams = {}) => {
+    return api.get<UserProfile[]>(`/admin/users?page=${page}&limit=${limit}`);
+  },
+
+  /**
+   * Placeholder for Ban/Unban functionality.
+   * Endpoint will be updated once provided by the user.
+   */
+  banUser: async (userId: string): Promise<void> => {
+    return api.post(`/admin/users/${userId}/ban`, {});
+  },
+
+  unbanUser: async (userId: string): Promise<void> => {
+    return api.post(`/admin/users/${userId}/unban`, {});
+  },
+};
 
 export function useUsersList(params?: UserListParams) {
   return useQuery({
     queryKey: ["admin", "users", params],
-    queryFn: () => fetchUsers(params),
+    queryFn: () => usersApi.fetchUsers(params),
   });
 }

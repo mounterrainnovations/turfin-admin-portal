@@ -21,6 +21,7 @@ export interface UserProfile {
   ownReferralCode: string | null;
   pushNotificationsEnabled: boolean;
   lastActiveAt: string | null;
+  status: UserStatus;
   createdAt: string;
 }
 

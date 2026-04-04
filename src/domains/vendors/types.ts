@@ -3,35 +3,23 @@ export type BusinessType =
   | "PARTNERSHIP"
   | "PRIVATE_LIMITED"
   | "INDIVIDUAL";
+
 export type VendorStatus =
   | "ACTIVE"
   | "INACTIVE"
   | "SUSPENDED"
   | "PENDING_ONBOARDING";
+
 export type KycStatus = "PENDING" | "APPROVED" | "REJECTED" | "NOT_SUBMITTED";
 
-export interface Vendor {
+export interface VendorDocument {
   id: string;
-  identityId: string;
-  businessName: string;
-  businessType: BusinessType;
-  ownerFullName: string;
-  addressLineOne: string;
-  addressLineTwo?: string;
-  city: string;
-  state: string;
-  pinCode: string;
-  googleMapsLink?: string;
-  commissionPct: number;
-  payoutCycle: "WEEKLY" | "FORTNIGHTLY" | "MONTHLY";
-  status: VendorStatus;
-  createdAt: string;
-  updatedAt: string;
-
-  // Computed or Joined fields (preparation for future backend enhancements)
-  revenue?: number;
-  fieldsCount?: number;
-  kycStatus?: KycStatus;
+  vendorId: string;
+  documentType: "pan" | "gst" | "canceledCheck" | "aadhaarFront" | "aadhaarBack" | "businessReg";
+  documentUrl: string;
+  status: "pending" | "verified" | "rejected";
+  rejectionReason?: string;
+  verifiedAt?: string;
 }
 
 export interface VendorKyc {
@@ -47,9 +35,42 @@ export interface VendorKyc {
   verifiedAt?: string;
 }
 
+export interface Address {
+  addressLineOne: string;
+  addressLineTwo?: string;
+  city: string;
+  state: string;
+  pinCode: string;
+  googleMapsLink?: string;
+}
+
+export interface Vendor {
+  id: string;
+  identityId: string;
+  businessName: string;
+  businessType: "individual" | "company" | "partnership";
+  ownerFullName: string;
+  address: Address;
+  commissionPct: string;
+  payoutCycle: string;
+  status: VendorStatus;
+  createdAt: string;
+  updatedAt: string;
+
+  // Joined fields from backend (as per doc 483)
+  kyc?: VendorKyc;
+}
+
 export interface VendorOnboardingResponse {
   vendor: Vendor;
   credentials: {
     tempPassword: string;
   };
+}
+
+export interface VendorListParams {
+  page?: number;
+  limit?: number;
+  status?: VendorStatus;
+  search?: string;
 }

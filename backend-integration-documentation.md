@@ -49,6 +49,27 @@ interface PaginatedSuccessResponse<T> {
 }
 ```
 
+### Audit Log Record
+
+```typescript
+interface AuditLogRecord {
+  id: string;
+  action: string;
+  category: string;
+  actorId?: string;
+  targetId?: string;
+  targetType?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  requestBody?: any;
+  responseStatus?: number;
+  responseTimeMs?: number;
+  errorMessage?: string;
+  metadata?: any;
+  createdAt: string;
+}
+```
+
 ### Error Wrapper
 
 ```typescript
@@ -146,6 +167,10 @@ interface TurfDocuments {
 
 - `active`, `pending`, `suspended`, `inactive`, `maintenance`
 
+### User Status
+
+- `active`, `pending`, `banned`, `inactive`
+
 ---
 
 ## 1. Auth Endpoints
@@ -173,6 +198,8 @@ interface SignupRequest {
     ownerFullName: string;
     address: Address;
     bankingDetails: VendorBankingDetails;
+    payoutCycle?: string;
+    commissionPct?: string;
   };
   // Optional profile fields
   avatarUrl?: string;
@@ -244,6 +271,7 @@ interface UserProfileResponse {
   preferredSports: string[];
   ownReferralCode: string | null;
   pushNotificationsEnabled: boolean;
+  status: string; // active, pending, banned, inactive
   lastActiveAt: string | null;
   createdAt: string;
 }
@@ -452,8 +480,9 @@ All admin endpoints require `super_admin` role.
 ### Listing Operations (Paginated)
 
 - `GET /admin/users` -> `PaginatedSuccessResponse<UserProfileResponse>`
-- `GET /admin/vendors` -> `PaginatedSuccessResponse<VendorProfileResponse>`
-- `GET /admin/turfs` -> `PaginatedSuccessResponse<TurfResponse>`
+- `GET /admin/vendors` -> `PaginatedSuccessResponse<VendorProfileResponse & { kyc?: KycResponse }>`
+- `GET /admin/turfs` -> `PaginatedSuccessResponse<TurfResponse & { documents?: TurfDocumentsResponse }>`
+- `GET /audit` -> `PaginatedSuccessResponse<AuditLogRecord>`
 
 ### Delegated Lookup
 
@@ -467,6 +496,8 @@ All admin endpoints require `super_admin` role.
 - `POST /admin/onboard-vendor`
   - Request: `{ email, password, vendorProfile: CreateVendorDto }`
   - Response: `{ vendorId: string, identityId: string }`
+- `POST /admin/users/:userId/ban` -> `{ message: string }`
+- `POST /admin/users/:userId/unban` -> `{ message: string }`
 
 ### Admin Overrides
 

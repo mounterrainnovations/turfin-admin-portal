@@ -5,14 +5,33 @@ import {
   VendorOnboardingResponse,
   KycStatus,
   VendorStatus,
+  VendorListParams,
 } from "./types";
+import { useQuery } from "@tanstack/react-query";
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
 
 export const vendorsApi = {
   /**
    * Fetches the complete list of vendors for the admin grid.
    */
-  listVendors: async (): Promise<Vendor[]> => {
-    return api.get<Vendor[]>("/admin/vendors");
+  listVendors: async (params: VendorListParams = {}): Promise<PaginatedResponse<Vendor>> => {
+    const searchParams = new URLSearchParams({
+      page: (params.page || 1).toString(),
+      limit: (params.limit || 10).toString(),
+    });
+
+    if (params.status) searchParams.append("status", params.status);
+    if (params.search) searchParams.append("search", params.search);
+
+    return api.get<PaginatedResponse<Vendor>>(`/admin/vendors?${searchParams.toString()}`);
   },
 
   /**
@@ -71,3 +90,10 @@ export const vendorsApi = {
     return api.get<VendorKyc>(`/admin/vendors/${vendorId}/kyc`);
   },
 };
+
+export function useVendorsList(params?: VendorListParams) {
+  return useQuery({
+    queryKey: ["admin", "vendors", params],
+    queryFn: () => vendorsApi.listVendors(params),
+  });
+}

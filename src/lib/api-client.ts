@@ -134,6 +134,14 @@ export async function request<T>(
       );
     }
 
+    // Handle paginated responses - include 'meta' in the returned data if present
+    if (result.meta) {
+      return {
+        data: result.data,
+        meta: result.meta,
+      } as any;
+    }
+
     return result.data;
   } catch (error) {
     if (error instanceof ApiError) throw error;
