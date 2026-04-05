@@ -91,9 +91,11 @@ export async function request<T>(
 ): Promise<T> {
   const url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
 
-  const defaultHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const defaultHeaders: Record<string, string> = {};
+
+  if (options.body) {
+    defaultHeaders["Content-Type"] = "application/json";
+  }
 
   const tokens = getAuthTokens();
   if (tokens?.access) {

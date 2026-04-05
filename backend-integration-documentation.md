@@ -221,6 +221,7 @@ interface AuthResponse {
     id: string;
     email: string;
     roles: string[];
+    permissions: string[]; // ['*'] for super_admin, or resource:action list
     profileCompleted: boolean;
   };
 }
@@ -514,17 +515,101 @@ All admin endpoints require `super_admin` role.
 
 ---
 
-## 8. Health Endpoints
+## 9. Sub-Admin & RBAC Endpoints
 
-### `GET /health/server`
+All endpoints require `super_admin` role OR a sub-admin with the `sub_admin:manage` permission.
 
-**Role**: Public
-**Purpose**: Internal server heartbeat.
+### Sub-Admin Management
 
-### `GET /health/database`
+#### `GET /admin/sub-admins`
+**Role**: Admin
+**Purpose**: List all users with sub-admin roles and their assigned custom roles.
 
-**Role**: Public
-**Purpose**: Check database availability.
+interface SubAdminListItem {
+  identityId: string;
+  email: string;
+  name?: string;
+  roles: {
+    id: string;
+    name: string;
+    description: string;
+  }[];
+}
+```
+
+#### `GET /admin/sub-admins/:id/roles`
+**Purpose**: Fetch the specific roles assigned to a sub-admin.
+**Response**: `CustomRoleItem[]`
+
+#### `POST /admin/sub-admins`
+**Purpose**: Create a new sub-admin account.
+**Request**:
+```typescript
+interface CreateSubAdminRequest {
+  email: string;
+  password: string;
+  name?: string;
+}
+```
+
+#### `PATCH /admin/sub-admins/:id/roles`
+**Purpose**: Assign or revoke custom roles for a sub-admin.
+**Request**: `{ roleIds: string[] }`
+
+---
+
+### Role & Permission Management
+
+#### `GET /admin/sub-admins/permissions`
+**Purpose**: Fetch the catalogue of all available permissions.
+**Response**:
+```typescript
+interface PermissionCatalogueItem {
+  id: string;
+  action: string;
+  resource: string;
+  description: string;
+}
+```
+
+#### `GET /admin/sub-admins/roles`
+**Purpose**: List all custom roles and their permissions.
+**Response**:
+```typescript
+interface CustomRoleItem {
+  id: string;
+  name: string;
+  description: string;
+  isSystem: boolean;
+  permissions: PermissionCatalogueItem[];
+  createdAt: string;
+}
+}
+```
+
+> [!NOTE]
+> System roles (`super_admin`, `vendor_owner`, `end_user`, `sub_admin`) are hidden and protected. They cannot be managed via these endpoints.
+
+#### `POST /admin/sub-admins/roles`
+**Request**:
+```typescript
+interface CreateRoleRequest {
+  name: string;
+  description: string;
+  permissionIds: string[]; // UUIDs from Permission Catalogue
+}
+```
+
+#### `PATCH /admin/sub-admins/roles/:roleId/permissions`
+**Purpose**: Fully update the permission list for a custom role.
+**Request**: `{ permissionIds: string[] }`
+
+#### `DELETE /admin/sub-admins/roles/:roleId`
+**Purpose**: Delete a custom role. Fails if the role is still assigned to users.
+
+#### `DELETE /admin/sub-admins/:id`
+**Purpose**: Decommission a sub-admin identity. This revokes all assignments and permanently deletes the user from Auth.
+**Response**: `{ success: true }`
 
 ---
 

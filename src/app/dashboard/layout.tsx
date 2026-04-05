@@ -11,7 +11,6 @@ import {
   SignOut,
   List,
   X,
-  Bell,
   MagnifyingGlass,
   Key,
   BellRinging,
@@ -25,24 +24,26 @@ import { AuditLogProvider } from "./audit-log-context";
 import { useSession } from "@/lib/auth";
 
 const navItems = [
-  { label: "Audit Log", icon: Scroll, href: "/dashboard/audit" },
-  { label: "Dashboard", icon: House, href: "/dashboard" },
-  { label: "Bookings", icon: CalendarBlank, href: "/dashboard/bookings" },
-  { label: "Vendors", icon: Handshake, href: "/dashboard/vendors" },
-  { label: "Fields", icon: MapPin, href: "/dashboard/fields" },
-  { label: "Users", icon: Users, href: "/dashboard/users" },
-  { label: "Analytics", icon: ChartLineUp, href: "/dashboard/analytics" },
+  { label: "Audit Log", icon: Scroll, href: "/dashboard/audit", permission: "audit:read" },
+  { label: "Dashboard", icon: House, href: "/dashboard" }, // Dashboard usually visible to all admins
+  { label: "Bookings", icon: CalendarBlank, href: "/dashboard/bookings", permission: "booking:read" },
+  { label: "Vendors", icon: Handshake, href: "/dashboard/vendors", permission: "vendor:read" },
+  { label: "Fields", icon: MapPin, href: "/dashboard/fields", permission: "turf:read" },
+  { label: "Users", icon: Users, href: "/dashboard/users", permission: "user:read" },
+  { label: "Analytics", icon: ChartLineUp, href: "/dashboard/analytics", permission: "report:read" },
   {
     label: "Notifications",
     icon: BellRinging,
     href: "/dashboard/notifications",
+    permission: "notification:read",
   },
   {
     label: "App Management",
     icon: DeviceMobile,
     href: "/dashboard/app-management",
+    permission: "app:write",
   },
-  { label: "Roles", icon: Key, href: "/dashboard/roles", restricted: true },
+  { label: "Roles", icon: Key, href: "/dashboard/roles", restricted: true }, // Restricted to super_admin usually
   { label: "Settings", icon: Gear, href: "/dashboard/settings" },
 ];
 
@@ -51,7 +52,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session, isLoading, signOut } = useSession();
+  const { session, isLoading, signOut, can } = useSession();
   const [open, setOpen] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
@@ -74,6 +75,10 @@ export default function DashboardLayout({
   // Filter nav items based on roles if needed (though only super_admin enters here)
   const filteredNav = navItems.filter((item) => {
     if (item.restricted && !session.roles.includes("super_admin")) return false;
+    if (item.permission) {
+      const [resource, action] = item.permission.split(":");
+      if (!can(resource, action)) return false;
+    }
     return true;
   });
 
@@ -180,17 +185,17 @@ export default function DashboardLayout({
                 <div className="flex items-center gap-3.5 pl-3 border-l border-gray-100">
                   <div className="flex flex-col items-end hidden sm:flex">
                     <p className="text-sm font-bold text-gray-900 leading-tight">
-                      Admin
+                      {session.email}
                     </p>
                     <p className="text-[10px] font-bold text-[#8a9e60] uppercase tracking-tighter">
-                      Super Admin
+                      {session.roles[0] || "User"}
                     </p>
                   </div>
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg shadow-[#8a9e60]/20 transition-transform hover:scale-105 cursor-pointer ring-2 ring-white"
                     style={{ backgroundColor: "#8a9e60" }}
                   >
-                    AD
+                    {session.email.split("@")[0].slice(0, 2).toUpperCase()}
                   </div>
                 </div>
               </div>

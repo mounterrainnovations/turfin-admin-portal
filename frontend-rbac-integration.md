@@ -105,7 +105,8 @@ All endpoints are prefixed with `/api/v1`.
 ### 4.3. Permission Catalogue
 
 #### **List Available Permissions**
-- **Endpoint**: `GET /admin/sub-admins/permissions`
+- **Endpoint**: **DELETE** `/api/v1/admin/sub-admins/:id`: Decommission a sub-admin. Revokes roles and deletes from Auth.
+- **GET** `/api/v1/admin/sub-admins/permissions`: List all granular permission definitions.
 - **Description**: Returns the full list of selectable permissions to be used in the role-creation UI.
 - **Response**: `PermissionListItem[]`
 
