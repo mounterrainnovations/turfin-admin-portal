@@ -22,7 +22,9 @@ export const vendorsApi = {
   /**
    * Fetches the complete list of vendors for the admin grid.
    */
-  listVendors: async (params: VendorListParams = {}): Promise<PaginatedResponse<Vendor>> => {
+  listVendors: async (
+    params: VendorListParams = {},
+  ): Promise<PaginatedResponse<Vendor>> => {
     const searchParams = new URLSearchParams({
       page: (params.page || 1).toString(),
       limit: (params.limit || 10).toString(),
@@ -31,7 +33,9 @@ export const vendorsApi = {
     if (params.status) searchParams.append("status", params.status);
     if (params.search) searchParams.append("search", params.search);
 
-    return api.get<PaginatedResponse<Vendor>>(`/admin/vendors?${searchParams.toString()}`);
+    return api.get<PaginatedResponse<Vendor>>(
+      `/admin/vendors?${searchParams.toString()}`,
+    );
   },
 
   /**
@@ -63,11 +67,11 @@ export const vendorsApi = {
   reviewVendorKyc: async (
     vendorId: string,
     status: KycStatus,
-    rejectionReason?: string,
+    reviewerNotes?: string,
   ): Promise<VendorKyc> => {
     return api.patch<VendorKyc>(`/admin/vendors/${vendorId}/kyc/review`, {
       status,
-      rejectionReason,
+      reviewerNotes,
     });
   },
 

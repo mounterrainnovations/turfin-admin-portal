@@ -1,14 +1,5 @@
 export type TurfStatus = "active" | "pending" | "suspended";
 
-export interface TurfDocumentsResponse {
-  id: string;
-  turfId: string;
-  documentUrl: string;
-  status: "pending" | "verified" | "rejected";
-  rejectionReason?: string;
-  verifiedAt?: string;
-}
-
 export interface TurfResponse {
   id: string;
   vendorId: string;
@@ -35,9 +26,23 @@ export interface TurfResponse {
   status: TurfStatus;
   createdAt: string;
   updatedAt: string;
-  
-  // Joined documents (as per doc 484)
-  documents?: TurfDocumentsResponse;
+
+  documents?: {
+    id: string;
+    fieldId: string;
+    status: "not_started" | "pending" | "verified" | "rejected";
+    documents: {
+      fieldPhotos?: string[];
+      municipalNoc?: string;
+      propertyDocument?: string;
+      liabilityInsurance?: string;
+    };
+    reviewedBy?: string | null;
+    reviewedAt?: string | null;
+    submittedAt?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
 export interface TurfListParams {

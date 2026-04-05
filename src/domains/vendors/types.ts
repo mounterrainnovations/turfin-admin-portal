@@ -1,39 +1,13 @@
-export type BusinessType =
-  | "PROPRIETORSHIP"
-  | "PARTNERSHIP"
-  | "PRIVATE_LIMITED"
-  | "INDIVIDUAL";
+export type BusinessType = "individual" | "company" | "partnership";
 
-export type VendorStatus =
-  | "ACTIVE"
-  | "INACTIVE"
-  | "SUSPENDED"
-  | "PENDING_ONBOARDING";
+export type VendorStatus = "active" | "pending" | "suspended" | "inactive";
 
-export type KycStatus = "PENDING" | "APPROVED" | "REJECTED" | "NOT_SUBMITTED";
-
-export interface VendorDocument {
-  id: string;
-  vendorId: string;
-  documentType: "pan" | "gst" | "canceledCheck" | "aadhaarFront" | "aadhaarBack" | "businessReg";
-  documentUrl: string;
-  status: "pending" | "verified" | "rejected";
-  rejectionReason?: string;
-  verifiedAt?: string;
-}
-
-export interface VendorKyc {
-  id: string;
-  vendorId: string;
-  panNumber: string;
-  gstNumber?: string;
-  bankAccountName: string;
-  bankAccountNumber: string;
-  bankIfscCode: string;
-  status: KycStatus;
-  rejectionReason?: string;
-  verifiedAt?: string;
-}
+export type KycStatus =
+  | "pending"
+  | "verified"
+  | "rejected"
+  | "not_submitted"
+  | "in_review";
 
 export interface Address {
   addressLineOne: string;
@@ -44,11 +18,30 @@ export interface Address {
   googleMapsLink?: string;
 }
 
+export interface VendorKyc {
+  id: string;
+  vendorId: string;
+  status: KycStatus;
+  documents: {
+    identityProof?: string;
+    addressProof?: string;
+    businessRegistration?: string;
+    gstCertificate?: string;
+    cancelledCheque?: string;
+  };
+  reviewerNotes?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  submittedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Vendor {
   id: string;
   identityId: string;
   businessName: string;
-  businessType: "individual" | "company" | "partnership";
+  businessType: BusinessType;
   ownerFullName: string;
   address: Address;
   commissionPct: string;
@@ -56,6 +49,7 @@ export interface Vendor {
   status: VendorStatus;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
 
   // Joined fields from backend (as per doc 483)
   kyc?: VendorKyc;

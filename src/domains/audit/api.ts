@@ -25,8 +25,8 @@ export const auditApi = {
     });
 
     if (category) params.append("category", category);
-    if (actorId) params.append("actorId", actorId);
-    if (search) params.append("search", search);
+    if (actorId)  params.append("actorId",  actorId);
+    if (search)   params.append("search",   search);
 
     return api.get<PaginatedResponse<AuditLogRecord>>(`/audit?${params.toString()}`);
   },
@@ -34,7 +34,9 @@ export const auditApi = {
 
 export function useAuditLogs(params?: AuditListParams) {
   return useQuery({
-    queryKey: ["admin", "audit", params],
+    // Spreading params so each unique combination of filters produces a unique cache key
+    queryKey: ["admin", "audit", params?.page, params?.limit, params?.category, params?.search, params?.actorId],
     queryFn: () => auditApi.fetchLogs(params),
+    staleTime: 0,  // Always refetch when filters change
   });
 }

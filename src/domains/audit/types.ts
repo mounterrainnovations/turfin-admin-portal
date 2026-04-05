@@ -2,8 +2,8 @@ export type AuditCategory = "auth" | "admin" | "kyc" | "turf";
 
 export interface AuditLogRecord {
   id: string;
-  actorId: string;
-  actorRole: string;
+  actorId: string | null;
+  actorRole: string | null;
   category: AuditCategory;
   eventType: string;
   targetType: string | null;
@@ -11,8 +11,8 @@ export interface AuditLogRecord {
   status: "success" | "failure";
   payload: any;
   metadata: any;
-  ipAddress: string;
-  userAgent: string;
+  ipAddress: string | null;
+  userAgent: string | null;
   createdAt: string;
 }
 

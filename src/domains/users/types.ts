@@ -14,8 +14,8 @@ export interface UserProfile {
   avatarUrl: string | null;
   dateOfBirth: string | null;
   gender: string | null;
-  city: string;
-  state: string;
+  city: string | null;
+  state: string | null;
   country: string;
   preferredSports: string[];
   ownReferralCode: string | null;
@@ -25,7 +25,7 @@ export interface UserProfile {
   createdAt: string;
 }
 
-export type UserStatus = "active" | "inactive" | "banned";
+export type UserStatus = "active" | "inactive" | "banned" | "pending";
 
-// We'll extend the backend profile for the FE requirements if needed, 
+// We'll extend the backend profile for the FE requirements if needed,
 // but for now let's stick to the official DTO.

@@ -9,7 +9,9 @@ interface UserListParams {
 
 export const usersApi = {
   fetchUsers: async ({ page = 1, limit = 10 }: UserListParams = {}) => {
-    return api.get<UserProfile[]>(`/admin/users?page=${page}&limit=${limit}`);
+    return api.get<{ data: UserProfile[]; meta: any }>(
+      `/admin/users?page=${page}&limit=${limit}`,
+    );
   },
 
   /**

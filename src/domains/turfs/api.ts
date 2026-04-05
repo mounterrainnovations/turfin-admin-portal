@@ -26,11 +26,27 @@ export const turfsApi = {
     if (status) params.append("status", status);
     if (search) params.append("search", search);
 
-    return api.get<PaginatedResponse<TurfResponse>>(`/admin/turfs?${params.toString()}`);
+    return api.get<PaginatedResponse<TurfResponse>>(
+      `/admin/turfs?${params.toString()}`,
+    );
   },
 
-  updateTurfStatus: async (turfId: string, status: TurfResponse["status"]): Promise<void> => {
+  updateTurfStatus: async (
+    turfId: string,
+    status: TurfResponse["status"],
+  ): Promise<void> => {
     return api.patch(`/admin/turfs/${turfId}/status`, { status });
+  },
+
+  reviewTurfDocuments: async (
+    turfId: string,
+    status: "verified" | "rejected" | "in_review",
+    reviewerNotes?: string,
+  ): Promise<void> => {
+    return api.patch(`/admin/turfs/${turfId}/documents/review`, {
+      status,
+      reviewerNotes,
+    });
   },
 };
 
