@@ -2,88 +2,144 @@
 
 ## Purpose
 
-This document is the current integration contract for the TurfIn backend. It is written so a frontend codebase or code-generation LLM can wire the API without reading controller and service internals.
+This document is the current integration contract for the TurfIn backend. It is written so a frontend codebase can wire the API using clear TypeScript interface definitions for every request and response, matching the provided Postman collection and backend controllers.
 
-Source of truth used for this document:
+Source of truth:
 
-- controllers under `src/modules/**`
-- DTOs under `src/modules/**/dto`
-- response envelope and exception filter in `src/common`
-- global API prefix in `src/main.ts`
+- `src/modules/**` (Controllers & DTOs)
+- `src/common/interceptors/transform.interceptor.ts`
+- `turfin_postman_collection.json`
 
 ## Runtime Basics
 
-- Base URL: `/api/v1`
-- Local default base URL: `http://localhost:3000/api/v1`
-- Transport: JSON over HTTP
-- Auth: Bearer token using the backend-issued `accessToken`
-- Token refresh: explicit `POST /auth/refresh`
-- API prefix is already included in the Postman collection variable `baseUrl`
+- **Base URL**: `/api/v1`
+- **Transport**: JSON over HTTP
+- **Auth**: Bearer token using the backend-issued `accessToken`.
+- **Token Rotation**: On `401`, perform `POST /auth/refresh` using the stored `refreshToken`.
+- **Global API Prefix**: Already included in the Postman collection variable `baseUrl`.
 
-## Global Response Shape
+---
 
-All successful responses are wrapped by the global transform interceptor:
+## Global Response Wrappers
 
-```json
-{
-  "success": true,
-  "data": {}
+All successful responses are wrapped by the global transform interceptor.
+
+### Standard Success Wrapper
+
+```typescript
+interface SuccessResponse<T> {
+  success: true;
+  data: T;
 }
 ```
 
-Paginated list responses include `meta`:
+### Paginated Success Wrapper
 
-```json
-{
-  "success": true,
-  "data": [],
-  "meta": {
-    "page": 1,
-    "limit": 10,
-    "total": 42
-  }
+Used on listing endpoints (e.g., `/admin/users`).
+
+```typescript
+interface PaginatedSuccessResponse<T> {
+  success: true;
+  data: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+  };
 }
 ```
 
-All failures are wrapped by the global exception filter:
+### Audit Log Record
 
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Validation failed",
-    "details": {
-      "errors": []
-    }
-  }
+```typescript
+interface AuditLogRecord {
+  id: string;
+  action: string;
+  category: string;
+  actorId?: string;
+  targetId?: string;
+  targetType?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  requestBody?: any;
+  responseStatus?: number;
+  responseTimeMs?: number;
+  errorMessage?: string;
+  metadata?: any;
+  createdAt: string;
 }
 ```
 
-## Auth Model
+### Error Wrapper
 
-- The backend uses Supabase Auth for identity verification.
-- The backend issues its own JWT access and refresh tokens.
-- The authenticated identity id is `user.sub` in backend code and maps to `identity.id`.
-- Route authorization is role-based.
+```typescript
+interface ErrorResponse {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+}
+```
 
-### Roles
+---
 
-- `end_user`
-- `vendor_owner`
-- `super_admin`
+## Common Interface Definitions
 
-## Integration Rules For Frontend
+These sub-objects are reused across multiple request and response DTOs.
 
-- Always send `Authorization: Bearer <accessToken>` for protected endpoints.
-- On `401`, try `POST /auth/refresh` once using the stored `refreshToken`, then retry the original request.
-- On refresh success, replace both `accessToken` and `refreshToken` in storage.
-- For paginated admin lists, read items from `data` and pagination from `meta`.
-- Do not assume raw controller return values; the app always wraps them in `{ success, data }`.
-- Vendor self-service routes derive `vendorId` from the logged-in identity. Do not send a vendor id for those routes.
-- Admin delegated routes require explicit ids in the path. Do not try to reuse self-service paths for admin tooling.
+### `Address` (User/Vendor/Turf)
 
-## Common Enums Used By FE
+```typescript
+interface Address {
+  addressLineOne: string;
+  addressLineTwo?: string;
+  city: string;
+  state: string;
+  pinCode: string;
+  googleMapsLink?: string;
+}
+```
+
+### `VendorBankingDetails`
+
+```typescript
+interface VendorBankingDetails {
+  bankName: string;
+  accountHolderName: string;
+  accountNumber: string;
+  ifsc: string;
+  upiId?: string;
+}
+```
+
+### `KycDocuments`
+
+```typescript
+interface KycDocuments {
+  identityProof: string;
+  addressProof: string;
+  businessRegistration: string;
+  gstCertificate: string;
+  cancelledCheque: string;
+}
+```
+
+### `TurfDocuments`
+
+```typescript
+interface TurfDocuments {
+  propertyDocument?: string;
+  municipalNoc?: string;
+  liabilityInsurance?: string;
+  fieldPhotos?: string[]; // Max 5 photos
+}
+```
+
+---
+
+## Enums
 
 ### Roles
 
@@ -93,712 +149,474 @@ All failures are wrapped by the global exception filter:
 
 ### Gender
 
-- `male`
-- `female`
-- `other`
-- `prefer_not_to_say`
+- `male`, `female`, `other`, `prefer_not_to_say`
 
 ### Sports
 
-- `football`
-- `cricket`
-- `tennis`
-- `badminton`
-- `basketball`
-- `hockey`
-- `volleyball`
-- `kabaddi`
+- `football`, `cricket`, `tennis`, `badminton`, `basketball`, `hockey`, `volleyball`, `kabaddi`
 
 ### Business Type
 
-- `individual`
-- `company`
-- `partnership`
+- `individual`, `company`, `partnership`
 
-### KYC Status
+### KYC / Document Status
 
-- `not_started`
-- `pending`
-- `in_review`
-- `verified`
-- `rejected`
+- `not_started`, `pending`, `in_review`, `verified`, `rejected`
 
-### Vendor Status
+### Vendor / Turf Status
 
-- `active`
-- `pending`
-- `suspended`
+- `active`, `pending`, `suspended`, `inactive`, `maintenance`
 
-### Turf Surface Type
+### User Status
 
-- `artificial_turf`
-- `natural_grass`
-- `concrete`
-- `wooden`
-- `synthetic`
+- `active`, `pending`, `banned`, `inactive`
 
-### Turf Amenity Type
+---
 
-- `parking`
-- `flood_lights`
-- `changing_room`
-- `cafeteria`
-- `equipment_rental`
-- `first_aid`
-- `wifi`
-- `cctv`
-- `drinking_water`
-
-### Turf Field Status
-
-- `active`
-- `inactive`
-- `pending`
-- `maintenance`
-- `suspended`
-
-## Auth Endpoints
+## 1. Auth Endpoints
 
 ### `POST /auth/signup`
 
-Purpose:
-- Register either an `end_user` or `vendor_owner`.
+**Role**: Public
+**Purpose**: Register a new `end_user` or `vendor_owner`.
 
-Important behavior:
-- `role` defaults to `end_user`.
-- `super_admin` signup is forbidden.
-- Vendor signup creates vendor profile and an empty KYC record.
-- End-user signup creates the user profile immediately.
+**Request**:
 
-Request shape for `end_user`:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "role": "end_user",
-  "firstName": "John",
-  "lastName": "Doe",
-  "displayName": "JohnD",
-  "gender": "male",
-  "dateOfBirth": "1995-05-15",
-  "city": "Kochi",
-  "state": "Kerala",
-  "preferredSports": ["football", "cricket"]
+```typescript
+interface SignupRequest {
+  email: string;
+  password: string; // Min 8 chars
+  role?: 'end_user' | 'vendor_owner'; // Defaults to end_user
+  // Required if role is end_user
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  // Required if role is vendor_owner
+  vendorProfile?: {
+    businessName: string;
+    businessType: 'individual' | 'company' | 'partnership';
+    ownerFullName: string;
+    address: Address;
+    bankingDetails: VendorBankingDetails;
+    payoutCycle?: string;
+    commissionPct?: string;
+  };
+  // Optional profile fields
+  avatarUrl?: string;
+  dateOfBirth?: string; // ISO Date
+  gender?: string;
+  city?: string;
+  state?: string;
+  preferredSports?: string[];
 }
 ```
 
-Request shape for `vendor_owner`:
+**Response**:
 
-```json
-{
-  "email": "vendor@example.com",
-  "password": "password123",
-  "role": "vendor_owner",
-  "vendorProfile": {
-    "businessName": "Acme Turf Fields",
-    "businessType": "company",
-    "ownerFullName": "John Vendor",
-    "address": {
-      "addressLineOne": "123 Stadium Drive",
-      "addressLineTwo": "Near Central Park",
-      "city": "Mumbai",
-      "state": "Maharashtra",
-      "pinCode": "400001",
-      "googleMapsLink": "https://maps.google.com/?q=123+Stadium+Drive"
-    },
-    "bankingDetails": {
-      "bankName": "HDFC Bank",
-      "accountHolderName": "John Vendor",
-      "accountNumber": "123456789012",
-      "ifsc": "HDFC0001234",
-      "upiId": "john@upi"
-    }
-  }
-}
-```
-
-Success payload inside `data`:
-
-```json
-{
-  "accessToken": "jwt",
-  "refreshToken": "jwt",
-  "identity": {
-    "id": "identity-id",
-    "email": "user@example.com",
-    "roles": ["end_user"],
-    "profileCompleted": true
-  }
+```typescript
+interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  identity: {
+    id: string;
+    email: string;
+    roles: string[];
+    permissions: string[]; // ['*'] for super_admin, or resource:action list
+    profileCompleted: boolean;
+  };
 }
 ```
 
 ### `POST /auth/signin`
 
-Purpose:
-- Sign in using email and password.
-
-Request:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-Response:
-- Same shape as signup.
+**Role**: Public
+**Request**: `{ email, password }`
+**Response**: `AuthResponse`
 
 ### `POST /auth/refresh`
 
-Purpose:
-- Rotate access and refresh tokens.
-
-Request:
-
-```json
-{
-  "refreshToken": "existing-refresh-token"
-}
-```
-
-Response:
-- Same shape as signup.
+**Role**: Public (with valid Refresh Token)
+**Request**: `{ refreshToken: string }`
+**Response**: `AuthResponse`
 
 ### `POST /auth/signout`
 
-Purpose:
-- Revoke refresh tokens for the authenticated identity.
+**Role**: Authenticated
+**Request**: (Bearer Token only)
+**Response**: `{ message: string }`
 
-Notes:
-- Requires bearer token.
-- Returns a message in `data`.
+---
 
-## User Endpoints
+## 2. User Endpoints
 
 ### `GET /users/me`
 
-Role:
-- any authenticated user with a completed end-user profile
+**Role**: Authenticated
+**Response**:
 
-Purpose:
-- Fetch the current end-user profile.
-
-Response fields in `data`:
-
-```json
-{
-  "id": "user-id",
-  "identityId": "identity-id",
-  "email": "user@example.com",
-  "firstName": "John",
-  "middleName": null,
-  "lastName": "Doe",
-  "displayName": "JohnD",
-  "avatarUrl": null,
-  "dateOfBirth": null,
-  "gender": null,
-  "city": "Kochi",
-  "state": "Kerala",
-  "country": "India",
-  "preferredSports": ["football"],
-  "ownReferralCode": null,
-  "pushNotificationsEnabled": false,
-  "lastActiveAt": null,
-  "createdAt": "2026-04-03T10:00:00.000Z"
+```typescript
+interface UserProfileResponse {
+  id: string;
+  identityId: string;
+  email: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  displayName: string;
+  avatarUrl: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
+  city: string | null;
+  state: string | null;
+  country: string;
+  preferredSports: string[];
+  ownReferralCode: string | null;
+  pushNotificationsEnabled: boolean;
+  status: string; // active, pending, banned, inactive
+  lastActiveAt: string | null;
+  createdAt: string;
 }
 ```
 
 ### `PATCH /users/me`
 
-Purpose:
-- Partial update of end-user profile fields.
+**Role**: Authenticated
+**Purpose**: Partial update of profile.
+**Request**:
 
-Supported request fields:
-
-- `firstName`
-- `middleName`
-- `lastName`
-- `displayName`
-- `avatarUrl`
-- `dateOfBirth`
-- `gender`
-- `city`
-- `state`
-- `preferredSports`
-- `deviceOs`
-- `appVersion`
-- `pushNotificationsEnabled`
-- `onesignalPlayerId`
-- `whatsapp`
-
-Important behavior:
-- `whatsapp` is stored on the identity layer, not the `users` table.
-- Missing fields are ignored.
+```typescript
+interface UpdateUserProfileRequest {
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  city?: string;
+  state?: string;
+  preferredSports?: string[];
+  deviceOs?: 'ios' | 'android' | 'web';
+  appVersion?: string;
+  pushNotificationsEnabled?: boolean;
+  onesignalPlayerId?: string;
+  whatsapp?: string;
+}
+```
 
 ### `DELETE /users/me`
 
-Purpose:
-- Soft-delete the current user account.
+**Role**: Authenticated
+**Purpose**: Soft-delete account.
+**Response**: `{ message: string }`
 
-Important behavior:
-- Marks the user as deleted.
-- Sets the identity status to `inactive`.
-- FE should treat this as a terminal action and log the user out locally.
+---
 
-### `GET /users/:id`
-
-Role:
-- `super_admin`
-
-Purpose:
-- Fetch any user by user id.
-
-## Vendor Endpoints
+## 3. Vendor Endpoints
 
 ### `GET /vendors/me`
 
-Role:
-- `vendor_owner`
+**Role**: `vendor_owner`
+**Response**:
 
-Purpose:
-- Fetch the current vendor profile using the authenticated identity.
-
-Response fields in `data`:
-
-```json
-{
-  "id": "vendor-id",
-  "identityId": "identity-id",
-  "businessName": "Acme Turf Fields",
-  "businessType": "company",
-  "ownerFullName": "John Vendor",
-  "address": {
-    "addressLineOne": "123 Stadium Drive",
-    "addressLineTwo": null,
-    "city": "Mumbai",
-    "state": "Maharashtra",
-    "pinCode": "400001",
-    "googleMapsLink": null
-  },
-  "commissionPct": "0.00",
-  "payoutCycle": "monthly",
-  "status": "pending",
-  "createdAt": "2026-04-03T10:00:00.000Z",
-  "updatedAt": "2026-04-03T10:00:00.000Z"
+```typescript
+interface VendorProfileResponse {
+  id: string;
+  identityId: string;
+  businessName: string;
+  businessType: string;
+  ownerFullName: string;
+  address: Address;
+  commissionPct: string;
+  payoutCycle: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
-
-Notes:
-- `bankingDetails` is excluded from the standard response DTO. Do not assume it is returned.
 
 ### `PATCH /vendors/me`
 
-Role:
-- `vendor_owner`
+**Role**: `vendor_owner`
+**Request**: `Partial<SignupRequest['vendorProfile']>`
+**Response**: `VendorProfileResponse`
 
-Purpose:
-- Partial update of vendor profile fields.
+---
 
-Supported request fields:
-- `businessName`
-- `businessType`
-- `ownerFullName`
-- `address`
-- `bankingDetails`
+## 4. Vendor KYC Endpoints
 
-## Vendor KYC Endpoints
+### `PATCH /kyc/me/submit`
 
-### `POST /kyc/me/submit`
+**Role**: `vendor_owner`
+**Request**: `{ documents: Partial<KycDocuments> }`
+**Response**:
 
-Role:
-- `vendor_owner`
-
-Purpose:
-- Submit or replace the vendor KYC document set.
-
-Request:
-
-```json
-{
-  "documents": {
-    "identityProof": "https://storage.example.com/docs/id.pdf",
-    "addressProof": "https://storage.example.com/docs/addr.pdf",
-    "businessRegistration": "https://storage.example.com/docs/biz.pdf",
-    "gstCertificate": "https://storage.example.com/docs/gst.pdf",
-    "cancelledCheque": "https://storage.example.com/docs/cheque.pdf"
-  }
+```typescript
+interface KycResponse {
+  id: string;
+  vendorId: string;
+  status: string;
+  documents: KycDocuments;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  submittedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
-
-Important behavior:
-- If the KYC record is already `verified`, further updates are rejected.
-- Complete submissions move status toward `pending`.
-- Vendor signup already creates an empty KYC record with status `not_started`.
 
 ### `GET /kyc/me`
 
-Role:
-- `vendor_owner`
+**Role**: `vendor_owner`
+**Response**: `KycResponse`
 
-Purpose:
-- Get current vendor KYC status and stored documents.
+---
 
-Response fields in `data`:
-
-```json
-{
-  "id": "kyc-id",
-  "vendorId": "vendor-id",
-  "status": "pending",
-  "documents": {
-    "identityProof": "https://...",
-    "addressProof": "https://...",
-    "businessRegistration": "https://...",
-    "gstCertificate": "https://...",
-    "cancelledCheque": "https://..."
-  },
-  "reviewedBy": null,
-  "reviewedAt": null,
-  "submittedAt": "2026-04-03T10:00:00.000Z",
-  "createdAt": "2026-04-03T10:00:00.000Z",
-  "updatedAt": "2026-04-03T10:00:00.000Z"
-}
-```
-
-Notes:
-- `reviewerNotes` is excluded from the standard DTO response.
-
-## Turf Endpoints
+## 5. Turf Endpoints
 
 ### `POST /turfs`
 
-Role:
-- `vendor_owner`
+**Role**: `vendor_owner`
+**Request**:
 
-Purpose:
-- Create a turf for the authenticated vendor.
-
-Request:
-
-```json
-{
-  "name": "Champions Arena",
-  "sports": ["football", "cricket"],
-  "surfaceType": "artificial_turf",
-  "address": {
-    "addressLineOne": "Stadium Complex",
-    "city": "Kochi",
-    "state": "Kerala",
-    "pinCode": "682001"
-  },
-  "weekdayOpen": "06:00",
-  "weekdayClose": "23:00",
-  "weekendOpen": "05:00",
-  "weekendClose": "23:59",
-  "standardPricePaise": 150000,
-  "amenities": ["parking", "changing_room"],
-  "capacity": 14,
-  "sizeFormat": "7v7",
-  "cancellationWindowHrs": 24
+```typescript
+interface CreateTurfRequest {
+  name: string;
+  sports: string[];
+  surfaceType: string;
+  address: Address;
+  weekdayOpen: string; // HH:MM
+  weekdayClose: string;
+  weekendOpen: string;
+  weekendClose: string;
+  standardPricePaise: number;
+  amenities?: string[];
+  capacity?: number;
+  sizeFormat?: string;
+  cancellationWindowHrs?: number;
 }
 ```
 
-Validation notes:
-- Time fields must be valid `HH:MM` or `HH:MM:SS`.
-- `standardPricePaise` is integer paise, not decimal currency.
+**Response**: (`TurfResponseDto`)
 
-Important behavior:
-- Turf creation also creates an empty turf document record.
-- New turf status starts as `pending`.
+```typescript
+interface TurfResponse {
+  id: string;
+  vendorId: string;
+  name: string;
+  sports: string[];
+  amenities: string[];
+  capacity: number | null;
+  sizeFormat: string | null;
+  surfaceType: string;
+  address: Address;
+  weekdayOpen: string;
+  weekdayClose: string;
+  weekendOpen: string;
+  weekendClose: string;
+  standardPricePaise: number;
+  cancellationWindowHrs: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
 
 ### `GET /turfs/my-turfs`
 
-Role:
-- `vendor_owner`
-
-Purpose:
-- Fetch all turfs owned by the current vendor.
+**Role**: `vendor_owner`
+**Response**: `TurfResponse[]` (Standard Wrapper)
 
 ### `GET /turfs/:id`
 
-Role:
-- `vendor_owner`
-
-Purpose:
-- Fetch one turf owned by the current vendor.
-
-Important behavior:
-- Ownership is enforced. A vendor cannot read another vendor's turf.
+**Role**: `vendor_owner`
+**Response**: `TurfResponse`
 
 ### `PATCH /turfs/:id`
 
-Role:
-- `vendor_owner`
-
-Purpose:
-- Partially update turf fields.
-
-Supported request fields:
-- any field from create turf payload
+**Role**: `vendor_owner`
+**Request**: `Partial<CreateTurfRequest>`
+**Response**: `TurfResponse`
 
 ### `DELETE /turfs/:id`
 
-Role:
-- `vendor_owner`
+**Role**: `vendor_owner`
+**Response**: `{ message: string }`
 
-Purpose:
-- Soft-delete the turf.
+---
 
-## Turf Document Endpoints
+## 6. Turf Document Endpoints
 
 ### `PATCH /turfs/:turfId/documents`
 
-Role:
-- `vendor_owner`
+**Role**: `vendor_owner`
+**Request**: `{ documents: Partial<TurfDocuments> }`
+**Response**:
 
-Purpose:
-- Submit or partially update turf verification documents.
-
-Request:
-
-```json
-{
-  "documents": {
-    "propertyDocument": "https://storage.com/docs/prop.pdf",
-    "municipalNoc": "https://storage.com/docs/noc.pdf",
-    "liabilityInsurance": "https://storage.com/docs/insurance.pdf",
-    "fieldPhotos": [
-      "https://storage.com/img1.jpg",
-      "https://storage.com/img2.jpg"
-    ]
-  }
+```typescript
+interface TurfDocumentsResponse {
+  id: string;
+  fieldId: string;
+  status: string;
+  documents: TurfDocuments;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  submittedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
-
-Validation notes:
-- All document URLs must be valid URLs.
-- `fieldPhotos` max length is 5.
-
-Important behavior:
-- Partial updates are merged with existing document values.
-- If the full set becomes complete, status can move to `pending`.
-- Verified turf documents cannot be updated again.
 
 ### `GET /turfs/:turfId/documents`
 
-Role:
-- `vendor_owner`
+**Role**: `vendor_owner`
+**Response**: `TurfDocumentsResponse`
 
-Purpose:
-- Fetch current turf document status and stored document URLs.
+---
 
-Response fields in `data`:
+## 7. Admin Endpoints
 
-```json
-{
-  "id": "field-doc-id",
-  "fieldId": "turf-id",
-  "status": "pending",
-  "documents": {
-    "propertyDocument": "https://...",
-    "municipalNoc": "https://...",
-    "liabilityInsurance": "https://...",
-    "fieldPhotos": ["https://..."]
-  },
-  "reviewedBy": null,
-  "reviewedAt": null,
-  "submittedAt": "2026-04-03T10:00:00.000Z",
-  "createdAt": "2026-04-03T10:00:00.000Z",
-  "updatedAt": "2026-04-03T10:00:00.000Z"
+All admin endpoints require `super_admin` role.
+
+### Listing Operations (Paginated)
+
+- `GET /admin/users` -> `PaginatedSuccessResponse<UserProfileResponse>`
+- `GET /admin/vendors` -> `PaginatedSuccessResponse<VendorProfileResponse & { kyc?: KycResponse }>`
+- `GET /admin/turfs` -> `PaginatedSuccessResponse<TurfResponse & { documents?: TurfDocumentsResponse }>`
+- `GET /audit` -> `PaginatedSuccessResponse<AuditLogRecord>`
+
+### Delegated Lookup
+
+- `GET /admin/users/:userId` -> `UserProfileResponse`
+- `GET /admin/vendors/:vendorId` -> `VendorProfileResponse`
+- `GET /admin/turfs/:turfId` -> `TurfResponse`
+
+### Admin Operations
+
+- `DELETE /admin/vendors/:vendorId` -> `{ message: string }`
+- `POST /admin/onboard-vendor`
+  - Request: `{ email, password, vendorProfile: CreateVendorDto }`
+  - Response: `{ vendorId: string, identityId: string }`
+- `POST /admin/users/:userId/ban` -> `{ message: string }`
+- `POST /admin/users/:userId/unban` -> `{ message: string }`
+
+### Admin Overrides
+
+- `POST /admin/vendors/:vendorId/turfs` -> `TurfResponse`
+- `POST /admin/vendors/:vendorId/kyc` -> `KycResponse`
+- `PATCH /admin/vendors/:vendorId/kyc/review`
+  - Request: `{ status: KycStatus, reviewerNotes?: string }`
+  - Response: `KycResponse`
+- `PATCH /admin/turfs/:turfId/documents` -> `TurfDocumentsResponse`
+- `GET /admin/turfs/:turfId/documents` -> `TurfDocumentsResponse`
+- `PATCH /admin/turfs/:turfId/documents/review`
+  - Request: `{ status: KycStatus, reviewerNotes?: string }`
+  - Response: `TurfDocumentsResponse`
+
+---
+
+## 9. Sub-Admin & RBAC Endpoints
+
+All endpoints require `super_admin` role OR a sub-admin with the `sub_admin:manage` permission.
+
+### Sub-Admin Management
+
+#### `GET /admin/sub-admins`
+**Role**: Admin
+**Purpose**: List all users with sub-admin roles and their assigned custom roles.
+
+interface SubAdminListItem {
+  identityId: string;
+  email: string;
+  name?: string;
+  roles: {
+    id: string;
+    name: string;
+    description: string;
+  }[];
 }
 ```
 
-Notes:
-- `reviewerNotes` is excluded from the standard DTO response.
+#### `GET /admin/sub-admins/:id/roles`
+**Purpose**: Fetch the specific roles assigned to a sub-admin.
+**Response**: `CustomRoleItem[]`
 
-## Admin Endpoints
-
-All admin endpoints require:
-
-- bearer token
-- `super_admin` role
-
-### Admin Listing
-
-#### `GET /admin/users?page=1&limit=10`
-
-Purpose:
-- List end-user profiles.
-
-Response:
-- paginated response with `data[]` and `meta`
-
-#### `GET /admin/vendors?page=1&limit=10`
-
-Purpose:
-- List vendor profiles.
-
-Response:
-- paginated response with `data[]` and `meta`
-
-Pagination notes:
-- `page` minimum is `1`
-- `limit` minimum is `1`
-- `limit` maximum is `100`
-
-### Admin Vendor Onboarding
-
-#### `POST /admin/onboard-vendor`
-
-Purpose:
-- Create a vendor directly from admin tooling.
-
-Request:
-- same vendor profile shape as vendor signup, plus top-level `email` and `password`
-
-Important behavior:
-- creates auth identity
-- assigns `vendor_owner` role
-- creates vendor profile
-- creates empty KYC record
-- returns:
-
-```json
-{
-  "vendorId": "vendor-id",
-  "identityId": "identity-id"
+#### `POST /admin/sub-admins`
+**Purpose**: Create a new sub-admin account.
+**Request**:
+```typescript
+interface CreateSubAdminRequest {
+  email: string;
+  password: string;
+  name?: string;
 }
 ```
 
-### Admin KYC Delegated Operations
+#### `PATCH /admin/sub-admins/:id/roles`
+**Purpose**: Assign or revoke custom roles for a sub-admin.
+**Request**: `{ roleIds: string[] }`
 
-#### `POST /admin/vendors/:vendorId/kyc`
+---
 
-Purpose:
-- Upload vendor KYC documents on behalf of a vendor.
+### Role & Permission Management
 
-Request:
-- same as `POST /kyc/me/submit`
-
-#### `PATCH /admin/vendors/:vendorId/kyc/review`
-
-Purpose:
-- Review vendor KYC.
-
-Request:
-
-```json
-{
-  "status": "verified",
-  "reviewerNotes": "Approved by Admin."
+#### `GET /admin/sub-admins/permissions`
+**Purpose**: Fetch the catalogue of all available permissions.
+**Response**:
+```typescript
+interface PermissionCatalogueItem {
+  id: string;
+  action: string;
+  resource: string;
+  description: string;
 }
 ```
 
-Important behavior:
-- if status is `verified`, vendor status becomes `active`
-- if status is `rejected` or `in_review`, vendor status becomes `pending`
-
-### Admin Turf Delegated Operations
-
-#### `POST /admin/vendors/:vendorId/turfs`
-
-Purpose:
-- Create a turf for a specific vendor.
-
-Request:
-- same as `POST /turfs`
-
-#### `GET /admin/turfs/:turfId`
-
-Purpose:
-- Fetch any turf by id without vendor self-scope restrictions.
-
-#### `PATCH /admin/turfs/:turfId/documents`
-
-Purpose:
-- Upload or merge turf documents on behalf of the turf owner.
-
-Request:
-- same as `PATCH /turfs/:turfId/documents`
-
-#### `GET /admin/turfs/:turfId/documents`
-
-Purpose:
-- Fetch current turf document status by turf id.
-
-#### `PATCH /admin/turfs/:turfId/documents/review`
-
-Purpose:
-- Review turf verification documents.
-
-Request:
-
-```json
-{
-  "status": "verified",
-  "reviewerNotes": "Turf docs look solid."
+#### `GET /admin/sub-admins/roles`
+**Purpose**: List all custom roles and their permissions.
+**Response**:
+```typescript
+interface CustomRoleItem {
+  id: string;
+  name: string;
+  description: string;
+  isSystem: boolean;
+  permissions: PermissionCatalogueItem[];
+  createdAt: string;
+}
 }
 ```
 
-Important behavior:
-- if status is `verified`, turf field status becomes `active`
-- if status is `rejected` or `in_review`, turf field status becomes `pending`
+> [!NOTE]
+> System roles (`super_admin`, `vendor_owner`, `end_user`, `sub_admin`) are hidden and protected. They cannot be managed via these endpoints.
 
-## Health Endpoints
+#### `POST /admin/sub-admins/roles`
+**Request**:
+```typescript
+interface CreateRoleRequest {
+  name: string;
+  description: string;
+  permissionIds: string[]; // UUIDs from Permission Catalogue
+}
+```
 
-### `GET /health/server`
+#### `PATCH /admin/sub-admins/roles/:roleId/permissions`
+**Purpose**: Fully update the permission list for a custom role.
+**Request**: `{ permissionIds: string[] }`
 
-Purpose:
-- Public server heartbeat endpoint.
+#### `DELETE /admin/sub-admins/roles/:roleId`
+**Purpose**: Delete a custom role. Fails if the role is still assigned to users.
 
-### `GET /health/database`
+#### `DELETE /admin/sub-admins/:id`
+**Purpose**: Decommission a sub-admin identity. This revokes all assignments and permanently deletes the user from Auth.
+**Response**: `{ success: true }`
 
-Purpose:
-- Public database connectivity check.
+---
 
-## Recommended Frontend Flows
+## Important Integration Caveats
 
-### End User Auth Flow
-
-1. Call `POST /auth/signup` or `POST /auth/signin`.
-2. Store `accessToken`, `refreshToken`, and `identity.roles`.
-3. Use `GET /users/me` to hydrate the end-user profile.
-4. Use `PATCH /users/me` for profile edits.
-
-### Vendor Onboarding Flow
-
-1. Call `POST /auth/signup` with `role: "vendor_owner"` and nested `vendorProfile`.
-2. Store tokens from the auth response.
-3. Call `GET /vendors/me` to hydrate vendor profile state.
-4. Call `GET /kyc/me` to inspect current KYC status.
-5. Call `POST /kyc/me/submit` when the full KYC document set is ready.
-6. Poll or refetch `GET /kyc/me` after submission until status changes.
-
-### Turf Creation And Verification Flow
-
-1. Call `POST /turfs`.
-2. Read created turf id from `data.id`.
-3. Upload documents using `PATCH /turfs/:turfId/documents`.
-4. Fetch document status using `GET /turfs/:turfId/documents`.
-5. Show turf activation state from turf `status` and document `status`.
-
-### Admin Review Flow
-
-1. Use admin list endpoints to fetch users and vendors.
-2. Use delegated admin routes with explicit path ids.
-3. For vendor review:
-   - upload docs with `POST /admin/vendors/:vendorId/kyc` if needed
-   - review with `PATCH /admin/vendors/:vendorId/kyc/review`
-4. For turf review:
-   - inspect turf with `GET /admin/turfs/:turfId`
-   - upload docs with `PATCH /admin/turfs/:turfId/documents` if needed
-   - review with `PATCH /admin/turfs/:turfId/documents/review`
-
-## Important FE Caveats
-
-- The Postman collection now reflects the controller paths. Use it as the quickest executable reference.
-- Earlier collection paths like `/kyc/:vendorId/review` and `/turfs/:turfId/documents/review` without the `/admin` prefix were not valid controller routes.
-- Review note fields are accepted in admin review payloads, but standard DTO responses exclude `reviewerNotes`.
-- Vendor profile responses exclude `bankingDetails` by default.
+1. **Paise Implementation**: All monetary values (`standardPricePaise`) are integer values in Paise. Divide by 100 on FE for display.
+2. **Date Strings**: All dates are returned in ISO 8601 strings.
+3. **Partial Updates**: All `PATCH` requests support partial updates. Merging logic is handled on the backend.
+4. **Validation Errors**: Validation failures return `400` with the `error` wrapper.
+5. **Role-Based Access**: FE should guard routes based on `identity.roles` provided in the login/signup response.

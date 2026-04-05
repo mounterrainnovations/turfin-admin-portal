@@ -82,7 +82,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["auth", "signup"]
             },
-            "description": "Register a new vendor_owner account. Creates auth identity + vendor profile + empty KYC record in a single atomic transaction."
+            "description": "Register a new vendor_owner account. Creates auth identity + vendor profile + empty KYC record in a single atomic transaction. Includes optional financial terms (payoutCycle, commissionPct)."
           },
           "response": []
         },
@@ -189,6 +189,48 @@
       ]
     },
     {
+      "name": "Audit",
+      "description": "System-wide audit logging endpoints for administrators.",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "List all system audit logs with pagination metadata. Requires super_admin role."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Admin",
       "description": "Super admin delegated operations. These endpoints act on explicit vendor or turf identifiers and should never rely on the currently signed-in vendor context.",
       "item": [
@@ -256,7 +298,191 @@
                 }
               ]
             },
-            "description": "List vendor profiles with pagination metadata. Requires a super_admin bearer token."
+            "description": "List vendor profiles with pagination metadata. Includes KYC details. Requires a super_admin bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "List Turfs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/turfs?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "turfs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "List all turf profiles across all vendors with pagination metadata. Includes turf documents. Requires a super_admin bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Vendor by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vendors/:vendorId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "vendors", ":vendorId"],
+              "variable": [
+                {
+                  "key": "vendorId",
+                  "value": "{{vendorId}}"
+                }
+              ]
+            },
+            "description": "Fetch a specific vendor profile by its ID. Requires a super_admin bearer token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", ":userId"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Fetch a specific user profile by its ID. Moved from /users/:id to /admin/users/:userId."
+          },
+          "response": []
+        },
+        {
+          "name": "Ban User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:userId/ban",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", ":userId", "ban"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Ban a user and cancel all active bookings."
+          },
+          "response": []
+        },
+        {
+          "name": "Unban User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:userId/unban",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", ":userId", "unban"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Unban a user account."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Vendor",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vendors/:vendorId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "vendors", ":vendorId"],
+              "variable": [
+                {
+                  "key": "vendorId",
+                  "value": "{{vendorId}}"
+                }
+              ]
+            },
+            "description": "Soft-delete a vendor profile. This sets the deletedAt timestamp and suspends the vendor."
           },
           "response": []
         },
@@ -403,11 +629,11 @@
                 }
               ]
             },
-            "method": "POST",
+            "method": "PATCH",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\",\n        \"addressProof\": \"https://storage.example.com/docs/addr.pdf\",\n        \"businessRegistration\": \"https://storage.example.com/docs/biz.pdf\",\n        \"gstCertificate\": \"https://storage.example.com/docs/gst.pdf\",\n        \"cancelledCheque\": \"https://storage.example.com/docs/cheque.pdf\"\n    }\n}",
+              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\"\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -425,7 +651,7 @@
                 }
               ]
             },
-            "description": "Submit or replace vendor KYC documents through the admin delegated route. Useful when operations uploads documents on the vendor's behalf."
+            "description": "Submit or partially update vendor KYC documents through the admin delegated route."
           },
           "response": []
         },
@@ -575,6 +801,288 @@
             "description": "Review turf verification documents. Setting status to verified activates the turf; rejected or in_review keeps the turf pending."
           },
           "response": []
+        },
+        {
+          "name": "Sub-Admin Management",
+          "description": "Endpoints for managing sub-admin accounts and their permission-based roles.",
+          "item": [
+            {
+              "name": "List Sub-Admins",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins"]
+                },
+                "description": "Retrieve all users with admin-level roles and their assigned custom roles."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Sub-Admin",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"subadmin@example.com\",\n    \"password\": \"password123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins"]
+                },
+                "description": "Create a new sub-admin account. Requires super_admin or sub_admin:manage."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Sub-Admin Roles",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", ":id", "roles"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Fetch the specific roles assigned to an administrator."
+              },
+              "response": []
+            },
+            {
+              "name": "Assign Roles to Sub-Admin",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"roleIds\": [\"role-uuid-here\"]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", ":id", "roles"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Update the roles assigned to a sub-admin. Replaces existing assignments."
+              },
+              "response": []
+            },
+            {
+              "name": "List All Permissions",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins/permissions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "permissions"]
+                },
+                "description": "Get a list of all available permission strings in the system (resource:action)."
+              },
+              "response": []
+            },
+            {
+              "name": "List Custom Roles",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins/roles",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "roles"]
+                },
+                "description": "List all custom roles and their associated permission arrays."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Custom Role",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"KYC Specialist\",\n    \"description\": \"Responsible for viewing and verifying vendor KYC\",\n    \"permissionIds\": [\"uuid-from-permissions-catalogue\"]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins/roles",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "roles"]
+                },
+                "description": "Create a new custom role with a set of permissions."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Role Permissions",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"permissionIds\": [\"uuid-1\", \"uuid-2\"]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "roles", ":roleId", "permissions"],
+                  "variable": [
+                    {
+                      "key": "roleId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Update the list of permissions for a specific custom role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Custom Role",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "roles", ":roleId"],
+                  "variable": [
+                    {
+                      "key": "roleId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Delete a custom role. Fails if the role has active assignments."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -662,36 +1170,6 @@
             "description": "Soft-delete current user's account."
           },
           "response": []
-        },
-        {
-          "name": "Get User by ID",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/users/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "{{userId}}"
-                }
-              ]
-            },
-            "description": "Get any user by ID (Super Admin Role Required)."
-          },
-          "response": []
         }
       ]
     },
@@ -719,12 +1197,12 @@
               "host": ["{{baseUrl}}"],
               "path": ["vendors", "me"]
             },
-            "description": "Retrieve the vendor profile of the currently authenticated vendor_owner."
+            "description": "Retrieve the profile of the vendor associated with the current identity."
           },
           "response": []
         },
         {
-          "name": "Update My Vendor Profile",
+          "name": "Update Vendor Profile",
           "request": {
             "auth": {
               "type": "bearer",
@@ -740,7 +1218,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"businessName\": \"Acme Turf Fields Updated\",\n    \"ownerFullName\": \"John V. Updated\",\n    \"address\": {\n        \"addressLineOne\": \"456 New Stadium Road\",\n        \"city\": \"Pune\",\n        \"state\": \"Maharashtra\",\n        \"pinCode\": \"411001\"\n    }\n}",
+              "raw": "{\n    \"businessName\": \"Acme Sports Refined\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -752,7 +1230,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["vendors", "me"]
             },
-            "description": "Partially update vendor profile fields."
+            "description": "Partially update vendor fields like businessName, address, or bankingDetails."
           },
           "response": []
         }
@@ -760,10 +1238,10 @@
     },
     {
       "name": "KYC",
-      "description": "Vendor-owner KYC self-service endpoints. Admin delegated KYC routes live under the Admin folder.",
+      "description": "Vendor KYC submission and status retrieval.",
       "item": [
         {
-          "name": "Submit Vendor KYC",
+          "name": "Submit/Update KYC",
           "request": {
             "auth": {
               "type": "bearer",
@@ -775,11 +1253,11 @@
                 }
               ]
             },
-            "method": "POST",
+            "method": "PATCH",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\",\n        \"addressProof\": \"https://storage.example.com/docs/addr.pdf\",\n        \"businessRegistration\": \"https://storage.example.com/docs/biz.pdf\",\n        \"gstCertificate\": \"https://storage.example.com/docs/gst.pdf\",\n        \"cancelledCheque\": \"https://storage.example.com/docs/cheque.pdf\"\n    }\n}",
+              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\",\n        \"addressProof\": \"https://storage.example.com/docs/addr.pdf\"\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -791,7 +1269,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["kyc", "me", "submit"]
             },
-            "description": "Submit KYC documents for the authenticated vendor."
+            "description": "Submit or merge KYC document URLs. Status moves to pending if essential docs are present."
           },
           "response": []
         },
@@ -815,7 +1293,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["kyc", "me"]
             },
-            "description": "Retrieve own KYC status."
+            "description": "Retrieve the current KYC verification status and stored document metadata."
           },
           "response": []
         }
@@ -823,7 +1301,7 @@
     },
     {
       "name": "Turfs",
-      "description": "Vendor-owner turf CRUD. These routes are self-scoped to the authenticated vendor and return turf records wrapped in the standard response envelope.",
+      "description": "Turf management for vendors. Covers creation, retrieval, and document verification flows.",
       "item": [
         {
           "name": "Create Turf",
@@ -856,7 +1334,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"Champions Arena\",\n    \"sports\": [\"football\", \"cricket\"],\n    \"surfaceType\": \"artificial_turf\",\n    \"address\": {\n        \"addressLineOne\": \"Stadium Complex\",\n        \"city\": \"Kochi\",\n        \"state\": \"Kerala\",\n        \"pinCode\": \"682001\"\n    },\n    \"weekdayOpen\": \"06:00\",\n    \"weekdayClose\": \"23:00\",\n    \"weekendOpen\": \"05:00\",\n    \"weekendClose\": \"23:59\",\n    \"standardPricePaise\": 150000,\n    \"amenities\": [\"parking\", \"changing_room\", \"drinking_water\"]\n}",
+              "raw": "{\n    \"name\": \"Main Football Field\",\n    \"sports\": [\"football\"],\n    \"surfaceType\": \"natural_grass\",\n    \"address\": {\n        \"addressLineOne\": \"Plot 44, Sports Complex\",\n        \"city\": \"Mumbai\",\n        \"state\": \"Maharashtra\",\n        \"pinCode\": \"400002\"\n    },\n    \"weekdayOpen\": \"06:00\",\n    \"weekdayClose\": \"22:00\",\n    \"weekendOpen\": \"05:00\",\n    \"weekendClose\": \"23:00\",\n    \"standardPricePaise\": 150000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -868,12 +1346,12 @@
               "host": ["{{baseUrl}}"],
               "path": ["turfs"]
             },
-            "description": "Create a new turf field (Vendor only)."
+            "description": "Create a new turf field. Automatically initializes a corresponding turf document record with not_started status."
           },
           "response": []
         },
         {
-          "name": "Get My Turfs",
+          "name": "List My Turfs",
           "request": {
             "auth": {
               "type": "bearer",
@@ -892,7 +1370,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["turfs", "my-turfs"]
             },
-            "description": "Get all turfs owned by the current vendor."
+            "description": "List all turfs owned by the authenticated vendor."
           },
           "response": []
         },
@@ -922,85 +1400,10 @@
                 }
               ]
             },
-            "description": "Get basic turf details by ID."
+            "description": "Fetch details of a specific turf field."
           },
           "response": []
         },
-        {
-          "name": "Update Turf",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Champions Arena Updated\",\n    \"standardPricePaise\": 160000\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/turfs/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "{{turfId}}"
-                }
-              ]
-            },
-            "description": "Partially update turf details."
-          },
-          "response": []
-        },
-        {
-          "name": "Delete Turf",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/turfs/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "{{turfId}}"
-                }
-              ]
-            },
-            "description": "Soft-delete a turf."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Turf Documents",
-      "description": "Vendor-owner turf verification document endpoints. Admin delegated document routes live under the Admin folder.",
-      "item": [
         {
           "name": "Update Turf Documents",
           "request": {
@@ -1018,7 +1421,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"documents\": {\n        \"propertyDocument\": \"https://storage.com/docs/prop.pdf\",\n        \"municipalNoc\": \"https://storage.com/docs/noc.pdf\",\n        \"fieldPhotos\": [\"https://storage.com/img1.jpg\", \"https://storage.com/img2.jpg\"]\n    }\n}",
+              "raw": "{\n    \"documents\": {\n        \"propertyDocument\": \"https://storage.com/docs/turf_prop.pdf\",\n        \"municipalNoc\": \"https://storage.com/docs/turf_noc.pdf\"\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1036,12 +1439,12 @@
                 }
               ]
             },
-            "description": "Submit or update documents for a specific turf field."
+            "description": "Submit or merge verification documents for a specific turf field."
           },
           "response": []
         },
         {
-          "name": "Get Documents Status",
+          "name": "Get Turf Documents Status",
           "request": {
             "auth": {
               "type": "bearer",
@@ -1069,6 +1472,100 @@
             "description": "Get current status and metadata of turf documents."
           },
           "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sub-Admin Management",
+      "description": "RBAC management endpoints for creating sub-admins, managing custom roles, and assigning granular resource:action permissions.",
+      "item": [
+        {
+          "name": "List Sub-Admins",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins"] },
+            "description": "List all identities with the 'sub_admin' role and their assigned custom roles."
+          }
+        },
+        {
+          "name": "Create Sub-Admin",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"subadmin@example.com\",\n  \"password\": \"subadmin123\",\n  \"name\": \"Support User\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins"] }
+          }
+        },
+        {
+          "name": "Delete Sub-Admin",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/:id", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", ":id"] },
+            "description": "Permanently decommission a sub-admin. Revokes roles and deletes from Auth."
+          }
+        },
+        {
+          "name": "List Custom Roles",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/roles", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", "roles"] },
+            "description": "List all custom (non-system) roles and their granular permissions."
+          }
+        },
+        {
+          "name": "Create Custom Role",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Support Manager\",\n  \"description\": \"Full access to review KYC and turfs\",\n  \"permissionIds\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/roles", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", "roles"] }
+          }
+        },
+        {
+          "name": "Assign Roles to Sub-Admin",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "PATCH",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleIds\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/:id/roles", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", ":id", "roles"] }
+          }
+        },
+        {
+          "name": "Update Role Permissions",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "PATCH",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissionIds\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", "roles", ":roleId", "permissions"] }
+          }
+        },
+        {
+          "name": "List All Available Permissions",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/permissions", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", "permissions"] },
+            "description": "Fetch the catalogue of all granular resource:action permissions defined in the system."
+          }
         }
       ]
     },

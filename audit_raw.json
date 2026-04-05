@@ -1,0 +1,356 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "6c4844be-3e2b-4aa8-890e-eb4dcc61635d",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": "e02a062f-0c7a-4895-acbf-63b3ad9f0576",
+      "status": "success",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": null,
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": {
+          "identity": {
+            "id": "e02a062f-0c7a-4895-acbf-63b3ad9f0576",
+            "email": "admin@pranav.com",
+            "roles": [
+              "super_admin"
+            ],
+            "profileCompleted": false
+          },
+          "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMDJhMDYyZi0wYzdhLTQ4OTUtYWNiZi02M2IzYWQ5ZjA1NzYiLCJlbWFpbCI6ImFkbWluQHByYW5hdi5jb20iLCJyb2xlcyI6WyJzdXBlcl9hZG1pbiJdLCJpYXQiOjE3NzUzNjY1MTQsImV4cCI6MTc3NTM2NzQxNH0.F0zytUU3oZ_zCiOp5eyw4zDUd7T8PrzPSzH665_Nsdo",
+          "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMDJhMDYyZi0wYzdhLTQ4OTUtYWNiZi02M2IzYWQ5ZjA1NzYiLCJqdGkiOiJjMTAyMTE0OC01MTJmLTQ5ODQtOTI4YS0yMmI2MzZiNTEyNTciLCJpYXQiOjE3NzUzNjY1MTQsImV4cCI6MTc3NTk3MTMxNH0.GqjSlGJONkb2qR9ruFyS8-LVCN_Xhq-xL_RnV0Fnw0o"
+        },
+        "durationMs": 1452,
+        "httpStatus": 200
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "curl/8.7.1",
+      "createdAt": "2026-04-05T05:21:54.439Z"
+    },
+    {
+      "id": "48f5858f-eadc-4874-95e4-1ae2f71a665f",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": "e02a062f-0c7a-4895-acbf-63b3ad9f0576",
+      "status": "success",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": null,
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": {
+          "identity": {
+            "id": "e02a062f-0c7a-4895-acbf-63b3ad9f0576",
+            "email": "admin@pranav.com",
+            "roles": [
+              "super_admin"
+            ],
+            "profileCompleted": false
+          },
+          "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMDJhMDYyZi0wYzdhLTQ4OTUtYWNiZi02M2IzYWQ5ZjA1NzYiLCJlbWFpbCI6ImFkbWluQHByYW5hdi5jb20iLCJyb2xlcyI6WyJzdXBlcl9hZG1pbiJdLCJpYXQiOjE3NzUzMjk4MzcsImV4cCI6MTc3NTMzMDczN30.zDTd-C8L92PhHo7I-u7JoDelWA8YNImPYRk926bIoYw",
+          "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMDJhMDYyZi0wYzdhLTQ4OTUtYWNiZi02M2IzYWQ5ZjA1NzYiLCJqdGkiOiI2ZjY0NzY5Ni01OWIyLTQyNWItYWQwZS01YjViZjNiNDJmZDkiLCJpYXQiOjE3NzUzMjk4MzcsImV4cCI6MTc3NTkzNDYzN30.ZTKJk9cSMCfFTEU3xIUthkR0qHSpUAOWgXOfmDlXKQ8"
+        },
+        "durationMs": 1083,
+        "httpStatus": 200
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "curl/8.7.1",
+      "createdAt": "2026-04-04T19:10:37.751Z"
+    },
+    {
+      "id": "78090c97-55d7-4a49-bc11-d842a6ab8725",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": null,
+      "status": "failure",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": {
+          "code": "AUTH_INVALID_CREDENTIALS",
+          "message": "Invalid email or password"
+        },
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": null,
+        "durationMs": 146,
+        "httpStatus": 401
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "createdAt": "2026-04-04T19:09:47.951Z"
+    },
+    {
+      "id": "f401a6a4-fefe-45cc-8d21-77f86ab83b68",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": null,
+      "status": "failure",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": {
+          "code": "AUTH_INVALID_CREDENTIALS",
+          "message": "Invalid email or password"
+        },
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": null,
+        "durationMs": 136,
+        "httpStatus": 401
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "createdAt": "2026-04-04T19:09:31.443Z"
+    },
+    {
+      "id": "c49e425d-4743-418b-9ce3-63bbfca960ee",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": null,
+      "status": "failure",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": {
+          "code": "AUTH_INVALID_CREDENTIALS",
+          "message": "Invalid email or password"
+        },
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": null,
+        "durationMs": 497,
+        "httpStatus": 401
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "createdAt": "2026-04-04T19:09:30.855Z"
+    },
+    {
+      "id": "38a9da1f-10d1-492c-b701-d762a1a4ac0c",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": null,
+      "status": "failure",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": {
+          "code": "AUTH_INVALID_CREDENTIALS",
+          "message": "Invalid email or password"
+        },
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": null,
+        "durationMs": 138,
+        "httpStatus": 401
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "createdAt": "2026-04-04T19:08:52.643Z"
+    },
+    {
+      "id": "8e032d8e-71b1-4d40-9acc-ab725d000378",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": null,
+      "status": "failure",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": {
+          "code": "AUTH_INVALID_CREDENTIALS",
+          "message": "Invalid email or password"
+        },
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": null,
+        "durationMs": 264,
+        "httpStatus": 401
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "createdAt": "2026-04-04T19:08:51.948Z"
+    },
+    {
+      "id": "d5d6805e-17a5-4fd9-a752-4135b68da5c3",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": null,
+      "status": "failure",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": {
+          "code": "AUTH_INVALID_CREDENTIALS",
+          "message": "Invalid email or password"
+        },
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": null,
+        "durationMs": 136,
+        "httpStatus": 401
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "createdAt": "2026-04-04T19:08:00.155Z"
+    },
+    {
+      "id": "008ae849-3a19-411f-b782-e2a6b7da4b03",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": null,
+      "status": "failure",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": {
+          "code": "AUTH_INVALID_CREDENTIALS",
+          "message": "Invalid email or password"
+        },
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": null,
+        "durationMs": 376,
+        "httpStatus": 401
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "createdAt": "2026-04-04T19:07:59.304Z"
+    },
+    {
+      "id": "9f1c951a-71c0-458d-bae4-c2806d49b7a7",
+      "actorId": null,
+      "actorRole": null,
+      "category": "auth",
+      "eventType": "AUTH_LOGIN",
+      "targetType": "identity",
+      "targetId": null,
+      "status": "failure",
+      "payload": {
+        "body": {
+          "email": "admin@pranav.com",
+          "password": "***"
+        },
+        "query": {},
+        "params": {}
+      },
+      "metadata": {
+        "url": "/api/v1/auth/signin",
+        "error": {
+          "code": "AUTH_INVALID_CREDENTIALS",
+          "message": "Invalid email or password"
+        },
+        "route": "/api/v1/auth/signin",
+        "method": "POST",
+        "response": null,
+        "durationMs": 164,
+        "httpStatus": 401
+      },
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "createdAt": "2026-04-04T19:07:29.280Z"
+    }
+  ],
+  "meta": {
+    "total": 56,
+    "page": 1,
+    "limit": 10
+  }
+}
