@@ -8,6 +8,8 @@ import {
   Prohibit,
   ArrowCounterClockwise,
   CurrencyDollar,
+  CaretLeft,
+  CaretRight,
 } from "@phosphor-icons/react";
 import { useState, useMemo } from "react";
 import { usersApi, useUsersList } from "@/domains/users/api";
@@ -138,15 +140,19 @@ export default function UsersPage() {
 
   const [banModal, setBanModal] = useState<AppUser | null>(null);
   const [banReason, setBanReason] = useState("");
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useUsersList();
+  const { data, isLoading } = useUsersList({ page, limit: 10 });
 
   // Directly process data inside useMemo to avoid linting warnings and extra renders
   const users = useMemo(() => {
     // Correctly cast the response from useUsersList
-    const raw = (data as { data: UserProfile[]; meta: { total: number } })?.data || [];
-    return raw.map(mapBackendUser);
+    const raw = (data as any)?.data || [];
+    return (raw as UserProfile[]).map(mapBackendUser);
   }, [data]);
+
+  const meta = (data as any)?.meta;
+  const totalPages = meta?.total ? Math.ceil(meta.total / 10) : 1;
 
   const statusMutation = useMutation({
     mutationFn: ({
@@ -514,10 +520,30 @@ export default function UsersPage() {
             )}
           </tbody>
         </table>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <p className="text-[11px] text-gray-400">
-            Total registered users: {users.length}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+          <p className="text-[11px] text-gray-400 font-medium">
+            Showing <span className="text-gray-700">{users.length}</span> of{" "}
+            {meta?.total || users.length} users
           </p>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 disabled:opacity-30 hover:bg-white transition-all shadow-sm"
+            >
+              <CaretLeft size={14} weight="bold" />
+            </button>
+            <span className="text-[11px] font-bold text-gray-600 px-3">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 disabled:opacity-30 hover:bg-white transition-all shadow-sm"
+            >
+              <CaretRight size={14} weight="bold" />
+            </button>
+          </div>
         </div>
       </div>
 

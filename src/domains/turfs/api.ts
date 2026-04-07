@@ -48,6 +48,10 @@ export const turfsApi = {
       reviewerNotes,
     });
   },
+
+  onboardTurf: async (vendorId: string, data: any): Promise<TurfResponse> => {
+    return api.post<TurfResponse>(`/admin/vendors/${vendorId}/turfs`, data);
+  },
 };
 
 export function useTurfsList(params?: TurfListParams) {

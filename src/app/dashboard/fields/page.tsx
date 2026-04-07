@@ -338,6 +338,7 @@ export default function FieldsPage() {
     null,
   );
   const [reviewNote, setReviewNote] = useState("");
+  const [onboardModalOpen, setOnboardModalOpen] = useState(false);
 
   const { data, isLoading } = useTurfsList({
     page,
@@ -389,6 +390,7 @@ export default function FieldsPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold text-gray-900">Field Management</h1>
           <button
+            onClick={() => setOnboardModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: "#8a9e60" }}
           >
@@ -807,6 +809,196 @@ export default function FieldsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Onboard Field Modal ── */}
+      {onboardModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => setOnboardModalOpen(false)}
+          />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden relative animate-in zoom-in-95 duration-200 flex flex-col">
+            <OnboardFieldForm
+              onClose={() => setOnboardModalOpen(false)}
+              onSuccess={() => {
+                setOnboardModalOpen(false);
+                queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+                toast.success("Field onboarded successfully");
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function OnboardFieldForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [step, setStep] = useState(1);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    sports: [] as string[],
+    surfaceType: "artificial_turf",
+    standardPricePaise: 150000,
+    addressLineOne: "",
+    city: "",
+    state: "",
+    pinCode: "",
+    weekdayOpen: "06:00:00",
+    weekdayClose: "23:00:00",
+    weekendOpen: "06:00:00",
+    weekendClose: "23:00:00",
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: any) => turfsApi.onboardTurf(selectedVendorId, data),
+    onSuccess,
+    onError: (err: any) => toast.error(err?.message || "Failed to onboard field")
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedVendorId) return toast.error("Please select a vendor first");
+    mutation.mutate({
+      ...formData,
+      address: {
+        addressLineOne: formData.addressLineOne,
+        city: formData.city,
+        state: formData.state,
+        pinCode: formData.pinCode
+      }
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]">
+      <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-gray-900 tracking-tight">Onboard New Field</h2>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Step {step} of 2: {step === 1 ? "Select Vendor" : "Field Details"}</p>
+        </div>
+        <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-gray-50 text-gray-400">
+          <X size={20} weight="bold" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        {step === 1 ? (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Assign to Vendor (ID)</label>
+              <input
+                required
+                value={selectedVendorId}
+                onChange={e => setSelectedVendorId(e.target.value)}
+                placeholder="Enter Vendor ID (e.g. vend_...)"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+              />
+              <p className="text-[10px] text-gray-400 italic mt-2">
+                Currently, please provide the unique Vendor ID. You can find this in the Vendors dashboard.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-1.5 col-span-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Field Name</label>
+              <input
+                required
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Center Court - Smash Arena"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Surface Type</label>
+              <select
+                value={formData.surfaceType}
+                onChange={e => setFormData({ ...formData, surfaceType: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] appearance-none"
+              >
+                <option value="natural_grass">Natural Grass</option>
+                <option value="artificial_turf">Artificial Turf</option>
+                <option value="clay">Clay</option>
+                <option value="hard_court">Hard Court</option>
+              </select>
+            </div>
+            <div className="space-y-1.5 text-right">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">Price (paise/hr)</label>
+              <input
+                type="number"
+                required
+                value={formData.standardPricePaise}
+                onChange={e => setFormData({ ...formData, standardPricePaise: Number(e.target.value) })}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 text-right outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2 mt-2">
+              <p className="text-[10px] font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                <MapPin size={12} weight="fill" className="text-[#8a9e60]" /> Location Details
+              </p>
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <input
+                required
+                value={formData.addressLineOne}
+                onChange={e => setFormData({ ...formData, addressLineOne: e.target.value })}
+                placeholder="Address line 1"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <input
+                required
+                value={formData.city}
+                onChange={e => setFormData({ ...formData, city: e.target.value })}
+                placeholder="City"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <input
+                required
+                value={formData.state}
+                onChange={e => setFormData({ ...formData, state: e.target.value })}
+                placeholder="State"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="px-8 py-5 border-t border-gray-50 bg-gray-50/30 flex gap-3">
+        {step === 1 ? (
+          <>
+            <button type="button" onClick={onClose} className="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl">CANCEL</button>
+            <button 
+              type="button" 
+              onClick={() => selectedVendorId.trim() ? setStep(2) : toast.error("Enter Vendor ID")}
+              className="flex-1 py-3 text-xs font-bold text-white rounded-xl shadow-lg shadow-[#8a9e60]/20"
+              style={{ backgroundColor: "#8a9e60" }}
+            >
+              NEXT: FIELD INFO
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl">BACK</button>
+            <button 
+              type="submit"
+              disabled={mutation.isPending}
+              className="flex-1 py-3 text-xs font-bold text-white rounded-xl shadow-lg shadow-[#8a9e60]/20 disabled:opacity-50"
+              style={{ backgroundColor: "#8a9e60" }}
+            >
+              {mutation.isPending ? "CREATING..." : "ONBOARD FIELD"}
+            </button>
+          </>
+        )}
+      </div>
+    </form>
   );
 }

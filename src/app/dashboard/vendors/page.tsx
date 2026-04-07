@@ -147,6 +147,11 @@ export default function VendorsPage() {
   const [page, setPage] = useState(1);
   const [statusTab, setStatusTab] = useState<VendorStatus | "all">("all");
   const [actionMenu, setActionMenu] = useState<string | null>(null);
+  const [onboardModalOpen, setOnboardModalOpen] = useState(false);
+  const [onboardSuccessData, setOnboardSuccessData] = useState<{
+    email: string;
+    pass: string;
+  } | null>(null);
 
   // Modals
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
@@ -270,6 +275,7 @@ export default function VendorsPage() {
           </div>
 
           <button
+            onClick={() => setOnboardModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 shadow-sm shrink-0"
             style={{ backgroundColor: "#8a9e60" }}
           >
@@ -834,6 +840,194 @@ export default function VendorsPage() {
           onClick={() => setActionMenu(null)}
         />
       )}
+
+      {/* ── Onboard Vendor Modal ── */}
+      {onboardModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => !onboardSuccessData && setOnboardModalOpen(false)}
+          />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative animate-in zoom-in-95 duration-200">
+            {onboardSuccessData ? (
+              <div className="p-8 text-center space-y-6">
+                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle size={40} weight="fill" className="text-green-500" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Onboarding Successful!</h2>
+                  <p className="text-sm text-gray-400 font-medium mt-1">Vendor account created successfully.</p>
+                </div>
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 text-left space-y-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Login Email</p>
+                    <p className="text-sm font-bold text-gray-800">{onboardSuccessData.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Temporary Password</p>
+                    <div className="flex items-center justify-between bg-white border border-gray-100 px-3 py-2 rounded-xl mt-1">
+                      <code className="text-sm font-black text-[#8a9e60] tracking-wider">{onboardSuccessData.pass}</code>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(onboardSuccessData.pass);
+                          toast.success("Password copied");
+                        }}
+                        className="text-[10px] font-bold text-gray-400 hover:text-gray-600"
+                      >
+                        COPY
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-amber-600 font-medium mt-2">
+                       Please share these credentials with the vendor safely.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setOnboardModalOpen(false);
+                    setOnboardSuccessData(null);
+                  }}
+                  className="w-full py-3 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                  style={{ backgroundColor: "#8a9e60" }}
+                >
+                  DONE
+                </button>
+              </div>
+            ) : (
+              <OnboardVendorForm
+                onClose={() => setOnboardModalOpen(false)}
+                onSuccess={(email, pass) => setOnboardSuccessData({ email, pass })}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function OnboardVendorForm({ 
+  onClose, 
+  onSuccess 
+}: { 
+  onClose: () => void;
+  onSuccess: (email: string, pass: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    email: "",
+    businessName: "",
+    ownerFullName: "",
+    businessType: "individual",
+    commissionPct: 15,
+    payoutCycle: "weekly",
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: typeof formData) => vendorsApi.onboardVendor(data),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
+      onSuccess(formData.email, res.credentials.tempPassword);
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to onboard vendor");
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    mutation.mutate(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col">
+      <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-gray-900 tracking-tight">Onboard New Vendor</h2>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Create a new vendor profile and identity</p>
+        </div>
+        <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-gray-50 text-gray-400">
+          <X size={20} weight="bold" />
+        </button>
+      </div>
+
+      <div className="p-8 space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Name</label>
+            <input
+              required
+              value={formData.businessName}
+              onChange={e => setFormData({ ...formData, businessName: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+              placeholder="e.g. Smash & Score Arena"
+            />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Owner Full Name</label>
+            <input
+              required
+              value={formData.ownerFullName}
+              onChange={e => setFormData({ ...formData, ownerFullName: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+              placeholder="e.g. Rajesh Kumar"
+            />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Login Email Address</label>
+            <input
+              required
+              type="email"
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+              placeholder="vendor@example.com"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Type</label>
+            <select
+              value={formData.businessType}
+              onChange={e => setFormData({ ...formData, businessType: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] transition-colors appearance-none"
+            >
+              <option value="individual">Individual</option>
+              <option value="company">Company / LLP</option>
+              <option value="partnership">Partnership</option>
+            </select>
+          </div>
+          <div className="space-y-1.5 text-right">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">Commission %</label>
+            <input
+              type="number"
+              required
+              min="0"
+              max="100"
+              value={formData.commissionPct}
+              onChange={e => setFormData({ ...formData, commissionPct: Number(e.target.value) })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 text-right outline-none focus:border-[#8a9e60] transition-colors"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-8 py-5 border-t border-gray-50 bg-gray-50/30 flex gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all"
+        >
+          CANCEL
+        </button>
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="flex-1 py-3 text-xs font-bold text-white rounded-xl shadow-lg shadow-[#8a9e60]/20 hover:opacity-90 disabled:opacity-50 transition-all uppercase tracking-widest"
+          style={{ backgroundColor: "#8a9e60" }}
+        >
+          {mutation.isPending ? "Onboarding..." : "Onboard Vendor"}
+        </button>
+      </div>
+    </form>
   );
 }
