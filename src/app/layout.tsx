@@ -9,8 +9,11 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Turfin Admin Portal",
-  description: "Turfin Admin Portal Login",
+  title: "Turf | Admin Management",
+  description: "Turfin Admin Portal",
+  icons: {
+    icon: "/turfinLogo.svg",
+  },
 };
 
 export default function RootLayout({

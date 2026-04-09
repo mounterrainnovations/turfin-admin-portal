@@ -99,9 +99,9 @@ const STATUS_CONFIG: Record<
     dot: "bg-gray-400",
     bg: "bg-gray-100",
   },
-  banned: { 
-    label: "Banned", 
-    color: "text-red-600", 
+  banned: {
+    label: "Banned",
+    color: "text-red-600",
     dot: "bg-red-500",
     bg: "bg-red-50",
   },
@@ -189,7 +189,10 @@ function UserDetailPanel({
 }) {
   const st = STATUS_CONFIG[user.status] || STATUS_CONFIG.active;
   const col = avatarColor(user.id);
-  const cr = user.bookings > 0 ? Math.round(((user.cancelled + user.noShows) / user.bookings) * 100) : 0;
+  const cr =
+    user.bookings > 0
+      ? Math.round(((user.cancelled + user.noShows) / user.bookings) * 100)
+      : 0;
 
   return (
     <div className="fixed right-0 top-0 bottom-0 w-[480px] bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-100 animate-in slide-in-from-right duration-300">
@@ -200,18 +203,24 @@ function UserDetailPanel({
       >
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white text-xl font-bold border border-white/30 shadow-lg shrink-0 overflow-hidden">
-             {avatar(user.name)}
+            {avatar(user.name)}
           </div>
           <div className="min-w-0">
             <h2 className="text-white font-bold text-lg leading-tight truncate">
               {user.name}
-              {isVip(user) && <span className="ml-2 text-[10px] bg-yellow-400 text-yellow-900 px-1.5 py-0.5 rounded-md align-middle">VIP</span>}
+              {isVip(user) && (
+                <span className="ml-2 text-[10px] bg-yellow-400 text-yellow-900 px-1.5 py-0.5 rounded-md align-middle">
+                  VIP
+                </span>
+              )}
             </h2>
             <p className="text-white/70 text-[11px] font-mono mt-1 truncate">
               {user.id}
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-white/20 text-white border border-white/10`}>
+              <span
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-white/20 text-white border border-white/10`}
+              >
                 <span className={`w-1 h-1 rounded-full ${st.dot}`} />
                 {st.label.toUpperCase()}
               </span>
@@ -232,70 +241,113 @@ function UserDetailPanel({
       <div className="flex-1 overflow-y-auto p-4 space-y-8">
         {/* Contact info cards */}
         <div className="grid grid-cols-2 gap-3">
-           <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Status</p>
-             <div className="flex items-center gap-2 mt-1">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${user.emailVerified ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}>
-                   {user.emailVerified ? "VERIFIED" : "PENDING"}
-                </span>
-             </div>
-             <p className="text-[11px] text-gray-800 font-semibold mt-2 truncate">{user.email}</p>
-           </div>
-           <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Phone Status</p>
-             <div className="flex items-center gap-2 mt-1">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${user.phoneVerified ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}>
-                   {user.phoneVerified ? "VERIFIED" : "PENDING"}
-                </span>
-             </div>
-             <p className="text-[11px] text-gray-800 font-semibold mt-2">{user.phone}</p>
-           </div>
+          <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Email Status
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${user.emailVerified ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}
+              >
+                {user.emailVerified ? "VERIFIED" : "PENDING"}
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-800 font-semibold mt-2 truncate">
+              {user.email}
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Phone Status
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${user.phoneVerified ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}
+              >
+                {user.phoneVerified ? "VERIFIED" : "PENDING"}
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-800 font-semibold mt-2">
+              {user.phone}
+            </p>
+          </div>
         </div>
 
         {/* Life-time metrics */}
         <section>
           <div className="flex items-center gap-2 mb-4">
-             <div className="w-1 h-4 bg-[#8a9e60] rounded-full" />
-             <h3 className="text-[11px] font-bold text-gray-800 uppercase tracking-widest">Platform Metrics</h3>
+            <div className="w-1 h-4 bg-[#8a9e60] rounded-full" />
+            <h3 className="text-[11px] font-bold text-gray-800 uppercase tracking-widest">
+              Platform Metrics
+            </h3>
           </div>
           <div className="grid grid-cols-3 gap-3">
-             <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
-                <p className="text-[9px] font-bold text-gray-400 uppercase">Bookings</p>
-                <p className="text-lg font-bold text-gray-800">{user.bookings}</p>
-             </div>
-             <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
-                <p className="text-[9px] font-bold text-gray-400 uppercase">Spent</p>
-                <p className="text-lg font-bold text-gray-800">₹{user.totalSpent.toLocaleString()}</p>
-             </div>
-             <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
-                <p className="text-[9px] font-bold text-gray-400 uppercase">Cancel Rate</p>
-                <p className={`text-lg font-bold ${cr > 20 ? "text-red-500" : "text-gray-800"}`}>{cr}%</p>
-             </div>
+            <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+              <p className="text-[9px] font-bold text-gray-400 uppercase">
+                Bookings
+              </p>
+              <p className="text-lg font-bold text-gray-800">{user.bookings}</p>
+            </div>
+            <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+              <p className="text-[9px] font-bold text-gray-400 uppercase">
+                Spent
+              </p>
+              <p className="text-lg font-bold text-gray-800">
+                ₹{user.totalSpent.toLocaleString()}
+              </p>
+            </div>
+            <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+              <p className="text-[9px] font-bold text-gray-400 uppercase">
+                Cancel Rate
+              </p>
+              <p
+                className={`text-lg font-bold ${cr > 20 ? "text-red-500" : "text-gray-800"}`}
+              >
+                {cr}%
+              </p>
+            </div>
           </div>
         </section>
 
         {/* About User */}
         <section>
-           <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-4 bg-blue-500 rounded-full" />
-              <h3 className="text-[11px] font-bold text-gray-800 uppercase tracking-widest">Activity & Info</h3>
-           </div>
-           <div className="space-y-4">
-              {[
-                { label: "Location", val: `${user.city}, ${user.state}`, icon: MapPin },
-                { label: "Joined On", val: user.joined, icon: CalendarBlank },
-                { label: "Last Active", val: user.lastActive, icon: Clock },
-                { label: "Preferred Sport", val: user.favSport, icon: CheckCircle },
-              ].map((row) => (
-                <div key={row.label} className="flex items-center justify-between">
-                   <div className="flex items-center gap-2">
-                      <row.icon size={16} className="text-gray-300" />
-                      <span className="text-xs text-gray-400 font-medium">{row.label}</span>
-                   </div>
-                   <span className="text-xs text-gray-700 font-bold">{row.val}</span>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1 h-4 bg-blue-500 rounded-full" />
+            <h3 className="text-[11px] font-bold text-gray-800 uppercase tracking-widest">
+              Activity & Info
+            </h3>
+          </div>
+          <div className="space-y-4">
+            {[
+              {
+                label: "Location",
+                val: `${user.city}, ${user.state}`,
+                icon: MapPin,
+              },
+              { label: "Joined On", val: user.joined, icon: CalendarBlank },
+              { label: "Last Active", val: user.lastActive, icon: Clock },
+              {
+                label: "Preferred Sport",
+                val: user.favSport,
+                icon: CheckCircle,
+              },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <row.icon size={16} className="text-gray-300" />
+                  <span className="text-xs text-gray-400 font-medium">
+                    {row.label}
+                  </span>
                 </div>
-              ))}
-           </div>
+                <span className="text-xs text-gray-700 font-bold">
+                  {row.val}
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
       </div>
 
@@ -303,12 +355,17 @@ function UserDetailPanel({
       <div className="p-4 border-t border-gray-100 bg-gray-50/50">
         <button
           onClick={onBanAction}
-          className={`w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm ${user.status === 'banned' ? 'bg-[#8a9e60]' : 'bg-red-500'}`}
+          className={`w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm ${user.status === "banned" ? "bg-[#8a9e60]" : "bg-red-500"}`}
         >
-          {user.status === 'banned' ? (
-            <><ArrowCounterClockwise size={14} weight="bold" /> Reactivate User Account</>
+          {user.status === "banned" ? (
+            <>
+              <ArrowCounterClockwise size={14} weight="bold" /> Reactivate User
+              Account
+            </>
           ) : (
-            <><Prohibit size={14} weight="bold" /> Restrict / Ban User Account</>
+            <>
+              <Prohibit size={14} weight="bold" /> Restrict / Ban User Account
+            </>
           )}
         </button>
       </div>
@@ -355,7 +412,10 @@ export default function UsersPage() {
       setBanModal(null);
       // Update selected user in view if applicable
       if (selected && selected.id === banModal?.id) {
-         setSelected({ ...selected, status: selected.status === "banned" ? "active" : "banned" });
+        setSelected({
+          ...selected,
+          status: selected.status === "banned" ? "active" : "banned",
+        });
       }
     },
     onError: (err) => {
@@ -439,13 +499,14 @@ export default function UsersPage() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 max-w-sm shadow-sm ring-1 ring-black/5">
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 flex-1 max-w-sm shadow-sm opacity-60 cursor-not-allowed">
           <MagnifyingGlass size={15} className="text-gray-400 shrink-0" />
           <input
+            disabled
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, email, phone, city…"
-            className="flex-1 outline-none text-sm text-gray-700 bg-transparent placeholder:text-gray-400"
+            className="flex-1 outline-none text-sm text-gray-400 bg-transparent placeholder:text-gray-400 cursor-not-allowed"
           />
         </div>
         <div className="hidden md:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -464,24 +525,31 @@ export default function UsersPage() {
       <div className="flex border-b border-gray-200 gap-1 shrink-0 overflow-x-auto scrollbar-hide">
         {(["all", "active", "inactive", "banned"] as const).map((tab) => {
           const isActive = activeTab === tab;
-          const count = tab === "all" ? users.length : users.filter(u => u.status === tab).length;
+          const count =
+            tab === "all"
+              ? users.length
+              : users.filter((u) => u.status === tab).length;
           return (
             <button
               key={tab}
               onClick={() => {
-                 setActiveTab(tab);
-                 setPage(1);
+                setActiveTab(tab);
+                setPage(1);
               }}
               className={`px-4 py-2 text-xs font-semibold transition-colors flex items-center gap-2 border-b-2 whitespace-nowrap ${
-                isActive 
-                  ? "text-[#8a9e60] border-[#8a9e60]" 
+                isActive
+                  ? "text-[#8a9e60] border-[#8a9e60]"
                   : "text-gray-400 border-transparent hover:text-gray-600"
               }`}
             >
-              {tab === "all" ? "All Users" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === "all"
+                ? "All Users"
+                : tab.charAt(0).toUpperCase() + tab.slice(1)}
               <span
                 className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                  isActive ? "bg-[#8a9e60] text-white" : "bg-gray-100 text-gray-400"
+                  isActive
+                    ? "bg-[#8a9e60] text-white"
+                    : "bg-gray-100 text-gray-400"
                 }`}
               >
                 {count}
@@ -529,15 +597,26 @@ export default function UsersPage() {
                 <tr>
                   <td colSpan={7} className="py-24 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <Users size={32} weight="thin" className="text-gray-200" />
-                      <p className="text-sm text-gray-400 font-medium">No user accounts found</p>
+                      <Users
+                        size={32}
+                        weight="thin"
+                        className="text-gray-200"
+                      />
+                      <p className="text-sm text-gray-400 font-medium">
+                        No user accounts found
+                      </p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 filtered.map((u) => {
                   const sc = STATUS_CONFIG[u.status] || STATUS_CONFIG.active;
-                  const cr = u.bookings > 0 ? Math.round(((u.cancelled + u.noShows) / u.bookings) * 100) : 0;
+                  const cr =
+                    u.bookings > 0
+                      ? Math.round(
+                          ((u.cancelled + u.noShows) / u.bookings) * 100,
+                        )
+                      : 0;
                   const risky = cr >= 20;
                   const col = avatarColor(u.id);
 
@@ -558,7 +637,9 @@ export default function UsersPage() {
                             </div>
                             {isVip(u) && (
                               <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-yellow-400 flex items-center justify-center border-2 border-white shadow-sm ring-1 ring-yellow-200">
-                                <span className="text-[7px] text-white font-black">V</span>
+                                <span className="text-[7px] text-white font-black">
+                                  V
+                                </span>
                               </div>
                             )}
                           </div>
@@ -573,57 +654,79 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-xs font-semibold text-gray-700 truncate max-w-[160px]">{u.email}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{u.phone}</p>
+                        <p className="text-xs font-semibold text-gray-700 truncate max-w-[160px]">
+                          {u.email}
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {u.phone}
+                        </p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-xs font-semibold text-gray-700">{u.city}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{u.state}</p>
+                        <p className="text-xs font-semibold text-gray-700">
+                          {u.city}
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {u.state}
+                        </p>
                       </td>
                       <td className="px-4 py-4">
-                         <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold text-gray-700 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded">
-                               {u.bookings} BKGS
-                            </span>
-                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${risky ? "bg-orange-50 text-orange-600 border-orange-100" : "bg-green-50 text-green-600 border-green-100"}`}>
-                               {cr}% CR
-                            </span>
-                         </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-gray-700 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded">
+                            {u.bookings} BKGS
+                          </span>
+                          <span
+                            className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${risky ? "bg-orange-50 text-orange-600 border-orange-100" : "bg-green-50 text-green-600 border-green-100"}`}
+                          >
+                            {cr}% CR
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex items-center gap-1.5 text-[9px] font-black px-2 py-0.5 rounded-full uppercase border ${sc.bg} ${sc.color} ${sc.bg.replace('bg-', 'border-').replace('50', '100')}`}>
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-[9px] font-black px-2 py-0.5 rounded-full uppercase border ${sc.bg} ${sc.color} ${sc.bg.replace("bg-", "border-").replace("50", "100")}`}
+                        >
                           <span className={`w-1 h-1 rounded-full ${sc.dot}`} />
                           {sc.label}
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <p className="text-[10px] text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded inline-block">
-                           {u.lastActive}
+                          {u.lastActive}
                         </p>
                       </td>
-                      <td className="px-4 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className="px-4 py-4 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="relative">
                           <button
-                            onClick={() => setActionMenu(actionMenu === u.id ? null : u.id)}
+                            onClick={() =>
+                              setActionMenu(actionMenu === u.id ? null : u.id)
+                            }
                             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                           >
                             <DotsThreeVertical size={18} weight="bold" />
                           </button>
                           {actionMenu === u.id && (
                             <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 min-w-[150px] animate-in fade-in slide-in-from-top-1 duration-200">
-                               <button
-                                 onClick={() => {
-                                   setActionMenu(null);
-                                   setBanModal(u);
-                                 }}
-                                 className={`w-full text-left px-4 py-2 text-[10px] font-black flex items-center gap-2.5 ${u.status === 'banned' ? 'text-green-600 hover:bg-green-50' : 'text-red-500 hover:bg-red-50'}`}
-                               >
-                                 {u.status === 'banned' ? (
-                                   <><ArrowCounterClockwise size={14} /> Reactivate</>
-                                 ) : (
-                                   <><Prohibit size={14} /> Ban User</>
-                                 )}
-                               </button>
+                              <button
+                                onClick={() => {
+                                  setActionMenu(null);
+                                  setBanModal(u);
+                                }}
+                                className={`w-full text-left px-4 py-2 text-[10px] font-black flex items-center gap-2.5 ${u.status === "banned" ? "text-green-600 hover:bg-green-50" : "text-red-500 hover:bg-red-50"}`}
+                              >
+                                {u.status === "banned" ? (
+                                  <>
+                                    <ArrowCounterClockwise size={14} />{" "}
+                                    Reactivate
+                                  </>
+                                ) : (
+                                  <>
+                                    <Prohibit size={14} /> Ban User
+                                  </>
+                                )}
+                              </button>
                             </div>
                           )}
                         </div>
@@ -639,7 +742,8 @@ export default function UsersPage() {
         {/* Footer / Pagination */}
         <div className="shrink-0 border-t border-gray-100 px-6 py-3 flex items-center justify-between bg-gray-50/30">
           <p className="text-xs text-gray-400 font-medium">
-            Showing <span className="text-gray-700">{filtered.length}</span> of {meta?.total || users.length} users
+            Showing <span className="text-gray-700">{filtered.length}</span> of{" "}
+            {meta?.total || users.length} users
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -664,7 +768,10 @@ export default function UsersPage() {
       </div>
 
       {actionMenu && (
-        <div className="fixed inset-0 z-40" onClick={() => setActionMenu(null)} />
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setActionMenu(null)}
+        />
       )}
 
       {/* Details Panel Overlay */}
@@ -678,8 +785,8 @@ export default function UsersPage() {
             user={selected}
             onClose={() => setSelected(null)}
             onBanAction={() => {
-               setBanModal(selected);
-               setActionMenu(null);
+              setBanModal(selected);
+              setActionMenu(null);
             }}
           />
         </>
@@ -707,7 +814,9 @@ export default function UsersPage() {
                 )}
               </div>
               <h3 className="text-xl font-black text-gray-900 tracking-tight mb-2">
-                {banModal.status === "banned" ? "Reactivate User?" : "Restrict User?"}
+                {banModal.status === "banned"
+                  ? "Reactivate User?"
+                  : "Restrict User?"}
               </h3>
               <p className="text-xs text-gray-400 font-medium leading-relaxed mb-6">
                 {banModal.status === "banned"
@@ -742,7 +851,9 @@ export default function UsersPage() {
                   onClick={handleBan}
                   className={`flex-1 py-3 text-xs font-bold text-white rounded-xl shadow-lg transition-all hover:opacity-90 active:scale-95 ${banModal.status === "banned" ? "bg-[#8a9e60]" : "bg-red-500"}`}
                 >
-                  {banModal.status === "banned" ? "Confirm Unban" : "Confirm Ban"}
+                  {banModal.status === "banned"
+                    ? "Confirm Unban"
+                    : "Confirm Ban"}
                 </button>
               </div>
             </div>

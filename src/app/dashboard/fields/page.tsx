@@ -479,13 +479,14 @@ export default function FieldsPage() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 max-w-sm">
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 flex-1 max-w-sm shadow-sm opacity-60 cursor-not-allowed">
           <MagnifyingGlass size={15} className="text-gray-400 shrink-0" />
           <input
+            disabled
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, address, city…"
-            className="flex-1 outline-none text-sm text-gray-700 bg-transparent placeholder:text-gray-400"
+            className="flex-1 outline-none text-sm text-gray-400 bg-transparent placeholder:text-gray-400 cursor-not-allowed"
           />
         </div>
 
