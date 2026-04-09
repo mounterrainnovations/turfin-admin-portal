@@ -26,6 +26,7 @@ import { useMutation, useQueryClient, UseMutationResult } from "@tanstack/react-
 import { toast } from "react-hot-toast";
 import { ErrorCodes } from "@/lib/error-codes";
 import { ApiError } from "@/lib/api-client";
+import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -513,13 +514,7 @@ export default function FieldsPage() {
   const [onboardModalOpen, setOnboardModalOpen] = useState(false);
   const [kycError, setKycError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 500);
-    return () => clearTimeout(timer);
-  }, [search]);
+  const debouncedSearch = useDebounce(search, 500);
 
   const { data, isLoading } = useTurfsList({
     page,
@@ -622,20 +617,14 @@ export default function FieldsPage() {
         />
         <StatCard
           label="Pending Review"
-          value={String(
-            turfs.filter(
-              (t) =>
-                t.documents?.status &&
-                !["verified"].includes(t.documents.status),
-            ).length,
-          )}
+          value="-"
           sub="Requires attention"
           icon={WarningCircle}
           color="#f59e0b"
         />
         <StatCard
           label="Active Fields"
-          value={String(turfs.filter((t) => t.status === "active").length)}
+          value="-"
           sub="Now live on app"
           icon={ShieldCheck}
           color="#3b82f6"

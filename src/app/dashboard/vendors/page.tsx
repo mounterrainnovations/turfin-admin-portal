@@ -21,11 +21,12 @@ import {
   ArrowCounterClockwise,
   MinusCircle,
 } from "@phosphor-icons/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { vendorsApi, useVendorsList } from "@/domains/vendors/api";
 import { ApiError } from "@/lib/api-client";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Vendor,
   KycStatus as DomainKycStatus,
@@ -158,14 +159,8 @@ function StatCard({
 export default function VendorsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 500);
-    return () => clearTimeout(timer);
-  }, [search]);
   const [statusTab, setStatusTab] = useState<VendorStatus | "all">("all");
   const [actionMenu, setActionMenu] = useState<string | null>(null);
   const [onboardModalOpen, setOnboardModalOpen] = useState(false);

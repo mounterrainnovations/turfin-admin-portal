@@ -23,7 +23,7 @@ import NotificationPanel from "./components/NotificationPanel";
 import { AuditLogProvider } from "./audit-log-context";
 import { useSession } from "@/lib/auth";
 
-const disabledItems = [
+const disabledItems: string[] = [
   // "Dashboard",
   // "Bookings",
   // "Analytics",

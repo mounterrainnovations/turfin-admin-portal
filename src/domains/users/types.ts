@@ -25,7 +25,11 @@ export interface UserProfile {
   createdAt: string;
 }
 
-export type UserStatus = "active" | "inactive" | "banned" | "pending";
+export type UserStatus = "active" | "inactive" | "banned" | "pending" | "under_review";
 
-// We'll extend the backend profile for the FE requirements if needed,
-// but for now let's stick to the official DTO.
+export interface UserListParams {
+  page?: number;
+  limit?: number;
+  status?: UserStatus;
+  search?: string;
+}

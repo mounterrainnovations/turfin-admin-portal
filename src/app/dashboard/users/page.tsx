@@ -20,6 +20,7 @@ import { usersApi, useUsersList } from "@/domains/users/api";
 import { UserProfile, UserStatus } from "@/domains/users/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast as hotToast } from "react-hot-toast";
+import { useDebounce } from "@/hooks/use-debounce";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AppUser {
@@ -110,6 +111,12 @@ const STATUS_CONFIG: Record<
     color: "text-blue-600",
     dot: "bg-blue-500",
     bg: "bg-blue-50",
+  },
+  under_review: {
+    label: "Under Review",
+    color: "text-amber-600",
+    dot: "bg-amber-500",
+    bg: "bg-amber-50",
   },
 };
 
@@ -384,8 +391,14 @@ export default function UsersPage() {
   const [banModal, setBanModal] = useState<AppUser | null>(null);
   const [banReason, setBanReason] = useState("");
   const [page, setPage] = useState(1);
+  const debouncedSearch = useDebounce(search, 500);
 
-  const { data, isLoading } = useUsersList({ page, limit: PAGE_SIZE });
+  const { data, isLoading } = useUsersList({
+    page,
+    limit: PAGE_SIZE,
+    status: activeTab === "all" ? undefined : activeTab,
+    search: debouncedSearch || undefined,
+  });
 
   const users = useMemo(() => {
     const raw = (data as { data: UserProfile[] })?.data || [];
@@ -425,20 +438,7 @@ export default function UsersPage() {
     },
   });
 
-  const filtered = useMemo(() => {
-    return users.filter((u) => {
-      const matchTab = activeTab === "all" || u.status === activeTab;
-      const q = search.toLowerCase();
-      const matchSearch =
-        !q ||
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.phone.toLowerCase().includes(q) ||
-        u.city.toLowerCase().includes(q) ||
-        u.id.toLowerCase().includes(q);
-      return matchTab && matchSearch;
-    });
-  }, [users, activeTab, search]);
+  const filtered = users;
 
   const stats = useMemo(() => {
     const active = users.filter((u) => u.status === "active").length;
@@ -499,14 +499,16 @@ export default function UsersPage() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 flex-1 max-w-sm shadow-sm opacity-60 cursor-not-allowed">
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 flex-1 max-w-sm shadow-sm transition-all focus-within:ring-2 focus-within:ring-[#8a9e60]/20 focus-within:border-[#8a9e60]/30">
           <MagnifyingGlass size={15} className="text-gray-400 shrink-0" />
           <input
-            disabled
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search by name, email, phone, city…"
-            className="flex-1 outline-none text-sm text-gray-400 bg-transparent placeholder:text-gray-400 cursor-not-allowed"
+            className="flex-1 outline-none text-sm text-gray-600 bg-transparent placeholder:text-gray-400"
           />
         </div>
         <div className="hidden md:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -523,12 +525,10 @@ export default function UsersPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 gap-1 shrink-0 overflow-x-auto scrollbar-hide">
-        {(["all", "active", "inactive", "banned"] as const).map((tab) => {
+        {(
+          ["all", "active", "pending", "under_review", "inactive", "banned"] as const
+        ).map((tab) => {
           const isActive = activeTab === tab;
-          const count =
-            tab === "all"
-              ? users.length
-              : users.filter((u) => u.status === tab).length;
           return (
             <button
               key={tab}
@@ -544,16 +544,14 @@ export default function UsersPage() {
             >
               {tab === "all"
                 ? "All Users"
-                : tab.charAt(0).toUpperCase() + tab.slice(1)}
-              <span
-                className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                  isActive
-                    ? "bg-[#8a9e60] text-white"
-                    : "bg-gray-100 text-gray-400"
-                }`}
-              >
-                {count}
-              </span>
+                : tab.charAt(0).toUpperCase() + tab.slice(1).replace(/_/g, " ")}
+              {isActive && meta?.total !== undefined && (
+                <span
+                  className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#8a9e60] text-white"
+                >
+                  {meta.total}
+                </span>
+              )}
             </button>
           );
         })}

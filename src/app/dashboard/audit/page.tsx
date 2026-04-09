@@ -18,8 +18,9 @@ import {
   Storefront,
   MagnifyingGlass,
 } from "@phosphor-icons/react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { auditApi, useAuditLogs } from "@/domains/audit/api";
+import { useDebounce } from "@/hooks/use-debounce";
 import { AuditCategory, AuditLogRecord } from "@/domains/audit/types";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -266,16 +267,10 @@ function LogDetailPanel({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AuditPage() {
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
   const [catFilter, setCatFilter] = useState<AuditCategory | "all">("all");
   const [selected, setSelected] = useState<AuditLogRecord | null>(null);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 500);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   async function handleExportCSV(category?: AuditCategory, actorId?: string) {
     try {
