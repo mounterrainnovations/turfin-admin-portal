@@ -1,282 +1,432 @@
--- WARNING: This schema is for context only and is not meant to be run.
--- Table order and constraints may not be valid for execution.
+# TurfIn Database Documentation
 
-CREATE TABLE public.audit_logs (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-actor_id uuid,
-category USER-DEFINED NOT NULL,
-event_type USER-DEFINED NOT NULL,
-payload jsonb NOT NULL DEFAULT '{}'::jsonb,
-ip_address inet,
-user_agent text,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-actor_role text,
-target_type text,
-target_id uuid,
-status text DEFAULT 'success'::text,
-metadata jsonb DEFAULT '{}'::jsonb,
-CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
-CONSTRAINT audit_logs_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.identities(id)
-);
-CREATE TABLE public.booking_slots (
-booking_id uuid NOT NULL,
-slot_id uuid NOT NULL,
-price_paise integer NOT NULL CHECK (price_paise >= 0),
-CONSTRAINT booking_slots_pkey PRIMARY KEY (booking_id, slot_id),
-CONSTRAINT booking_slots_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id),
-CONSTRAINT booking_slots_slot_id_fkey FOREIGN KEY (slot_id) REFERENCES public.slots(id)
-);
-CREATE TABLE public.bookings (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-user_id uuid NOT NULL,
-field_id uuid NOT NULL,
-total_amount_paise integer NOT NULL CHECK (total_amount_paise >= 0),
-discount_amount_paise integer NOT NULL DEFAULT 0 CHECK (discount_amount_paise >= 0),
-coupon_id uuid,
-status USER-DEFINED NOT NULL DEFAULT 'pending'::booking_status,
-booked_at timestamp with time zone NOT NULL DEFAULT now(),
-cancelled_at timestamp with time zone,
-cancellation_reason text,
-CONSTRAINT bookings_pkey PRIMARY KEY (id),
-CONSTRAINT bookings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-CONSTRAINT bookings_field_id_fkey FOREIGN KEY (field_id) REFERENCES public.fields(id),
-CONSTRAINT bookings_coupon_id_fkey FOREIGN KEY (coupon_id) REFERENCES public.coupons(id)
-);
-CREATE TABLE public.coupon_scopes (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-coupon_id uuid NOT NULL,
-scope_type USER-DEFINED NOT NULL,
-scope_ref_id uuid,
-CONSTRAINT coupon_scopes_pkey PRIMARY KEY (id),
-CONSTRAINT coupon_scopes_coupon_id_fkey FOREIGN KEY (coupon_id) REFERENCES public.coupons(id)
-);
-CREATE TABLE public.coupons (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-created_by uuid NOT NULL,
-code text NOT NULL UNIQUE,
-discount_type USER-DEFINED NOT NULL,
-discount_value integer NOT NULL CHECK (discount_value > 0),
-min_booking_amount integer NOT NULL DEFAULT 0 CHECK (min_booking_amount >= 0),
-max_discount_cap integer CHECK (max_discount_cap > 0),
-max_uses integer CHECK (max_uses > 0),
-uses_count integer NOT NULL DEFAULT 0 CHECK (uses_count >= 0),
-valid_from timestamp with time zone NOT NULL,
-valid_until timestamp with time zone,
-is_active boolean NOT NULL DEFAULT true,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-CONSTRAINT coupons_pkey PRIMARY KEY (id),
-CONSTRAINT coupons_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.identities(id)
-);
-CREATE TABLE public.field_documents (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-field_id uuid NOT NULL UNIQUE,
-status USER-DEFINED NOT NULL DEFAULT 'not_started'::kyc_status,
-documents jsonb NOT NULL DEFAULT '{}'::jsonb,
-reviewer_notes text,
-reviewed_by uuid,
-reviewed_at timestamp with time zone,
-submitted_at timestamp with time zone,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-CONSTRAINT field_documents_pkey PRIMARY KEY (id),
-CONSTRAINT field_documents_field_id_fkey FOREIGN KEY (field_id) REFERENCES public.fields(id),
-CONSTRAINT field_documents_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.identities(id)
-);
-CREATE TABLE public.fields (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-vendor_id uuid NOT NULL,
-name text NOT NULL,
-sports ARRAY NOT NULL DEFAULT '{}'::sport_type[],
-amenities ARRAY NOT NULL DEFAULT '{}'::amenity_type[],
-capacity integer,
-size_format text,
-surface_type USER-DEFINED NOT NULL,
-address jsonb NOT NULL DEFAULT '{}'::jsonb,
-weekday_open time without time zone NOT NULL DEFAULT '06:00:00'::time without time zone,
-weekday_close time without time zone NOT NULL DEFAULT '23:00:00'::time without time zone,
-weekend_open time without time zone NOT NULL DEFAULT '06:00:00'::time without time zone,
-weekend_close time without time zone NOT NULL DEFAULT '23:00:00'::time without time zone,
-standard_price_paise integer NOT NULL CHECK (standard_price_paise >= 0),
-cancellation_window_hrs integer NOT NULL DEFAULT 24 CHECK (cancellation_window_hrs >= 0),
-status USER-DEFINED NOT NULL DEFAULT 'pending'::field_status,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-deleted_at timestamp with time zone,
-CONSTRAINT fields_pkey PRIMARY KEY (id),
-CONSTRAINT fields_vendor_id_fkey FOREIGN KEY (vendor_id) REFERENCES public.vendors(id)
-);
-CREATE TABLE public.identities (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-status USER-DEFINED NOT NULL DEFAULT 'active'::identity_status,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-whatsapp text,
-email text NOT NULL,
-CONSTRAINT identities_pkey PRIMARY KEY (id),
-CONSTRAINT fk_identities_auth_user FOREIGN KEY (id) REFERENCES auth.users(id)
-);
-CREATE TABLE public.identity_roles (
-identity_id uuid NOT NULL,
-role_id uuid NOT NULL,
-assigned_at timestamp with time zone NOT NULL DEFAULT now(),
-assigned_by uuid,
-CONSTRAINT identity_roles_pkey PRIMARY KEY (identity_id, role_id),
-CONSTRAINT identity_roles_identity_id_fkey FOREIGN KEY (identity_id) REFERENCES public.identities(id),
-CONSTRAINT identity_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id),
-CONSTRAINT identity_roles_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES public.identities(id)
-);
-CREATE TABLE public.notifications (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-recipient_id uuid NOT NULL,
-title text NOT NULL,
-body text NOT NULL,
-type USER-DEFINED NOT NULL,
-channel USER-DEFINED NOT NULL,
-is_inbox boolean NOT NULL DEFAULT false,
-read_at timestamp with time zone,
-data jsonb NOT NULL DEFAULT '{}'::jsonb,
-sent_at timestamp with time zone,
-failed_at timestamp with time zone,
-failure_reason text,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-CONSTRAINT notifications_pkey PRIMARY KEY (id),
-CONSTRAINT notifications_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES public.identities(id)
-);
-CREATE TABLE public.payments (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-booking_id uuid NOT NULL UNIQUE,
-amount_paise integer NOT NULL CHECK (amount_paise >= 0),
-status USER-DEFINED NOT NULL DEFAULT 'pending'::payment_status,
-gateway_name text,
-gateway_order_id text,
-gateway_payment_id text,
-gateway_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
-paid_at timestamp with time zone,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-CONSTRAINT payments_pkey PRIMARY KEY (id),
-CONSTRAINT payments_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id)
-);
-CREATE TABLE public.permissions (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-resource text NOT NULL,
-action text NOT NULL,
-description text,
-CONSTRAINT permissions_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.refresh_tokens (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-identity_id uuid NOT NULL,
-token_hash text NOT NULL,
-expires_at timestamp with time zone NOT NULL,
-revoked_at timestamp with time zone,
-device_info text,
-ip_address inet,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-CONSTRAINT refresh_tokens_pkey PRIMARY KEY (id),
-CONSTRAINT refresh_tokens_identity_id_fkey FOREIGN KEY (identity_id) REFERENCES public.identities(id)
-);
-CREATE TABLE public.role_permissions (
-role_id uuid NOT NULL,
-permission_id uuid NOT NULL,
-CONSTRAINT role_permissions_pkey PRIMARY KEY (role_id, permission_id),
-CONSTRAINT role_permissions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id),
-CONSTRAINT role_permissions_permission_id_fkey FOREIGN KEY (permission_id) REFERENCES public.permissions(id)
-);
-CREATE TABLE public.roles (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-name text NOT NULL UNIQUE,
-description text,
-is_system boolean NOT NULL DEFAULT false,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-CONSTRAINT roles_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.slots (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-field_id uuid NOT NULL,
-slot_date date NOT NULL,
-start_time time without time zone NOT NULL,
-end_time time without time zone NOT NULL,
-price_paise integer NOT NULL CHECK (price_paise >= 0),
-status USER-DEFINED NOT NULL DEFAULT 'available'::slot_status,
-block_reason USER-DEFINED,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-CONSTRAINT slots_pkey PRIMARY KEY (id),
-CONSTRAINT slots_field_id_fkey FOREIGN KEY (field_id) REFERENCES public.fields(id)
-);
-CREATE TABLE public.users (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-identity_id uuid NOT NULL UNIQUE,
-addresses jsonb NOT NULL DEFAULT '[]'::jsonb,
-status USER-DEFINED NOT NULL DEFAULT 'active'::user_status,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-display_name text NOT NULL,
-avatar_url text,
-date_of_birth date,
-gender USER-DEFINED,
-city text,
-state text,
-country text NOT NULL DEFAULT 'India'::text,
-preferred_sports ARRAY NOT NULL DEFAULT '{}'::sport_type[],
-ban_reason text,
-banned_at timestamp with time zone,
-banned_by uuid,
-source USER-DEFINED NOT NULL DEFAULT 'organic'::acquisition_source,
-referral_code_used text,
-own_referral_code text UNIQUE,
-device_os USER-DEFINED,
-app_version text,
-push_notifications_enabled boolean NOT NULL DEFAULT true,
-onesignal_player_id text,
-last_active_at timestamp with time zone,
-deleted_at timestamp with time zone,
-first_name text,
-middle_name text,
-last_name text,
-CONSTRAINT users_pkey PRIMARY KEY (id),
-CONSTRAINT users_identity_id_fkey FOREIGN KEY (identity_id) REFERENCES public.identities(id),
-CONSTRAINT users_banned_by_fkey FOREIGN KEY (banned_by) REFERENCES public.identities(id)
-);
-CREATE TABLE public.vendor_kyc (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-vendor_id uuid NOT NULL UNIQUE,
-status USER-DEFINED NOT NULL DEFAULT 'not_started'::kyc_status,
-documents jsonb NOT NULL DEFAULT '{}'::jsonb,
-reviewer_notes text,
-reviewed_by uuid,
-reviewed_at timestamp with time zone,
-submitted_at timestamp with time zone,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-CONSTRAINT vendor_kyc_pkey PRIMARY KEY (id),
-CONSTRAINT vendor_kyc_vendor_id_fkey FOREIGN KEY (vendor_id) REFERENCES public.vendors(id),
-CONSTRAINT vendor_kyc_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.identities(id)
-);
-CREATE TABLE public.vendors (
-id uuid NOT NULL DEFAULT gen_random_uuid(),
-identity_id uuid NOT NULL UNIQUE,
-business_name text NOT NULL,
-business_type USER-DEFINED NOT NULL,
-owner_full_name text NOT NULL,
-address jsonb NOT NULL DEFAULT '{}'::jsonb,
-banking_details jsonb NOT NULL DEFAULT '{}'::jsonb,
-commission_pct numeric NOT NULL DEFAULT 0,
-payout_cycle USER-DEFINED NOT NULL DEFAULT 'monthly'::payout_cycle,
-status USER-DEFINED NOT NULL DEFAULT 'pending'::vendor_status,
-created_at timestamp with time zone NOT NULL DEFAULT now(),
-updated_at timestamp with time zone NOT NULL DEFAULT now(),
-deleted_at timestamp with time zone,
-CONSTRAINT vendors_pkey PRIMARY KEY (id),
-CONSTRAINT vendors_identity_id_fkey FOREIGN KEY (identity_id) REFERENCES public.identities(id)
-);
-CREATE TABLE public.waitlist (
-uuid uuid NOT NULL DEFAULT gen_random_uuid(),
-email text NOT NULL UNIQUE,
-name text,
-phone_number text,
-created_at timestamp with time zone DEFAULT now(),
-CONSTRAINT waitlist_pkey PRIMARY KEY (uuid, email)
-);
+This document provides a comprehensive overview of the Supabase database schema for the TurfIn platform. It includes enum definitions, table structures, and relationships to serve as a reference for both backend DTO verification and frontend integration.
+
+## Table of Contents
+
+- [Enums](#enums)
+- [Tables](#tables)
+  - [Identities & Roles](#identities--roles)
+  - [Users](#users)
+  - [Vendors & KYC](#vendors--kyc)
+  - [Fields & Documents](#fields--documents)
+  - [Slots & Bookings](#slots--bookings)
+  - [Payments & Refunds](#payments--refunds)
+  - [Audit & Notifications](#audit--notifications)
+  - [Infrastructure](#infrastructure)
+
+---
+
+## Enums
+
+| Enum Name              | Values                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| :--------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `identity_status`      | `active`, `inactive`, `banned`, `under_review`                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `user_status`          | `active`, `inactive`, `banned`, `under_review`                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `vendor_status`        | `active`, `pending`, `suspended`, `banned`                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `field_status`         | `active`, `inactive`, `pending`, `maintenance`, `suspended`, `banned`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `kyc_status`           | `not_started`, `pending`, `in_review`, `verified`, `rejected`                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `payment_status`       | `created`, `pending`, `authorized`, `captured`, `failed`, `refunded`, `partially_refunded`                                                                                                                                                                                                                                                                                                                                                                                       |
+| `booking_status`       | `pending`, `confirmed`, `cancelled`, `completed`, `no_show`                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `slot_status`          | `available`, `booked`, `blocked`, `maintenance`                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `block_reason`         | `maintenance`, `private_event`, `weather`, `vendor_hold`, `other`                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `business_type`        | `individual`, `company`, `partnership`                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `payout_cycle`         | `daily`, `weekly`, `monthly`                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `gender_type`          | `male`, `female`, `other`, `prefer_not_to_say`                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `sport_type`           | `football`, `cricket`, `tennis`, `badminton`, `basketball`, `hockey`, `volleyball`, `kabaddi`                                                                                                                                                                                                                                                                                                                                                                                    |
+| `amenity_type`         | `parking`, `flood_lights`, `changing_room`, `cafeteria`, `equipment_rental`, `first_aid`, `wifi`, `cctv`, `drinking_water`                                                                                                                                                                                                                                                                                                                                                       |
+| `surface_type`         | `artificial_turf`, `natural_grass`, `concrete`, `wooden`, `synthetic`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `discount_type`        | `flat`, `percentage`                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `coupon_scope_type`    | `platform`, `vendor`, `field`                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `audit_category`       | `auth`, `kyc`, `booking`, `payment`, `slot`, `admin`, `vendor`, `turf`                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `audit_action`         | `AUTH_LOGIN`, `AUTH_LOGOUT`, `AUTH_SIGNUP`, `KYC_SUBMIT`, `KYC_VERIFY`, `KYC_REJECT`, `TURF_CREATE`, `TURF_UPDATE`, `TURF_DELETE`, `BOOKING_CREATE`, `BOOKING_CANCEL`, `PAYMENT_REFUND`, `USER_BAN`, `USER_UNBAN`, `VENDOR_CREATED`, `VENDOR_UPDATE`, `VENDOR_BAN`, `VENDOR_UNBAN`, `TURF_DOCS_UPDATE`, `TURF_DOCS_REVIEW`, `FIELD_BAN`, `FIELD_UNBAN`, `FIELD_STATUS_UPDATE`, `SUB_ADMIN_CREATE`, `SUB_ADMIN_DELETE`, `SUB_ADMIN_PASSWORD_UPDATE`, `ROLE_ASSIGN`, `ROLE_REVOKE` |
+| `notification_type`    | `booking_confirmed`, `booking_cancelled`, `booking_reminder`, `slot_booked`, `slot_cancelled`, `payment_received`, `payment_failed`, `payment_refunded`, `kyc_submitted`, `kyc_verified`, `kyc_rejected`, `field_approved`, `field_rejected`, `account_banned`, `account_reinstated`, `general`                                                                                                                                                                                  |
+| `notification_channel` | `push`, `sms`, `email`, `in_app`                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `acquisition_source`   | `organic`, `referral`, `google_ads`, `meta_ads`, `influencer`, `other`                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `device_os_type`       | `ios`, `android`, `web`                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `system_role`          | `super_admin`, `sub_admin`, `vendor_owner`, `end_user`                                                                                                                                                                                                                                                                                                                                                                                                                           |
+
+---
+
+## Tables
+
+### Identities & Roles
+
+#### `public.identities`
+
+Central identity table linked to Supabase Auth.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key, FK: `auth.users.id` |
+| `status` | `identity_status` | `'active'` | |
+| `email` | `text` | | Unique |
+| `whatsapp` | `text` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+
+#### `public.roles`
+
+System and custom roles.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `name` | `text` | | Unique |
+| `description` | `text` | | Nullable |
+| `is_system` | `boolean` | `false` | |
+| `created_at` | `timestamptz` | `now()` | |
+
+#### `public.permissions`
+
+Individual permissions for resources and actions.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `resource` | `text` | | |
+| `action` | `text` | | |
+| `description` | `text` | | Nullable |
+
+#### `public.identity_roles`
+
+Mapping of identities to roles.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `identity_id` | `uuid` | | PK, FK: `identities.id` |
+| `role_id` | `uuid` | | PK, FK: `roles.id` |
+| `assigned_at` | `timestamptz` | `now()` | |
+| `assigned_by` | `uuid` | | Nullable, FK: `identities.id` |
+
+#### `public.role_permissions`
+
+Mapping of roles to permissions.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `role_id` | `uuid` | | PK, FK: `roles.id` |
+| `permission_id` | `uuid` | | PK, FK: `permissions.id` |
+
+---
+
+### Users
+
+#### `public.users`
+
+End-user profiles.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `identity_id` | `uuid` | | Unique, FK: `identities.id` |
+| `display_name` | `text` | | |
+| `first_name` | `text` | | Nullable |
+| `middle_name` | `text` | | Nullable |
+| `last_name` | `text` | | Nullable |
+| `avatar_url` | `text` | | Nullable |
+| `date_of_birth` | `date` | | Nullable |
+| `gender` | `gender_type` | | Nullable |
+| `addresses` | `jsonb` | `'[]'` | |
+| `city` | `text` | | Nullable |
+| `state` | `text` | | Nullable |
+| `country` | `text` | `'India'` | |
+| `preferred_sports` | `sport_type[]` | `'{}'` | |
+| `status` | `user_status` | `'active'` | |
+| `ban_reason` | `text` | | Nullable |
+| `banned_at` | `timestamptz` | | Nullable |
+| `banned_by` | `uuid` | | Nullable, FK: `identities.id` |
+| `source` | `acquisition_source` | `'organic'` | |
+| `referral_code_used`| `text` | | Nullable |
+| `own_referral_code` | `text` | | Unique, Nullable |
+| `device_os` | `device_os_type` | | Nullable |
+| `app_version` | `text` | | Nullable |
+| `push_notifications_enabled` | `boolean` | `true` | |
+| `onesignal_player_id` | `text` | | Nullable |
+| `last_active_at` | `timestamptz` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+| `deleted_at` | `timestamptz` | | Nullable |
+
+---
+
+### Vendors & KYC
+
+#### `public.vendors`
+
+Vendor account details.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `identity_id` | `uuid` | | Unique, FK: `identities.id` |
+| `business_name` | `text` | | |
+| `business_type` | `business_type` | | |
+| `owner_full_name` | `text` | | |
+| `address` | `jsonb` | `'{}'` | |
+| `banking_details` | `jsonb` | `'{}'` | |
+| `commission_pct` | `numeric` | `0` | |
+| `payout_cycle` | `payout_cycle` | `'monthly'` | |
+| `status` | `vendor_status` | `'pending'` | |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+| `deleted_at` | `timestamptz` | | Nullable |
+
+#### `public.vendor_kyc`
+
+KYC verification status and documents for vendors.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `vendor_id` | `uuid` | | Unique, FK: `vendors.id` |
+| `status` | `kyc_status` | `'not_started'` | |
+| `documents` | `jsonb` | `'{}'` | |
+| `reviewer_notes` | `text` | | Nullable |
+| `reviewed_by` | `uuid` | | Nullable, FK: `identities.id` |
+| `reviewed_at` | `timestamptz` | | Nullable |
+| `submitted_at` | `timestamptz` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+
+---
+
+### Fields & Documents
+
+#### `public.fields`
+
+Turf/Court definitions.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `vendor_id` | `uuid` | | FK: `vendors.id` |
+| `name` | `text` | | |
+| `sports` | `sport_type[]` | `'{}'` | |
+| `amenities` | `amenity_type[]` | `'{}'` | |
+| `capacity` | `integer` | | Nullable |
+| `size_format` | `text` | | Nullable |
+| `surface_type` | `surface_type` | | |
+| `address` | `jsonb` | `'{}'` | |
+| `weekday_open` | `time` | `'06:00:00'` | |
+| `weekday_close` | `time` | `'23:00:00'` | |
+| `weekend_open` | `time` | `'06:00:00'` | |
+| `weekend_close` | `time` | `'23:00:00'` | |
+| `standard_price_paise` | `integer` | | Check: `>= 0` |
+| `cancellation_window_hrs` | `integer` | `24` | Check: `>= 0` |
+| `status` | `field_status` | `'pending'` | |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+| `deleted_at` | `timestamptz` | | Nullable |
+
+#### `public.field_documents`
+
+Validation documents for specific fields.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `field_id` | `uuid` | | Unique, FK: `fields.id` |
+| `status` | `kyc_status` | `'not_started'` | |
+| `documents` | `jsonb` | `'{}'` | |
+| `reviewer_notes` | `text` | | Nullable |
+| `reviewed_by` | `uuid` | | Nullable, FK: `identities.id` |
+| `reviewed_at` | `timestamptz` | | Nullable |
+| `submitted_at` | `timestamptz` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+
+---
+
+### Slots & Bookings
+
+#### `public.slots`
+
+Individual bookable time slots for a field.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `field_id` | `uuid` | | FK: `fields.id` |
+| `slot_date` | `date` | | |
+| `start_time` | `time` | | |
+| `end_time` | `time` | | |
+| `price_paise` | `integer` | | Check: `>= 0` |
+| `status` | `slot_status` | `'available'` | |
+| `block_reason` | `block_reason` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+
+#### `public.bookings`
+
+User bookings for one or more slots.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `user_id` | `uuid` | | FK: `users.id` |
+| `field_id` | `uuid` | | FK: `fields.id` |
+| `total_amount_paise` | `integer` | | Check: `>= 0` |
+| `discount_amount_paise` | `integer` | `0` | Check: `>= 0` |
+| `coupon_id` | `uuid` | | Nullable, FK: `coupons.id` |
+| `status` | `booking_status` | `'pending'` | |
+| `booked_at` | `timestamptz` | `now()` | |
+| `cancelled_at` | `timestamptz` | | Nullable |
+| `cancellation_reason` | `text` | | Nullable |
+
+#### `public.booking_slots`
+
+Many-to-many relationship between bookings and slots.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `booking_id` | `uuid` | | PK, FK: `bookings.id` |
+| `slot_id` | `uuid` | | PK, FK: `slots.id` |
+| `price_paise` | `integer` | | Check: `>= 0` |
+
+---
+
+### Payments & Refunds
+
+#### `public.payments`
+
+Transaction records associated with bookings.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `booking_id` | `uuid` | | FK: `bookings.id` |
+| `provider` | `text` | | e.g., 'razorpay' |
+| `provider_order_id`| `text` | | Nullable |
+| `provider_payment_id`| `text` | | Nullable |
+| `amount_paise` | `integer` | | Check: `>= 0` |
+| `currency` | `text` | `'INR'` | |
+| `status` | `text` | | Check: status in [created, pending, authorized, captured, failed, partially_refunded, refunded] |
+| `metadata` | `jsonb` | `'{}'` | |
+| `paid_at` | `timestamptz` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+
+#### `public.refunds`
+
+Refund records for payments.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `payment_id` | `uuid` | | FK: `payments.id` |
+| `provider_refund_id`| `text` | | Unique, Nullable |
+| `amount_paise` | `integer` | | Check: `>= 0` |
+| `status` | `text` | | Check: status in [pending, processed, failed] |
+| `metadata` | `jsonb` | `'{}'` | |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+
+#### `public.payment_events`
+
+Webhook events from payment providers.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `provider_event_id`| `text` | | Unique |
+| `provider` | `text` | | |
+| `event_type` | `text` | | |
+| `payload` | `jsonb` | | |
+| `processed_at` | `timestamptz` | `now()` | |
+
+---
+
+### Audit & Notifications
+
+#### `public.audit_logs`
+
+Activity logs for administrative and critical actions.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `actor_id` | `uuid` | | Nullable, FK: `identities.id` |
+| `actor_role` | `text` | | |
+| `category` | `audit_category` | | |
+| `event_type` | `audit_action` | | |
+| `payload` | `jsonb` | `'{}'` | |
+| `metadata` | `jsonb` | `'{}'` | |
+| `target_type` | `text` | | Nullable (e.g., 'vendor', 'field') |
+| `target_id` | `uuid` | | Nullable |
+| `status` | `text` | `'success'` | |
+| `ip_address` | `inet` | | Nullable |
+| `user_agent` | `text` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+
+#### `public.notifications`
+
+Messages sent to identities.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `recipient_id` | `uuid` | | FK: `identities.id` |
+| `title` | `text` | | |
+| `body` | `text` | | |
+| `type` | `notification_type` | | |
+| `channel` | `notification_channel` | | |
+| `is_inbox` | `boolean` | `false` | |
+| `read_at` | `timestamptz` | | Nullable |
+| `data` | `jsonb` | `'{}'` | |
+| `sent_at` | `timestamptz` | | Nullable |
+| `failed_at` | `timestamptz` | | Nullable |
+| `failure_reason` | `text` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+
+---
+
+### Infrastructure
+
+#### `public.coupons`
+
+Promotional codes and discounts.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `code` | `text` | | Unique |
+| `discount_type` | `discount_type` | | |
+| `discount_value` | `integer` | | Check: `> 0` |
+| `min_booking_amount`| `integer` | `0` | Check: `>= 0` |
+| `max_discount_cap` | `integer` | | Nullable, Check: `> 0` |
+| `max_uses` | `integer` | | Nullable, Check: `> 0` |
+| `uses_count` | `integer` | `0` | Check: `>= 0` |
+| `valid_from` | `timestamptz` | | |
+| `valid_until` | `timestamptz` | | Nullable |
+| `is_active` | `boolean` | `true` | |
+| `created_by` | `uuid` | | FK: `identities.id` |
+| `created_at` | `timestamptz` | `now()` | |
+| `updated_at` | `timestamptz` | `now()` | |
+
+#### `public.coupon_scopes`
+
+Restrictions on where coupons can be used.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `coupon_id` | `uuid` | | FK: `coupons.id` |
+| `scope_type` | `coupon_scope_type` | | |
+| `scope_ref_id` | `uuid` | | Nullable (id of vendor/field) |
+
+#### `public.refresh_tokens`
+
+Session management tokens.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `identity_id` | `uuid` | | FK: `identities.id` |
+| `token_hash` | `text` | | |
+| `expires_at` | `timestamptz` | | |
+| `revoked_at` | `timestamptz` | | Nullable |
+| `device_info` | `text` | | Nullable |
+| `ip_address` | `inet` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+
+#### `public.idempotency_keys`
+
+Prevents duplicate processing of requests.
+| Column | Type | Default | Options |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `key` | `text` | | Unique |
+| `operation` | `text` | | |
+| `result` | `jsonb` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
+
+#### `public.waitlist`
+
+Initial signup interest.
+| Column | Type | Default | Options |
+| :--- | :--- | : :--- | :--- |
+| `uuid` | `uuid` | `gen_random_uuid()` | Primary Key |
+| `email` | `text` | | Primary Key, Unique |
+| `name` | `text` | | Nullable |
+| `phone_number` | `text` | | Nullable |
+| `created_at` | `timestamptz` | `now()` | |
