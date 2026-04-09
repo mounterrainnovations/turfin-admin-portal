@@ -18,16 +18,24 @@ import {
   MinusCircle,
   Wrench,
   ArrowCounterClockwise,
+  CloudArrowUp,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import { useTurfsList, turfsApi } from "@/domains/turfs/api";
 import { TurfResponse, TurfStatus } from "@/domains/turfs/types";
-import { useMutation, useQueryClient, UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  UseMutationResult,
+} from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { ErrorCodes } from "@/lib/error-codes";
 import { ApiError } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
+import { DocumentUploadField } from "@/components/shared/document-upload-field";
+import { VendorSelector } from "@/components/shared/vendor-selector";
+import { storageApi } from "@/domains/storage/api";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -78,7 +86,12 @@ function ActionsMenu({
 }: {
   turf: TurfResponse;
   onReviewDocs: () => void;
-  statusMutation: UseMutationResult<any, any, { id: string; status: TurfStatus }, any>;
+  statusMutation: UseMutationResult<
+    any,
+    any,
+    { id: string; status: TurfStatus },
+    any
+  >;
   banMutation: UseMutationResult<any, any, string, any>;
   unbanMutation: UseMutationResult<any, any, string, any>;
 }) {
@@ -237,13 +250,20 @@ function FieldDetailPanel({
   statusMutation,
   banMutation,
   unbanMutation,
+  handleViewDoc,
 }: {
   turf: TurfResponse;
   onClose: () => void;
   onReviewDocs: () => void;
-  statusMutation: UseMutationResult<any, any, { id: string; status: TurfStatus }, any>;
+  statusMutation: UseMutationResult<
+    any,
+    any,
+    { id: string; status: TurfStatus },
+    any
+  >;
   banMutation: UseMutationResult<any, any, string, any>;
   unbanMutation: UseMutationResult<any, any, string, any>;
+  handleViewDoc: (url: string) => void;
 }) {
   const sc = STATUS_CONFIG[turf.status] || STATUS_CONFIG.pending;
 
@@ -404,13 +424,12 @@ function FieldDetailPanel({
                         <span className="text-[10px] font-bold text-gray-500 uppercase">
                           {label}
                         </span>
-                        <a
-                          href={value as string}
-                          target="_blank"
+                        <button
+                          onClick={() => handleViewDoc(value as string)}
                           className="text-[10px] text-[#8a9e60] font-bold hover:underline flex items-center gap-1"
                         >
                           <Eye size={12} /> VIEW
-                        </a>
+                        </button>
                       </div>
                     );
                   },
@@ -510,6 +529,9 @@ export default function FieldsPage() {
   const [docsReviewTurf, setDocsReviewTurf] = useState<TurfResponse | null>(
     null,
   );
+  const [docsTab, setDocsTab] = useState<"documents" | "upload_override">(
+    "documents",
+  );
   const [reviewNote, setReviewNote] = useState("");
   const [onboardModalOpen, setOnboardModalOpen] = useState(false);
   const [kycError, setKycError] = useState<string | null>(null);
@@ -581,11 +603,25 @@ export default function FieldsPage() {
     },
   });
 
-  function closeDocsModal() {
+  const closeDocsModal = () => {
     setDocsReviewTurf(null);
     setReviewNote("");
     setKycError(null);
-  }
+  };
+
+  const handleViewDoc = async (url: string) => {
+    if (!url) return;
+    if (url.startsWith("http")) {
+      window.open(url, "_blank");
+    } else {
+      try {
+        const signedUrl = await storageApi.getViewUrl(url);
+        window.open(signedUrl, "_blank");
+      } catch (error) {
+        toast.error("Failed to generate view link");
+      }
+    }
+  };
 
   const STATUS_TABS = [
     { key: "all", label: "All" },
@@ -861,6 +897,7 @@ export default function FieldsPage() {
               unbanMutation={unbanMutation}
               onClose={() => setSelected(null)}
               onReviewDocs={() => setDocsReviewTurf(selected)}
+              handleViewDoc={handleViewDoc}
             />
           )}
         </>
@@ -947,80 +984,146 @@ export default function FieldsPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex justify-end">
-                    <Link
-                      href="/dashboard/vendors"
-                      className="text-[10px] font-bold bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5"
-                    >
-                      <ShieldCheck size={12} weight="bold" /> GO TO VENDOR
-                      VERIFICATION
-                    </Link>
-                  </div>
                 </div>
               )}
 
-              {/* Document list */}
-              <div className="space-y-3">
-                {docsReviewTurf.documents?.documents &&
-                Object.keys(docsReviewTurf.documents.documents).length > 0 ? (
-                  Object.entries(docsReviewTurf.documents.documents).map(
-                    ([key, value]) => {
-                      const urls: string[] = Array.isArray(value)
-                        ? value
-                        : value
-                          ? [value as string]
-                          : [];
-                      return (
-                        <div
-                          key={key}
-                          className="border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:bg-gray-50/50"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
-                              <FileText size={24} />
+              {/* Document Tabs */}
+              <div className="flex border-b border-gray-100 mb-4 transition-all">
+                {["documents", "upload_override"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setDocsTab(tab as any)}
+                    className={`px-4 py-2 text-[10px] font-bold tracking-widest uppercase transition-all ${
+                      docsTab === tab
+                        ? "border-b-2 border-gray-900 text-gray-900"
+                        : "text-gray-400 hover:text-gray-600"
+                    }`}
+                  >
+                    {tab === "documents"
+                      ? "Current Documents"
+                      : "Upload Override"}
+                  </button>
+                ))}
+              </div>
+
+              {docsTab === "documents" ? (
+                /* Original Document list */
+                <div className="space-y-3">
+                  {docsReviewTurf.documents?.documents &&
+                  Object.keys(docsReviewTurf.documents.documents).length > 0 ? (
+                    Object.entries(docsReviewTurf.documents.documents).map(
+                      ([key, value]) => {
+                        const urls: string[] = Array.isArray(value)
+                          ? value
+                          : value
+                            ? [value as string]
+                            : [];
+                        return (
+                          <div
+                            key={key}
+                            className="border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:bg-gray-50/50"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                                <FileText size={24} />
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-gray-800 uppercase tracking-widest">
+                                  {key.replace(/([A-Z])/g, " $1").trim()}
+                                </p>
+                                <p className="text-[10px] text-gray-400 mt-0.5 font-medium">
+                                  {urls.length > 0
+                                    ? `${urls.length} file(s) — READY FOR REVIEW`
+                                    : "MISSING"}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-xs font-bold text-gray-800 uppercase tracking-widest">
-                                {key.replace(/([A-Z])/g, " $1").trim()}
-                              </p>
-                              <p className="text-[10px] text-gray-400 mt-0.5 font-medium">
-                                {urls.length > 0
-                                  ? `${urls.length} file(s) — READY FOR REVIEW`
-                                  : "MISSING"}
-                              </p>
-                            </div>
+                            {urls.length > 0 && (
+                              <div className="flex gap-2">
+                                {urls.slice(0, 2).map((url, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => handleViewDoc(url)}
+                                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-[11px] font-bold text-white bg-gray-900 hover:bg-gray-800 transition-all shadow-md"
+                                  >
+                                    <Eye size={13} />{" "}
+                                    {urls.length > 1 ? `#${i + 1}` : "VIEW"}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          {urls.length > 0 && (
-                            <div className="flex gap-2">
-                              {urls.slice(0, 2).map((url, i) => (
-                                <a
-                                  key={i}
-                                  href={url}
-                                  target="_blank"
-                                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-[11px] font-bold text-white bg-gray-900 hover:bg-gray-800"
-                                >
-                                  <Eye size={13} />{" "}
-                                  {urls.length > 1 ? `#${i + 1}` : "VIEW"}
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    },
-                  )
-                ) : (
-                  <div className="py-16 text-center border-2 border-dashed border-gray-100 rounded-3xl">
-                    <FileText
-                      size={40}
-                      className="text-gray-200 mx-auto mb-2"
-                    />
-                    <p className="text-sm font-bold text-gray-300">
-                      No documents uploaded yet
+                        );
+                      },
+                    )
+                  ) : (
+                    <div className="py-16 text-center border-2 border-dashed border-gray-100 rounded-3xl">
+                      <FileText
+                        size={40}
+                        className="text-gray-200 mx-auto mb-2"
+                      />
+                      <p className="text-sm font-bold text-gray-300">
+                        No documents uploaded yet
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Upload Override list */
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-2">
+                    <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
+                      Administrative Override: Replace or add documents for this
+                      field. Changes take effect immediately.
                     </p>
                   </div>
-                )}
-              </div>
+                  {[
+                    "propertyDocument",
+                    "municipalNoc",
+                    "liabilityInsurance",
+                  ].map((field) => (
+                    <DocumentUploadField
+                      key={field}
+                      label={field.replace(/([A-Z])/g, " $1").trim()}
+                      module="turf"
+                      moduleId={docsReviewTurf.id}
+                      fieldKey={field}
+                      currentUrl={
+                        docsReviewTurf.documents?.documents?.[
+                          field as keyof typeof docsReviewTurf.documents.documents
+                        ] as string
+                      }
+                      onUploadComplete={(path) => {
+                        const currentDocs =
+                          docsReviewTurf.documents?.documents || {};
+                        turfsApi
+                          .uploadTurfDocuments(docsReviewTurf.id, {
+                            ...currentDocs,
+                            [field]: path,
+                          } as any)
+                          .then(() => {
+                            queryClient.invalidateQueries({
+                              queryKey: ["admin", "turfs"],
+                            });
+                            setDocsReviewTurf((prev) => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                documents: {
+                                  ...prev.documents!,
+                                  documents: {
+                                    ...prev.documents!.documents,
+                                    [field]: path,
+                                  },
+                                },
+                              } as any;
+                            });
+                          });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Reviewer Notes */}
               <div>
@@ -1094,7 +1197,7 @@ export default function FieldsPage() {
             className="absolute inset-0 bg-black/60 backdrop-blur-md"
             onClick={() => setOnboardModalOpen(false)}
           />
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden relative animate-in zoom-in-95 duration-200 flex flex-col">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl overflow-hidden relative animate-in zoom-in-95 duration-200 flex flex-col">
             <OnboardFieldForm
               onClose={() => setOnboardModalOpen(false)}
               onSuccess={() => {
@@ -1165,13 +1268,16 @@ function OnboardFieldForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVendorId) return toast.error("Please select a vendor first");
+
+    const { addressLineOne, city, state, pinCode, ...restData } = formData;
+
     mutation.mutate({
-      ...formData,
+      ...restData,
       address: {
-        addressLineOne: formData.addressLineOne,
-        city: formData.city,
-        state: formData.state,
-        pinCode: formData.pinCode,
+        addressLineOne,
+        city,
+        state,
+        pinCode,
       },
     });
   };
@@ -1198,21 +1304,34 @@ function OnboardFieldForm({
 
       <div className="flex-1 overflow-y-auto p-8 space-y-6">
         {step === 1 ? (
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
-                Assign to Vendor (ID)
-              </label>
-              <input
-                required
-                value={selectedVendorId}
-                onChange={(e) => setSelectedVendorId(e.target.value)}
-                placeholder="Enter Vendor ID (e.g. vend_...)"
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
-              />
-              <p className="text-[10px] text-gray-400 italic mt-2">
-                Currently, please provide the unique Vendor ID. You can find
-                this in the Vendors dashboard.
+          <div className="py-12 flex flex-col items-center justify-center">
+            <div className="w-full max-w-md space-y-4">
+              <div className="space-y-1.5 text-center mb-6">
+                <div className="w-16 h-16 bg-[#8a9e60]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Buildings
+                    size={32}
+                    weight="fill"
+                    className="text-[#8a9e60]"
+                  />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800">
+                  Assign to Vendor
+                </h3>
+                <p className="text-xs text-gray-400 font-medium">
+                  Every field must be owned by a verified vendor profile
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <VendorSelector
+                  selectedVendorId={selectedVendorId}
+                  onSelect={(id) => setSelectedVendorId(id)}
+                  placeholder="Search vendor by business name..."
+                />
+              </div>
+              <p className="text-[10px] text-gray-400 italic text-center px-4">
+                You can search by business name or scroll through the list to
+                find the correct owner.
               </p>
             </div>
           </div>
@@ -1245,8 +1364,9 @@ function OnboardFieldForm({
               >
                 <option value="natural_grass">Natural Grass</option>
                 <option value="artificial_turf">Artificial Turf</option>
-                <option value="clay">Clay</option>
-                <option value="hard_court">Hard Court</option>
+                <option value="concrete">Concrete</option>
+                <option value="wooden">Wooden</option>
+                <option value="synthetic">Synthetic</option>
               </select>
             </div>
             <div className="space-y-1.5 text-right">
@@ -1302,6 +1422,17 @@ function OnboardFieldForm({
                   setFormData({ ...formData, state: e.target.value })
                 }
                 placeholder="State"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <input
+                required
+                value={formData.pinCode}
+                onChange={(e) =>
+                  setFormData({ ...formData, pinCode: e.target.value })
+                }
+                placeholder="PIN Code"
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
               />
             </div>

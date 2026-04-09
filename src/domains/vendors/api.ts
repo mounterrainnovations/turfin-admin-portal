@@ -33,6 +33,7 @@ export const vendorsApi = {
     });
 
     if (params.status) searchParams.append("status", params.status);
+    if (params.excludeStatus) searchParams.append("excludeStatus", params.excludeStatus);
     if (params.search) searchParams.append("search", params.search);
 
     return api.get<PaginatedResponse<Vendor>>(
@@ -57,10 +58,10 @@ export const vendorsApi = {
     businessName: string;
     ownerFullName: string;
     businessType: string;
-    commissionPct?: number;
+    commissionPct?: string | number;
     payoutCycle?: string;
-    address?: Address;
-    bankingDetails?: BankingDetails;
+    address: Address;
+    bankingDetails: BankingDetails;
   }): Promise<VendorOnboardingResponse> => {
     return api.post<VendorOnboardingResponse>("/admin/onboard-vendor", {
       email: data.email,
@@ -71,7 +72,7 @@ export const vendorsApi = {
         ownerFullName: data.ownerFullName,
         address: data.address,
         bankingDetails: data.bankingDetails,
-        commissionPct: data.commissionPct,
+        commissionPct: data.commissionPct?.toString(),
         payoutCycle: data.payoutCycle,
       },
     });
@@ -143,6 +144,25 @@ export const vendorsApi = {
     documents: VendorKyc["documents"],
   ): Promise<void> => {
     return api.post(`/admin/vendors/${vendorId}/kyc`, { documents });
+  },
+
+  /**
+   * Updates a vendor profile.
+   * Aligned with Postman: PATCH /admin/vendors/:vendorId
+   */
+  updateVendor: async (
+    vendorId: string,
+    data: Partial<{
+      businessName: string;
+      ownerFullName: string;
+      businessType: string;
+      commissionPct: string | number;
+      payoutCycle: string;
+      address: Partial<Address>;
+      bankingDetails: Partial<BankingDetails>;
+    }>,
+  ): Promise<Vendor> => {
+    return api.patch<Vendor>(`/admin/vendors/${vendorId}`, data);
   },
 };
 
