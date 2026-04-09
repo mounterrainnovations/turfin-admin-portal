@@ -182,33 +182,36 @@ export default function DashboardLayout({
               </p>
             </div>
             <div className="flex items-center gap-6">
-              <div className="hidden md:flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-400 w-64 focus-within:border-[#8a9e60] focus-within:ring-1 focus-within:ring-[#8a9e60]/20 transition-all">
+              <div className="hidden md:flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-400 w-64 opacity-50 cursor-not-allowed transition-all">
                 <MagnifyingGlass size={16} weight="bold" />
                 <input
                   type="text"
                   placeholder="Quick search..."
-                  className="bg-transparent border-none outline-none w-full text-gray-700 placeholder:text-gray-300"
+                  disabled
+                  className="bg-transparent border-none outline-none w-full text-gray-700 placeholder:text-gray-300 cursor-not-allowed"
                 />
               </div>
 
-              <div className="flex items-center gap-3 border-l border-gray-100 pl-6">
-                <NotificationPanel />
+              <div className="w-[1px] h-6 bg-gray-200/60" />
 
-                <div className="flex items-center gap-3.5 pl-3 border-l border-gray-100">
-                  <div className="flex flex-col items-end hidden sm:flex">
-                    <p className="text-sm font-bold text-gray-900 leading-tight">
-                      {session.email}
-                    </p>
-                    <p className="text-[10px] font-bold text-[#8a9e60] uppercase tracking-tighter">
-                      {session.roles[0] || "User"}
-                    </p>
-                  </div>
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg shadow-[#8a9e60]/20 transition-transform hover:scale-105 cursor-pointer ring-2 ring-white"
-                    style={{ backgroundColor: "#8a9e60" }}
-                  >
-                    {session.email.split("@")[0].slice(0, 2).toUpperCase()}
-                  </div>
+              <NotificationPanel disabled />
+
+              <div className="w-[1px] h-6 bg-gray-200/60" />
+
+              <div className="flex items-center gap-3.5">
+                <div className="flex flex-col items-end hidden sm:flex">
+                  <p className="text-sm font-bold text-gray-900 leading-tight">
+                    {session.email}
+                  </p>
+                  <p className="text-[10px] font-bold text-[#8a9e60] uppercase tracking-tighter">
+                    {session.roles[0] || "User"}
+                  </p>
+                </div>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg shadow-[#8a9e60]/20 transition-transform hover:scale-105 cursor-pointer ring-2 ring-white"
+                  style={{ backgroundColor: "#8a9e60" }}
+                >
+                  {session.email.split("@")[0].slice(0, 2).toUpperCase()}
                 </div>
               </div>
             </div>

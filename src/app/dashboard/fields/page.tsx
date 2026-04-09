@@ -52,12 +52,8 @@ const PAGE_SIZE = 10;
 // ─── Actions Menu ─────────────────────────────────────────────────────────────
 function ActionsMenu({
   turf,
-  onView,
-  onReviewDocs,
 }: {
   turf: TurfResponse;
-  onView: () => void;
-  onReviewDocs: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -100,26 +96,6 @@ function ActionsMenu({
 
       {open && (
         <div className="absolute right-0 top-8 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20">
-          <button
-            onClick={() => {
-              onView();
-              setOpen(false);
-            }}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Eye size={13} className="text-gray-400" /> View Details
-          </button>
-
-          <button
-            onClick={() => {
-              onReviewDocs();
-              setOpen(false);
-            }}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors font-bold"
-          >
-            <ShieldCheck size={13} /> Review Documents
-          </button>
-
           {turf.status === "pending" && (
             <button
               onClick={() =>
@@ -135,7 +111,7 @@ function ActionsMenu({
               onClick={() =>
                 statusMutation.mutate({ id: turf.id, status: "suspended" })
               }
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors"
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors font-medium"
             >
               <Prohibit size={13} /> Suspend Field
             </button>
@@ -145,7 +121,7 @@ function ActionsMenu({
               onClick={() =>
                 statusMutation.mutate({ id: turf.id, status: "active" })
               }
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-green-600 hover:bg-green-50 transition-colors"
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-green-600 hover:bg-green-50 transition-colors font-medium"
             >
               <CheckCircle size={13} /> Reinstate
             </button>
@@ -160,46 +136,58 @@ function ActionsMenu({
 function FieldDetailPanel({
   turf,
   onClose,
+  onReviewDocs,
 }: {
   turf: TurfResponse;
   onClose: () => void;
+  onReviewDocs: () => void;
 }) {
   const sc = STATUS_CONFIG[turf.status] || STATUS_CONFIG.pending;
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 w-[420px] bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-100 animate-in slide-in-from-right duration-300">
+    <div className="fixed right-0 top-0 bottom-0 w-[480px] bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-100 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div
-        className="shrink-0 px-5 py-4 flex items-start justify-between"
+        className="shrink-0 p-6 flex items-start justify-between border-b border-gray-100"
         style={{ background: "linear-gradient(135deg,#8a9e60,#6e8245)" }}
       >
-        <div className="flex-1 min-w-0 pr-3">
-          <p className="text-white/60 text-[11px] font-medium mb-0.5">
-            {turf.id}
-          </p>
-          <h2 className="text-white font-bold text-base leading-tight truncate">
-            {turf.name}
-          </h2>
-          <p className="text-white/60 text-[11px] mt-0.5 flex items-center gap-1">
-            <MapPin size={10} /> {turf.address.city}, {turf.address.state}
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            <span
-              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${sc.color}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-              {sc.label}
-            </span>
-            <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full capitalize">
-              {turf.surfaceType?.replace(/_/g, " ")}
-            </span>
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white text-xl font-bold border border-white/30 shadow-lg shrink-0 overflow-hidden">
+            {turf.documents?.documents.fieldPhotos?.[0] ? (
+              <img
+                src={turf.documents.documents.fieldPhotos[0]}
+                alt={turf.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              "T"
+            )}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-white font-bold text-lg leading-tight truncate">
+              {turf.name}
+            </h2>
+            <p className="text-white/70 text-[11px] font-mono mt-1 truncate">
+              {turf.id}
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <span
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-white/20 text-white border border-white/10`}
+              >
+                <span className={`w-1 h-1 rounded-full ${sc.dot}`} />
+                {sc.label.toUpperCase()}
+              </span>
+              <span className="text-[9px] bg-white/10 text-white/80 px-2 py-0.5 rounded-full capitalize border border-white/5">
+                {turf.surfaceType?.replace(/_/g, " ")}
+              </span>
+            </div>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="text-white/60 hover:text-white shrink-0 mt-0.5"
+          className="text-white/60 hover:text-white shrink-0"
         >
-          <X size={20} />
+          <X size={20} weight="bold" />
         </button>
       </div>
 
@@ -333,6 +321,20 @@ function FieldDetailPanel({
           )}
         </div>
       </div>
+
+      {/* Quick Review Button */}
+      <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+        <button
+          onClick={() => {
+            onClose();
+            onReviewDocs();
+          }}
+          className="w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
+          style={{ backgroundColor: "#8a9e60" }}
+        >
+          <ShieldCheck size={14} /> Review Documents
+        </button>
+      </div>
     </div>
   );
 }
@@ -417,8 +419,8 @@ export default function FieldsPage() {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
           <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-80">
+            {/* Search hidden for now */}
+            {/* <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-80">
               <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
               <input
                 value={search}
@@ -429,7 +431,7 @@ export default function FieldsPage() {
                 placeholder="Search turf name, location, ID..."
                 className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
               />
-            </div>
+            </div> */}
 
             {/* Tabs */}
             <div className="flex gap-1.5 ml-auto">
@@ -576,11 +578,7 @@ export default function FieldsPage() {
                           className="px-4 py-4 text-right"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <ActionsMenu
-                            turf={turf}
-                            onView={() => setSelected(turf)}
-                            onReviewDocs={() => setDocsReviewTurf(turf)}
-                          />
+                          <ActionsMenu turf={turf} />
                         </td>
                       </tr>
                     );
@@ -626,7 +624,11 @@ export default function FieldsPage() {
             className="fixed inset-0 bg-black/10 z-40 backdrop-blur-[2px]"
             onClick={() => setSelected(null)}
           />
-          <FieldDetailPanel turf={selected} onClose={() => setSelected(null)} />
+          <FieldDetailPanel
+            turf={selected}
+            onClose={() => setSelected(null)}
+            onReviewDocs={() => setDocsReviewTurf(selected)}
+          />
         </>
       )}
 

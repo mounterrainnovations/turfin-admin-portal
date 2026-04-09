@@ -9,7 +9,6 @@ import {
   WarningCircle,
   ClockCountdown,
   Plus,
-  MagnifyingGlass,
   DotsThreeVertical,
   X,
   Eye,
@@ -143,7 +142,7 @@ function StatCard({
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function VendorsPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
+  const [search] = useState("");
   const [page, setPage] = useState(1);
   const [statusTab, setStatusTab] = useState<VendorStatus | "all">("all");
   const [actionMenu, setActionMenu] = useState<string | null>(null);
@@ -245,18 +244,8 @@ export default function VendorsPage() {
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 shrink-0 space-y-4">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-80 shadow-inner">
-            <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search business, owner, city..."
-              className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
-            />
-          </div>
+          {/* Search hidden for now */}
+
 
           <div className="flex gap-1.5 ml-auto">
             {(["all", "active", "pending", "suspended"] as const).map((tab) => (

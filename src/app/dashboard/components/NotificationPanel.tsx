@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, CheckCircle, Storefront, CalendarCheck, WarningCircle, X } from "@phosphor-icons/react";
+import { Bell, CheckCircle, Storefront, CalendarCheck, WarningCircle } from "@phosphor-icons/react";
 import Link from "next/link";
 
 interface Notification {
@@ -13,44 +13,9 @@ interface Notification {
   type: "booking" | "system" | "vendor";
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "1",
-    title: "New Vendor Registration",
-    message: "Arena Sports Hub just signed up and is pending KYC review.",
-    time: "5m ago",
-    read: false,
-    type: "vendor",
-  },
-  {
-    id: "2",
-    title: "High Booking Volume",
-    message: "12 bookings were made in the last hour across Mumbai turfs.",
-    time: "1h ago",
-    read: false,
-    type: "booking",
-  },
-  {
-    id: "3",
-    title: "System Maintenance",
-    message: "Scheduled maintenance will occur tonight at 2:00 AM IST.",
-    time: "3h ago",
-    read: false,
-    type: "system",
-  },
-  {
-    id: "4",
-    title: "KYC Approved",
-    message: "GreenZone FC's documents have been approved.",
-    time: "1d ago",
-    read: true,
-    type: "vendor",
-  },
-];
-
-export default function NotificationPanel() {
+export default function NotificationPanel({ disabled }: { disabled?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -78,12 +43,13 @@ export default function NotificationPanel() {
     <div className="relative">
       {/* Bell Trigger */}
       <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative text-gray-400 hover:text-gray-600 transition-colors p-1"
-        title="Notifications"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`relative text-gray-400 hover:text-gray-600 transition-colors p-1 ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+        title={disabled ? "Notifications disabled" : "Notifications"}
       >
         <Bell size={20} />
-        {unreadCount > 0 && (
+        {!disabled && unreadCount > 0 && (
           <span className="absolute -top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
         )}
       </button>
