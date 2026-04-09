@@ -36,4 +36,14 @@ export const storageApi = {
       throw new Error("Failed to upload file to storage");
     }
   },
+
+  /**
+   * Gets a signed URL for viewing/downloading a private file.
+   */
+  getViewUrl: async (path: string): Promise<string> => {
+    const response = await api.get<{ signedUrl: string }>(
+      `/storage/view-url?path=${encodeURIComponent(path)}`,
+    );
+    return response.signedUrl;
+  },
 };

@@ -74,5 +74,6 @@ export interface VendorListParams {
   page?: number;
   limit?: number;
   status?: VendorStatus;
+  excludeStatus?: VendorStatus;
   search?: string;
 }

@@ -20,6 +20,7 @@ import {
   Prohibit,
   ArrowCounterClockwise,
   MinusCircle,
+  PencilSimple,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ import { vendorsApi, useVendorsList } from "@/domains/vendors/api";
 import { ApiError } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
 import { DocumentUploadField } from "@/components/shared/document-upload-field";
+import { storageApi } from "@/domains/storage/api";
 import {
   Vendor,
   KycStatus as DomainKycStatus,
@@ -175,6 +177,7 @@ export default function VendorsPage() {
   const [kycReviewVendor, setKycReviewVendor] = useState<Vendor | null>(null);
   const [kycTab, setKycTab] = useState<"documents" | "upload_override">("documents");
   const [reviewNote, setReviewNote] = useState("");
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
 
   const { data, isLoading } = useVendorsList({
     page,
@@ -230,11 +233,24 @@ export default function VendorsPage() {
     },
     onError: () => toast.error("Failed to submit KYC review"),
   });
-
-  function closeKycModal() {
+  const closeKycModal = () => {
     setKycReviewVendor(null);
     setReviewNote("");
-  }
+  };
+
+  const handleViewDoc = async (url: string) => {
+    if (!url) return;
+    if (url.startsWith("http")) {
+      window.open(url, "_blank");
+    } else {
+      try {
+        const signedUrl = await storageApi.getViewUrl(url);
+        window.open(signedUrl, "_blank");
+      } catch (error) {
+        toast.error("Failed to generate view link");
+      }
+    }
+  };
 
   return (
     <div className="px-6 py-5 space-y-6 h-full flex flex-col">
@@ -583,12 +599,22 @@ export default function VendorsPage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedVendor(null)}
-                className="text-white/60 hover:text-white"
-              >
-                <X size={20} weight="bold" />
-              </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingVendor(selectedVendor);
+                    }}
+                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-2 text-xs font-bold"
+                  >
+                    <PencilSimple size={14} weight="bold" /> EDIT
+                  </button>
+                  <button
+                    onClick={() => setSelectedVendor(null)}
+                    className="text-white/60 hover:text-white p-1"
+                  >
+                    <X size={20} weight="bold" />
+                  </button>
+                </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               {/* Summary */}
@@ -625,8 +651,47 @@ export default function VendorsPage() {
                     { label: "Type", val: selectedVendor.businessType },
                     {
                       label: "Address",
-                      val: `${selectedVendor.address.addressLineOne}, ${selectedVendor.address.city}`,
+                      val: selectedVendor.address 
+                        ? `${selectedVendor.address.addressLineOne}, ${selectedVendor.address.city}`
+                        : "—",
                     },
+                  ].map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex justify-between items-start gap-4"
+                    >
+                      <span className="text-xs text-gray-400 font-medium shrink-0 pt-0.5">
+                        {row.label}
+                      </span>
+                      <span className="text-xs text-gray-700 font-semibold text-right">
+                        {row.val || "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Banking Details */}
+              <section>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                  <h3 className="text-[11px] font-bold text-gray-800 uppercase tracking-widest">
+                    Banking Info
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {[
+                    { label: "Bank", val: selectedVendor.bankingDetails?.bankName },
+                    {
+                      label: "Account Holder",
+                      val: selectedVendor.bankingDetails?.accountHolderName,
+                    },
+                    {
+                      label: "A/C Number",
+                      val: selectedVendor.bankingDetails?.accountNumber,
+                    },
+                    { label: "IFSC", val: selectedVendor.bankingDetails?.ifsc },
+                    { label: "UPI ID", val: selectedVendor.bankingDetails?.upiId },
                   ].map((row) => (
                     <div
                       key={row.label}
@@ -678,13 +743,12 @@ export default function VendorsPage() {
                             {key.replace(/([A-Z])/g, " $1").trim()}
                           </span>
                           {url ? (
-                            <a
-                              href={url}
-                              target="_blank"
+                            <button
+                              onClick={() => handleViewDoc(url)}
                               className="text-[10px] font-bold text-[#8a9e60] hover:underline flex items-center gap-1"
                             >
                               <Eye size={12} /> VIEW
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-[10px] text-gray-400 font-medium">
                               NOT PROVIDED
@@ -857,13 +921,12 @@ export default function VendorsPage() {
                             </div>
                           </div>
                           {url && (
-                            <a
-                              href={url as string}
-                              target="_blank"
+                            <button
+                              onClick={() => handleViewDoc(url as string)}
                               className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold text-white bg-gray-900 hover:bg-gray-800 transition-all shadow-md"
                             >
                               <Eye size={14} /> VIEW DOC
-                            </a>
+                            </button>
                           )}
                         </div>
                       ),
@@ -945,7 +1008,7 @@ export default function VendorsPage() {
                   onChange={(e) => setReviewNote(e.target.value)}
                   rows={3}
                   placeholder='e.g. "All documents are clear and verified. KYC approved." or "Identity proof is blurred. Please re-upload a clear copy of your Aadhaar/PAN."'
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] resize-none placeholder:text-gray-300"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 font-medium focus:outline-none focus:border-[#8a9e60] resize-none placeholder:text-gray-300 transition-all bg-white"
                 />
               </div>
             </div>
@@ -1065,7 +1128,367 @@ export default function VendorsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Update Vendor Modal ── */}
+      {editingVendor && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => setEditingVendor(null)}
+          />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative animate-in zoom-in-95 duration-200">
+            <UpdateVendorForm
+              vendor={editingVendor}
+              onClose={() => setEditingVendor(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function UpdateVendorForm({
+  vendor,
+  onClose,
+}: {
+  vendor: Vendor;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    businessName: vendor.businessName,
+    ownerFullName: vendor.ownerFullName,
+    businessType: vendor.businessType,
+    commissionPct: vendor.commissionPct || 10,
+    payoutCycle: vendor.payoutCycle || "weekly",
+    address: {
+      addressLineOne: vendor.address?.addressLineOne || "",
+      city: vendor.address?.city || "",
+      state: vendor.address?.state || "",
+      pinCode: vendor.address?.pinCode || "",
+    },
+    bankingDetails: {
+      bankName: vendor.bankingDetails?.bankName || "",
+      accountHolderName: vendor.bankingDetails?.accountHolderName || "",
+      accountNumber: vendor.bankingDetails?.accountNumber || "",
+      ifsc: vendor.bankingDetails?.ifsc || "",
+      upiId: vendor.bankingDetails?.upiId || "",
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: typeof formData) =>
+      vendorsApi.updateVendor(vendor.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
+      toast.success("Vendor updated successfully");
+      onClose();
+    },
+    onError: (err: ApiError) => {
+      toast.error(err?.message || "Failed to update vendor");
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    mutation.mutate(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col bg-white overflow-hidden">
+      <div 
+        className="px-8 py-8 flex items-center justify-between relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #8a9e60, #6e8245)" }}
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+        <div className="relative z-10">
+          <h2 className="text-xl font-black text-white tracking-tight">
+            Edit Vendor
+          </h2>
+          <p className="text-xs text-white/70 font-medium mt-1">
+            Revising {vendor.businessName}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="relative z-10 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all"
+        >
+          <X size={20} weight="bold" />
+        </button>
+      </div>
+
+      <div className="p-8 space-y-10 max-h-[70vh] overflow-y-auto bg-white">
+        {/* Basic Info */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-3 bg-[#8a9e60] rounded-full" />
+            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+              Basic Information
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Business Name
+              </label>
+              <input
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-[#8a9e60]/10 focus:border-[#8a9e60] outline-none transition-all shadow-sm"
+                value={formData.businessName}
+                onChange={(e) =>
+                  setFormData({ ...formData, businessName: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Owner Full Name
+              </label>
+              <input
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-[#8a9e60]/10 focus:border-[#8a9e60] outline-none transition-all shadow-sm"
+                value={formData.ownerFullName}
+                onChange={(e) =>
+                  setFormData({ ...formData, ownerFullName: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Business Type
+              </label>
+              <select
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-[#8a9e60]/10 focus:border-[#8a9e60] outline-none transition-all shadow-sm appearance-none"
+                value={formData.businessType}
+                onChange={(e) =>
+                  setFormData({ ...formData, businessType: e.target.value })
+                }
+              >
+                <option value="individual">Individual</option>
+                <option value="partnership">Partnership</option>
+                <option value="private_limited">Private Limited</option>
+                <option value="proprietorship">Proprietorship</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Commission (%)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  required
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-[#8a9e60]/10 focus:border-[#8a9e60] outline-none transition-all shadow-sm"
+                  value={formData.commissionPct}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      commissionPct: parseFloat(e.target.value),
+                    })
+                  }
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">%</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Banking Details */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-3 bg-amber-500 rounded-full" />
+            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+              Banking Details
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+            <div className="space-y-2 col-span-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Bank Name
+              </label>
+              <input
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all shadow-sm"
+                value={formData.bankingDetails.bankName}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankingDetails: {
+                      ...formData.bankingDetails,
+                      bankName: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2 col-span-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Account Holder Name
+              </label>
+              <input
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all shadow-sm"
+                value={formData.bankingDetails.accountHolderName}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankingDetails: {
+                      ...formData.bankingDetails,
+                      accountHolderName: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Account Number
+              </label>
+              <input
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all shadow-sm"
+                value={formData.bankingDetails.accountNumber}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankingDetails: {
+                      ...formData.bankingDetails,
+                      accountNumber: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                IFSC Code
+              </label>
+              <input
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all shadow-sm"
+                value={formData.bankingDetails.ifsc}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankingDetails: {
+                      ...formData.bankingDetails,
+                      ifsc: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Address */}
+        <section className="space-y-6 pb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-3 bg-blue-500 rounded-full" />
+            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+              Business Address
+            </h3>
+          </div>
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Address Line 1
+              </label>
+              <input
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-sm"
+                value={formData.address.addressLineOne}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: {
+                      ...formData.address,
+                      addressLineOne: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                  City
+                </label>
+                <input
+                  required
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-sm"
+                  value={formData.address.city}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      address: { ...formData.address, city: e.target.value },
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                  State
+                </label>
+                <input
+                  required
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-sm"
+                  value={formData.address.state}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      address: { ...formData.address, state: e.target.value },
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
+                  PIN Code
+                </label>
+                <input
+                  required
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-sm"
+                  value={formData.address.pinCode}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      address: { ...formData.address, pinCode: e.target.value },
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="p-8 bg-gray-50 border-t border-gray-100 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-6 py-4 rounded-2xl text-xs font-bold text-gray-500 bg-white border border-gray-200 hover:bg-gray-100 transition-all flex-1"
+        >
+          CANCEL
+        </button>
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="px-8 py-4 rounded-2xl text-xs font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 shadow-xl shadow-[#8a9e60]/20 flex-[2] flex items-center justify-center gap-2"
+          style={{ backgroundColor: "#8a9e60" }}
+        >
+          {mutation.isPending ? (
+            <>
+              <ClockCountdown size={16} className="animate-spin" /> SAVING...
+            </>
+          ) : (
+            "SAVE CHANGES"
+          )}
+        </button>
+      </div>
+    </form>
   );
 }
 

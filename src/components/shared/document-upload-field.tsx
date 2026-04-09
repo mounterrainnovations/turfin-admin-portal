@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { CloudArrowUp, CheckCircle, ClockCountdown, X } from "@phosphor-icons/react";
 import { useSecureUpload } from "@/hooks/use-secure-upload";
+import { storageApi } from "@/domains/storage/api";
 import { toast } from "react-hot-toast";
 
 interface DocumentUploadFieldProps {
@@ -103,8 +104,19 @@ export function DocumentUploadField({
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold text-gray-800 uppercase tracking-tight truncate">Document Provided</p>
               <button 
-                onClick={() => window.open(currentUrl, "_blank")}
-                className="text-[9px] font-bold text-[#8a9e60] hover:underline"
+                onClick={async () => {
+                  if (currentUrl.startsWith("http")) {
+                    window.open(currentUrl, "_blank");
+                  } else {
+                    try {
+                      const signedUrl = await storageApi.getViewUrl(currentUrl);
+                      window.open(signedUrl, "_blank");
+                    } catch (error) {
+                      toast.error("Failed to generate view link");
+                    }
+                  }
+                }}
+                className="text-[9px] font-bold text-[#8a9e60] hover:underline text-left block"
               >
                 VIEW CURRENT
               </button>
