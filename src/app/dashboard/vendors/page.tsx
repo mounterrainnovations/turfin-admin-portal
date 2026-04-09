@@ -34,6 +34,7 @@ import {
   Vendor,
   KycStatus as DomainKycStatus,
   VendorStatus,
+  BusinessType,
 } from "@/domains/vendors/types";
 
 // ── Config ─────────────────────────────────────────────────────────────────────
@@ -1341,7 +1342,10 @@ function UpdateVendorForm({
                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:ring-4 focus:ring-[#8a9e60]/10 focus:border-[#8a9e60] outline-none transition-all shadow-sm appearance-none"
                 value={formData.businessType}
                 onChange={(e) =>
-                  setFormData({ ...formData, businessType: e.target.value })
+                  setFormData({
+                    ...formData,
+                    businessType: e.target.value as BusinessType,
+                  })
                 }
               >
                 <option value="individual">Individual</option>
@@ -1699,7 +1703,10 @@ function OnboardVendorForm({
               <select
                 value={formData.businessType}
                 onChange={(e) =>
-                  setFormData({ ...formData, businessType: e.target.value })
+                  setFormData({
+                    ...formData,
+                    businessType: e.target.value as BusinessType,
+                  })
                 }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] transition-colors appearance-none"
               >
