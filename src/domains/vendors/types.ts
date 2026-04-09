@@ -1,6 +1,12 @@
 export type BusinessType = "individual" | "company" | "partnership";
 
-export type VendorStatus = "active" | "inactive" | "pending" | "suspended" | "maintenance" | "banned";
+export type VendorStatus =
+  | "active"
+  | "inactive"
+  | "pending"
+  | "suspended"
+  | "maintenance"
+  | "banned";
 
 export type KycStatus =
   | "pending"
@@ -55,6 +61,7 @@ export interface Vendor {
   commissionPct: string;
   payoutCycle: string;
   status: VendorStatus;
+  bankingDetails: BankingDetails;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

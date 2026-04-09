@@ -175,7 +175,9 @@ export default function VendorsPage() {
   // Modals
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [kycReviewVendor, setKycReviewVendor] = useState<Vendor | null>(null);
-  const [kycTab, setKycTab] = useState<"documents" | "upload_override">("documents");
+  const [kycTab, setKycTab] = useState<"documents" | "upload_override">(
+    "documents",
+  );
   const [reviewNote, setReviewNote] = useState("");
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
 
@@ -207,7 +209,9 @@ export default function VendorsPage() {
       ban ? vendorsApi.banVendor(id) : vendorsApi.unbanVendor(id),
     onSuccess: (_, { ban }) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
-      toast.success(ban ? "Vendor banned successfully" : "Vendor unbanned successfully");
+      toast.success(
+        ban ? "Vendor banned successfully" : "Vendor unbanned successfully",
+      );
       setActionMenu(null);
       setSelectedVendor(null);
     },
@@ -314,7 +318,17 @@ export default function VendorsPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 gap-1 overflow-x-auto scrollbar-hide">
-        {(["all", "active", "pending", "suspended", "inactive", "maintenance", "banned"] as const).map((tab) => {
+        {(
+          [
+            "all",
+            "active",
+            "pending",
+            "suspended",
+            "inactive",
+            "maintenance",
+            "banned",
+          ] as const
+        ).map((tab) => {
           const isActive = statusTab === tab;
           return (
             <button
@@ -330,7 +344,9 @@ export default function VendorsPage() {
               }`}
               style={isActive ? { borderColor: "#8a9e60" } : {}}
             >
-              {tab === "all" ? "All Vendors" : tab.charAt(0).toUpperCase() + tab.slice(1).replace(/_/g, " ")}
+              {tab === "all"
+                ? "All Vendors"
+                : tab.charAt(0).toUpperCase() + tab.slice(1).replace(/_/g, " ")}
               {isActive && meta?.total !== undefined && (
                 <span
                   className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
@@ -485,14 +501,19 @@ export default function VendorsPage() {
                               {/* Ban / Unban */}
                               {v.status === "banned" ? (
                                 <button
-                                  onClick={() => banMutation.mutate({ id: v.id, ban: false })}
+                                  onClick={() =>
+                                    banMutation.mutate({ id: v.id, ban: false })
+                                  }
                                   className="w-full text-left px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 flex items-center gap-2.5"
                                 >
-                                  <ArrowCounterClockwise size={14} /> Unban Vendor
+                                  <ArrowCounterClockwise size={14} /> Unban
+                                  Vendor
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => banMutation.mutate({ id: v.id, ban: true })}
+                                  onClick={() =>
+                                    banMutation.mutate({ id: v.id, ban: true })
+                                  }
                                   className="w-full text-left px-4 py-2 text-[10px] font-black text-rose-600 hover:bg-rose-50 flex items-center gap-2.5"
                                 >
                                   <Prohibit size={14} /> Ban Vendor
@@ -503,10 +524,15 @@ export default function VendorsPage() {
                               {v.status !== "banned" && (
                                 <>
                                   <div className="border-t border-gray-50 my-1" />
-                                  {(v.status === "suspended" || v.status === "inactive" || v.status === "maintenance") ? (
+                                  {v.status === "suspended" ||
+                                  v.status === "inactive" ||
+                                  v.status === "maintenance" ? (
                                     <button
                                       onClick={() =>
-                                        updateStatusMutation.mutate({ id: v.id, status: "active" })
+                                        updateStatusMutation.mutate({
+                                          id: v.id,
+                                          status: "active",
+                                        })
                                       }
                                       className="w-full text-left px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 flex items-center gap-2.5"
                                     >
@@ -516,7 +542,10 @@ export default function VendorsPage() {
                                     <>
                                       <button
                                         onClick={() =>
-                                          updateStatusMutation.mutate({ id: v.id, status: "suspended" })
+                                          updateStatusMutation.mutate({
+                                            id: v.id,
+                                            status: "suspended",
+                                          })
                                         }
                                         className="w-full text-left px-4 py-2 text-[10px] font-black text-red-500 hover:bg-red-50 flex items-center gap-2.5"
                                       >
@@ -524,7 +553,10 @@ export default function VendorsPage() {
                                       </button>
                                       <button
                                         onClick={() =>
-                                          updateStatusMutation.mutate({ id: v.id, status: "inactive" })
+                                          updateStatusMutation.mutate({
+                                            id: v.id,
+                                            status: "inactive",
+                                          })
                                         }
                                         className="w-full text-left px-4 py-2 text-[10px] font-black text-gray-500 hover:bg-gray-50 flex items-center gap-2.5"
                                       >
@@ -599,22 +631,22 @@ export default function VendorsPage() {
                   </p>
                 </div>
               </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingVendor(selectedVendor);
-                    }}
-                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-2 text-xs font-bold"
-                  >
-                    <PencilSimple size={14} weight="bold" /> EDIT
-                  </button>
-                  <button
-                    onClick={() => setSelectedVendor(null)}
-                    className="text-white/60 hover:text-white p-1"
-                  >
-                    <X size={20} weight="bold" />
-                  </button>
-                </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setEditingVendor(selectedVendor);
+                  }}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-2 text-xs font-bold"
+                >
+                  <PencilSimple size={14} weight="bold" /> EDIT
+                </button>
+                <button
+                  onClick={() => setSelectedVendor(null)}
+                  className="text-white/60 hover:text-white p-1"
+                >
+                  <X size={20} weight="bold" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               {/* Summary */}
@@ -651,7 +683,7 @@ export default function VendorsPage() {
                     { label: "Type", val: selectedVendor.businessType },
                     {
                       label: "Address",
-                      val: selectedVendor.address 
+                      val: selectedVendor.address
                         ? `${selectedVendor.address.addressLineOne}, ${selectedVendor.address.city}`
                         : "—",
                     },
@@ -681,7 +713,10 @@ export default function VendorsPage() {
                 </div>
                 <div className="space-y-4">
                   {[
-                    { label: "Bank", val: selectedVendor.bankingDetails?.bankName },
+                    {
+                      label: "Bank",
+                      val: selectedVendor.bankingDetails?.bankName,
+                    },
                     {
                       label: "Account Holder",
                       val: selectedVendor.bankingDetails?.accountHolderName,
@@ -691,7 +726,10 @@ export default function VendorsPage() {
                       val: selectedVendor.bankingDetails?.accountNumber,
                     },
                     { label: "IFSC", val: selectedVendor.bankingDetails?.ifsc },
-                    { label: "UPI ID", val: selectedVendor.bankingDetails?.upiId },
+                    {
+                      label: "UPI ID",
+                      val: selectedVendor.bankingDetails?.upiId,
+                    },
                   ].map((row) => (
                     <div
                       key={row.label}
@@ -800,13 +838,20 @@ export default function VendorsPage() {
                 }}
                 disabled={banMutation.isPending}
                 className={`w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm disabled:opacity-50 ${
-                  selectedVendor?.status === "banned" ? "bg-[#8a9e60]" : "bg-rose-500"
+                  selectedVendor?.status === "banned"
+                    ? "bg-[#8a9e60]"
+                    : "bg-rose-500"
                 }`}
               >
                 {selectedVendor?.status === "banned" ? (
-                  <><ArrowCounterClockwise size={14} weight="bold" /> Unban Vendor</>
+                  <>
+                    <ArrowCounterClockwise size={14} weight="bold" /> Unban
+                    Vendor
+                  </>
                 ) : (
-                  <><Prohibit size={14} weight="bold" /> Ban Vendor</>
+                  <>
+                    <Prohibit size={14} weight="bold" /> Ban Vendor
+                  </>
                 )}
               </button>
             </div>
@@ -891,7 +936,9 @@ export default function VendorsPage() {
                         : "text-gray-400 hover:text-gray-600"
                     }`}
                   >
-                    {tab === "documents" ? "Current Documents" : "Upload Override"}
+                    {tab === "documents"
+                      ? "Current Documents"
+                      : "Upload Override"}
                   </button>
                 ))}
               </div>
@@ -948,8 +995,9 @@ export default function VendorsPage() {
                 <div className="space-y-4 animate-in fade-in duration-300">
                   <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-2">
                     <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
-                      Use this section to manually upload or replace documents for this vendor. 
-                      Changes are saved immediately to the vendor's record.
+                      Use this section to manually upload or replace documents
+                      for this vendor. Changes are saved immediately to the
+                      vendor's record.
                     </p>
                   </div>
                   {[
@@ -965,30 +1013,37 @@ export default function VendorsPage() {
                       module="kyc"
                       moduleId={kycReviewVendor.id}
                       fieldKey={field}
-                      currentUrl={(kycReviewVendor.kyc?.documents as any)?.[field]}
+                      currentUrl={
+                        (kycReviewVendor.kyc?.documents as any)?.[field]
+                      }
                       onUploadComplete={(path) => {
                         // Immediately update single document via API
-                        const currentDocs = kycReviewVendor.kyc?.documents || {};
-                        vendorsApi.uploadVendorKyc(kycReviewVendor.id, {
-                          ...currentDocs,
-                          [field]: path,
-                        }).then(() => {
-                           queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
-                           // Update local state to show 'View Current' immediately
-                           setKycReviewVendor(prev => {
-                             if (!prev) return null;
-                             return {
-                               ...prev,
-                               kyc: {
-                                 ...prev.kyc!,
-                                 documents: {
-                                   ...(prev.kyc?.documents || {}),
-                                   [field]: path,
-                                 }
-                               }
-                             } as any;
-                           });
-                        });
+                        const currentDocs =
+                          kycReviewVendor.kyc?.documents || {};
+                        vendorsApi
+                          .uploadVendorKyc(kycReviewVendor.id, {
+                            ...currentDocs,
+                            [field]: path,
+                          })
+                          .then(() => {
+                            queryClient.invalidateQueries({
+                              queryKey: ["admin", "vendors"],
+                            });
+                            // Update local state to show 'View Current' immediately
+                            setKycReviewVendor((prev) => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                kyc: {
+                                  ...prev.kyc!,
+                                  documents: {
+                                    ...(prev.kyc?.documents || {}),
+                                    [field]: path,
+                                  },
+                                },
+                              } as any;
+                            });
+                          });
                       }}
                     />
                   ))}
@@ -1078,24 +1133,42 @@ export default function VendorsPage() {
             {onboardSuccessData ? (
               <div className="p-8 text-center space-y-6">
                 <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle size={40} weight="fill" className="text-green-500" />
+                  <CheckCircle
+                    size={40}
+                    weight="fill"
+                    className="text-green-500"
+                  />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Onboarding Successful!</h2>
-                  <p className="text-sm text-gray-400 font-medium mt-1">Vendor account created successfully.</p>
+                  <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
+                    Onboarding Successful!
+                  </h2>
+                  <p className="text-sm text-gray-400 font-medium mt-1">
+                    Vendor account created successfully.
+                  </p>
                 </div>
                 <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 text-left space-y-4">
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Login Email</p>
-                    <p className="text-sm font-bold text-gray-800">{onboardSuccessData.email}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Login Email
+                    </p>
+                    <p className="text-sm font-bold text-gray-800">
+                      {onboardSuccessData.email}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Temporary Password</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Temporary Password
+                    </p>
                     <div className="flex items-center justify-between bg-white border border-gray-100 px-3 py-2 rounded-xl mt-1">
-                      <code className="text-sm font-black text-[#8a9e60] tracking-wider">{onboardSuccessData.pass}</code>
-                      <button 
+                      <code className="text-sm font-black text-[#8a9e60] tracking-wider">
+                        {onboardSuccessData.pass}
+                      </code>
+                      <button
                         onClick={() => {
-                          navigator.clipboard.writeText(onboardSuccessData.pass);
+                          navigator.clipboard.writeText(
+                            onboardSuccessData.pass,
+                          );
                           toast.success("Password copied");
                         }}
                         className="text-[10px] font-bold text-gray-400 hover:text-gray-600"
@@ -1104,7 +1177,7 @@ export default function VendorsPage() {
                       </button>
                     </div>
                     <p className="text-[10px] text-amber-600 font-medium mt-2">
-                       Please share these credentials with the vendor safely.
+                      Please share these credentials with the vendor safely.
                     </p>
                   </div>
                 </div>
@@ -1122,7 +1195,9 @@ export default function VendorsPage() {
             ) : (
               <OnboardVendorForm
                 onClose={() => setOnboardModalOpen(false)}
-                onSuccess={(email, pass) => setOnboardSuccessData({ email, pass })}
+                onSuccess={(email, pass) =>
+                  setOnboardSuccessData({ email, pass })
+                }
               />
             )}
           </div>
@@ -1196,8 +1271,11 @@ function UpdateVendorForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col bg-white overflow-hidden">
-      <div 
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col bg-white overflow-hidden"
+    >
+      <div
         className="px-8 py-8 flex items-center justify-between relative overflow-hidden"
         style={{ background: "linear-gradient(135deg, #8a9e60, #6e8245)" }}
       >
@@ -1289,7 +1367,9 @@ function UpdateVendorForm({
                     })
                   }
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">%</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
+                  %
+                </span>
               </div>
             </div>
           </div>
@@ -1492,10 +1572,10 @@ function UpdateVendorForm({
   );
 }
 
-function OnboardVendorForm({ 
-  onClose, 
-  onSuccess 
-}: { 
+function OnboardVendorForm({
+  onClose,
+  onSuccess,
+}: {
   onClose: () => void;
   onSuccess: (email: string, pass: string) => void;
 }) {
@@ -1518,22 +1598,23 @@ function OnboardVendorForm({
       accountHolderName: "",
       accountNumber: "",
       ifsc: "",
-    }
+    },
   });
 
   const mutation = useMutation({
-    mutationFn: (data: typeof formData) => vendorsApi.onboardVendor({
-      ...data,
-      address: data.address,
-      bankingDetails: data.bankingDetails,
-    }),
+    mutationFn: (data: typeof formData) =>
+      vendorsApi.onboardVendor({
+        ...data,
+        address: data.address,
+        bankingDetails: data.bankingDetails,
+      }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
       onSuccess(formData.email, res.credentials.tempPassword);
     },
     onError: (err: ApiError) => {
       toast.error(err?.message || "Failed to onboard vendor");
-    }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1545,10 +1626,18 @@ function OnboardVendorForm({
     <form onSubmit={handleSubmit} className="flex flex-col">
       <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black text-gray-900 tracking-tight">Onboard New Vendor</h2>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Create a new vendor profile and identity</p>
+          <h2 className="text-xl font-black text-gray-900 tracking-tight">
+            Onboard New Vendor
+          </h2>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">
+            Create a new vendor profile and identity
+          </p>
         </div>
-        <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-gray-50 text-gray-400">
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 rounded-full hover:bg-gray-50 text-gray-400"
+        >
           <X size={20} weight="bold" />
         </button>
       </div>
@@ -1556,44 +1645,62 @@ function OnboardVendorForm({
       <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
         {/* Basic Info */}
         <div className="space-y-4">
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">Basic Information</h3>
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">
+            Basic Information
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Name</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Business Name
+              </label>
               <input
                 required
                 value={formData.businessName}
-                onChange={e => setFormData({ ...formData, businessName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, businessName: e.target.value })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="e.g. Smash & Score Arena"
               />
             </div>
             <div className="space-y-1.5 col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Owner Full Name</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Owner Full Name
+              </label>
               <input
                 required
                 value={formData.ownerFullName}
-                onChange={e => setFormData({ ...formData, ownerFullName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, ownerFullName: e.target.value })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="e.g. Rajesh Kumar"
               />
             </div>
             <div className="space-y-1.5 col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Login Email Address</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Login Email Address
+              </label>
               <input
                 required
                 type="email"
                 value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="vendor@example.com"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Type</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Business Type
+              </label>
               <select
                 value={formData.businessType}
-                onChange={e => setFormData({ ...formData, businessType: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, businessType: e.target.value })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] transition-colors appearance-none"
               >
                 <option value="individual">Individual</option>
@@ -1602,14 +1709,21 @@ function OnboardVendorForm({
               </select>
             </div>
             <div className="space-y-1.5 text-right">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">Commission %</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">
+                Commission %
+              </label>
               <input
                 type="number"
                 required
                 min="0"
                 max="100"
                 value={formData.commissionPct}
-                onChange={e => setFormData({ ...formData, commissionPct: Number(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    commissionPct: Number(e.target.value),
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 text-right outline-none focus:border-[#8a9e60] transition-colors"
               />
             </div>
@@ -1618,44 +1732,77 @@ function OnboardVendorForm({
 
         {/* Address */}
         <div className="space-y-4">
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">Business Address</h3>
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">
+            Business Address
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Address Line 1</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Address Line 1
+              </label>
               <input
                 required
                 value={formData.address.addressLineOne}
-                onChange={e => setFormData({ ...formData, address: { ...formData.address, addressLineOne: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: {
+                      ...formData.address,
+                      addressLineOne: e.target.value,
+                    },
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="Building, Street, Area"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">City</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                City
+              </label>
               <input
                 required
                 value={formData.address.city}
-                onChange={e => setFormData({ ...formData, address: { ...formData.address, city: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address, city: e.target.value },
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="e.g. Kochi"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">State</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                State
+              </label>
               <input
                 required
                 value={formData.address.state}
-                onChange={e => setFormData({ ...formData, address: { ...formData.address, state: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address, state: e.target.value },
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="e.g. Kerala"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Pin Code</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Pin Code
+              </label>
               <input
                 required
                 value={formData.address.pinCode}
-                onChange={e => setFormData({ ...formData, address: { ...formData.address, pinCode: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address, pinCode: e.target.value },
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="682001"
               />
@@ -1665,44 +1812,86 @@ function OnboardVendorForm({
 
         {/* Banking Details */}
         <div className="space-y-4">
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">Banking Details</h3>
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">
+            Banking Details
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Bank Name</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Bank Name
+              </label>
               <input
                 required
                 value={formData.bankingDetails.bankName}
-                onChange={e => setFormData({ ...formData, bankingDetails: { ...formData.bankingDetails, bankName: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankingDetails: {
+                      ...formData.bankingDetails,
+                      bankName: e.target.value,
+                    },
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="e.g. HDFC Bank"
               />
             </div>
             <div className="space-y-1.5 col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Account Holder Name</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Account Holder Name
+              </label>
               <input
                 required
                 value={formData.bankingDetails.accountHolderName}
-                onChange={e => setFormData({ ...formData, bankingDetails: { ...formData.bankingDetails, accountHolderName: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankingDetails: {
+                      ...formData.bankingDetails,
+                      accountHolderName: e.target.value,
+                    },
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="As per bank records"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Account Number</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Account Number
+              </label>
               <input
                 required
                 value={formData.bankingDetails.accountNumber}
-                onChange={e => setFormData({ ...formData, bankingDetails: { ...formData.bankingDetails, accountNumber: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankingDetails: {
+                      ...formData.bankingDetails,
+                      accountNumber: e.target.value,
+                    },
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="Account number"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">IFSC Code</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                IFSC Code
+              </label>
               <input
                 required
                 value={formData.bankingDetails.ifsc}
-                onChange={e => setFormData({ ...formData, bankingDetails: { ...formData.bankingDetails, ifsc: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bankingDetails: {
+                      ...formData.bankingDetails,
+                      ifsc: e.target.value,
+                    },
+                  })
+                }
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
                 placeholder="IFSC"
               />
