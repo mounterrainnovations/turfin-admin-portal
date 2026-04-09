@@ -18,6 +18,7 @@ import {
   MinusCircle,
   Wrench,
   ArrowCounterClockwise,
+  CloudArrowUp,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import { useTurfsList, turfsApi } from "@/domains/turfs/api";
@@ -28,6 +29,7 @@ import { ErrorCodes } from "@/lib/error-codes";
 import { ApiError } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
+import { DocumentUploadField } from "@/components/shared/document-upload-field";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -510,6 +512,9 @@ export default function FieldsPage() {
   const [docsReviewTurf, setDocsReviewTurf] = useState<TurfResponse | null>(
     null,
   );
+  const [docsTab, setDocsTab] = useState<"documents" | "upload_override">(
+    "documents",
+  );
   const [reviewNote, setReviewNote] = useState("");
   const [onboardModalOpen, setOnboardModalOpen] = useState(false);
   const [kycError, setKycError] = useState<string | null>(null);
@@ -945,67 +950,133 @@ export default function FieldsPage() {
                       <p className="mt-0.5 opacity-80 leading-relaxed">
                         {kycError}
                       </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Link
-                      href="/dashboard/vendors"
-                      className="text-[10px] font-bold bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5"
-                    >
-                      <ShieldCheck size={12} weight="bold" /> GO TO VENDOR
-                      VERIFICATION
-                    </Link>
-                  </div>
-                </div>
-              )}
+                          {/* Document Tabs */}
+              <div className="flex border-b border-gray-100 mb-4 transition-all">
+                {["documents", "upload_override"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setDocsTab(tab as any)}
+                    className={`px-4 py-2 text-[10px] font-bold tracking-widest uppercase transition-all ${
+                      docsTab === tab
+                        ? "border-b-2 border-gray-900 text-gray-900"
+                        : "text-gray-400 hover:text-gray-600"
+                    }`}
+                  >
+                    {tab === "documents" ? "Current Documents" : "Upload Override"}
+                  </button>
+                ))}
+              </div>
 
-              {/* Document list */}
-              <div className="space-y-3">
-                {docsReviewTurf.documents?.documents &&
-                Object.keys(docsReviewTurf.documents.documents).length > 0 ? (
-                  Object.entries(docsReviewTurf.documents.documents).map(
-                    ([key, value]) => {
-                      const urls: string[] = Array.isArray(value)
-                        ? value
-                        : value
-                          ? [value as string]
-                          : [];
-                      return (
-                        <div
-                          key={key}
-                          className="border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:bg-gray-50/50"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
-                              <FileText size={24} />
+              {docsTab === "documents" ? (
+                /* Original Document list */
+                <div className="space-y-3">
+                  {docsReviewTurf.documents?.documents &&
+                  Object.keys(docsReviewTurf.documents.documents).length > 0 ? (
+                    Object.entries(docsReviewTurf.documents.documents).map(
+                      ([key, value]) => {
+                        const urls: string[] = Array.isArray(value)
+                          ? value
+                          : value
+                            ? [value as string]
+                            : [];
+                        return (
+                          <div
+                            key={key}
+                            className="border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:bg-gray-50/50"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                                <FileText size={24} />
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-gray-800 uppercase tracking-widest">
+                                  {key.replace(/([A-Z])/g, " $1").trim()}
+                                </p>
+                                <p className="text-[10px] text-gray-400 mt-0.5 font-medium">
+                                  {urls.length > 0
+                                    ? `${urls.length} file(s) — READY FOR REVIEW`
+                                    : "MISSING"}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-xs font-bold text-gray-800 uppercase tracking-widest">
-                                {key.replace(/([A-Z])/g, " $1").trim()}
-                              </p>
-                              <p className="text-[10px] text-gray-400 mt-0.5 font-medium">
-                                {urls.length > 0
-                                  ? `${urls.length} file(s) — READY FOR REVIEW`
-                                  : "MISSING"}
-                              </p>
-                            </div>
+                            {urls.length > 0 && (
+                              <div className="flex gap-2">
+                                {urls.slice(0, 2).map((url, i) => (
+                                  <a
+                                    key={i}
+                                    href={url}
+                                    target="_blank"
+                                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-[11px] font-bold text-white bg-gray-900 hover:bg-gray-800"
+                                  >
+                                    <Eye size={13} />{" "}
+                                    {urls.length > 1 ? `#${i + 1}` : "VIEW"}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          {urls.length > 0 && (
-                            <div className="flex gap-2">
-                              {urls.slice(0, 2).map((url, i) => (
-                                <a
-                                  key={i}
-                                  href={url}
-                                  target="_blank"
-                                  className="flex items-center gap-1 px-3 py-2 rounded-xl text-[11px] font-bold text-white bg-gray-900 hover:bg-gray-800"
-                                >
-                                  <Eye size={13} />{" "}
-                                  {urls.length > 1 ? `#${i + 1}` : "VIEW"}
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        );
+                      },
+                    )
+                  ) : (
+                    <div className="py-16 text-center border-2 border-dashed border-gray-100 rounded-3xl">
+                      <FileText
+                        size={40}
+                        className="text-gray-200 mx-auto mb-2"
+                      />
+                      <p className="text-sm font-bold text-gray-300">
+                        No documents uploaded yet
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Upload Override list */
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-2">
+                    <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
+                      Administrative Override: Replace or add documents for this field. 
+                      Changes take effect immediately.
+                    </p>
+                  </div>
+                  {[
+                    "propertyDocument",
+                    "municipalNoc",
+                    "liabilityInsurance",
+                  ].map((field) => (
+                    <DocumentUploadField
+                      key={field}
+                      label={field.replace(/([A-Z])/g, " $1").trim()}
+                      module="turf"
+                      moduleId={docsReviewTurf.id}
+                      fieldKey={field}
+                      currentUrl={docsReviewTurf.documents?.documents?.[field as keyof typeof docsReviewTurf.documents.documents] as string}
+                      onUploadComplete={(path) => {
+                        const currentDocs = docsReviewTurf.documents?.documents || {};
+                        turfsApi.uploadTurfDocuments(docsReviewTurf.id, {
+                          ...currentDocs,
+                          [field]: path,
+                        } as any).then(() => {
+                           queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+                           setDocsReviewTurf(prev => {
+                             if (!prev) return null;
+                             return {
+                               ...prev,
+                               documents: {
+                                 ...prev.documents!,
+                                 documents: {
+                                   ...prev.documents!.documents,
+                                   [field]: path,
+                                 }
+                               }
+                             } as any;
+                           });
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}    </div>
                       );
                     },
                   )

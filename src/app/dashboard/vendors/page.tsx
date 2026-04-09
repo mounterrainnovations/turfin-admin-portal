@@ -27,6 +27,7 @@ import { toast } from "react-hot-toast";
 import { vendorsApi, useVendorsList } from "@/domains/vendors/api";
 import { ApiError } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { DocumentUploadField } from "@/components/shared/document-upload-field";
 import {
   Vendor,
   KycStatus as DomainKycStatus,
@@ -172,6 +173,7 @@ export default function VendorsPage() {
   // Modals
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [kycReviewVendor, setKycReviewVendor] = useState<Vendor | null>(null);
+  const [kycTab, setKycTab] = useState<"documents" | "upload_override">("documents");
   const [reviewNote, setReviewNote] = useState("");
 
   const { data, isLoading } = useVendorsList({
@@ -813,53 +815,122 @@ export default function VendorsPage() {
                 </div>
               </div>
 
-              {/* Document list */}
-              <div className="space-y-3">
-                {kycReviewVendor.kyc?.documents &&
-                Object.keys(kycReviewVendor.kyc.documents).length > 0 ? (
-                  Object.entries(kycReviewVendor.kyc.documents).map(
-                    ([key, url]) => (
-                      <div
-                        key={key}
-                        className="border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
-                            <FileText size={24} />
+              {/* Document Tabs */}
+              <div className="flex border-b border-gray-100 mb-4 transition-all">
+                {["documents", "upload_override"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setKycTab(tab as any)}
+                    className={`px-4 py-2 text-[10px] font-bold tracking-widest uppercase transition-all ${
+                      kycTab === tab
+                        ? "border-b-2 border-gray-900 text-gray-900"
+                        : "text-gray-400 hover:text-gray-600"
+                    }`}
+                  >
+                    {tab === "documents" ? "Current Documents" : "Upload Override"}
+                  </button>
+                ))}
+              </div>
+
+              {kycTab === "documents" ? (
+                /* Original Document list */
+                <div className="space-y-3">
+                  {kycReviewVendor.kyc?.documents &&
+                  Object.keys(kycReviewVendor.kyc.documents).length > 0 ? (
+                    Object.entries(kycReviewVendor.kyc.documents).map(
+                      ([key, url]) => (
+                        <div
+                          key={key}
+                          className="border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                              <FileText size={24} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-gray-800 uppercase tracking-widest">
+                                {key.replace(/([A-Z])/g, " $1").trim()}
+                              </p>
+                              <p className="text-[10px] text-gray-400 mt-0.5 font-medium uppercase">
+                                {url ? "READY FOR REVIEW" : "MISSING"}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-bold text-gray-800 uppercase tracking-widest">
-                              {key.replace(/([A-Z])/g, " $1").trim()}
-                            </p>
-                            <p className="text-[10px] text-gray-400 mt-0.5 font-medium uppercase">
-                              {url ? "READY FOR REVIEW" : "MISSING"}
-                            </p>
-                          </div>
+                          {url && (
+                            <a
+                              href={url as string}
+                              target="_blank"
+                              className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold text-white bg-gray-900 hover:bg-gray-800 transition-all shadow-md"
+                            >
+                              <Eye size={14} /> VIEW DOC
+                            </a>
+                          )}
                         </div>
-                        {url && (
-                          <a
-                            href={url as string}
-                            target="_blank"
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold text-white bg-gray-900 hover:bg-gray-800 transition-all shadow-md"
-                          >
-                            <Eye size={14} /> VIEW DOC
-                          </a>
-                        )}
-                      </div>
-                    ),
-                  )
-                ) : (
-                  <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl">
-                    <FileText
-                      size={40}
-                      className="text-gray-200 mx-auto mb-2"
-                    />
-                    <p className="text-sm font-bold text-gray-300">
-                      No documents submitted
+                      ),
+                    )
+                  ) : (
+                    <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl">
+                      <FileText
+                        size={40}
+                        className="text-gray-200 mx-auto mb-2"
+                      />
+                      <p className="text-sm font-bold text-gray-300">
+                        No documents submitted
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Upload Override list */
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-2">
+                    <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
+                      Use this section to manually upload or replace documents for this vendor. 
+                      Changes are saved immediately to the vendor's record.
                     </p>
                   </div>
-                )}
-              </div>
+                  {[
+                    "identityProof",
+                    "addressProof",
+                    "businessRegistration",
+                    "gstCertificate",
+                    "cancelledCheque",
+                  ].map((field) => (
+                    <DocumentUploadField
+                      key={field}
+                      label={field.replace(/([A-Z])/g, " $1").trim()}
+                      module="kyc"
+                      moduleId={kycReviewVendor.id}
+                      fieldKey={field}
+                      currentUrl={(kycReviewVendor.kyc?.documents as any)?.[field]}
+                      onUploadComplete={(path) => {
+                        // Immediately update single document via API
+                        const currentDocs = kycReviewVendor.kyc?.documents || {};
+                        vendorsApi.uploadVendorKyc(kycReviewVendor.id, {
+                          ...currentDocs,
+                          [field]: path,
+                        }).then(() => {
+                           queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
+                           // Update local state to show 'View Current' immediately
+                           setKycReviewVendor(prev => {
+                             if (!prev) return null;
+                             return {
+                               ...prev,
+                               kyc: {
+                                 ...prev.kyc!,
+                                 documents: {
+                                   ...(prev.kyc?.documents || {}),
+                                   [field]: path,
+                                 }
+                               }
+                             } as any;
+                           });
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Reviewer Notes textarea */}
               <div>
