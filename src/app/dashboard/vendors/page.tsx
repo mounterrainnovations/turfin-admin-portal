@@ -1084,10 +1084,26 @@ function OnboardVendorForm({
     businessType: "individual",
     commissionPct: 15,
     payoutCycle: "weekly",
+    address: {
+      addressLineOne: "",
+      city: "",
+      state: "",
+      pinCode: "",
+    },
+    bankingDetails: {
+      bankName: "",
+      accountHolderName: "",
+      accountNumber: "",
+      ifsc: "",
+    }
   });
 
   const mutation = useMutation({
-    mutationFn: (data: typeof formData) => vendorsApi.onboardVendor(data),
+    mutationFn: (data: typeof formData) => vendorsApi.onboardVendor({
+      ...data,
+      address: data.address,
+      bankingDetails: data.bankingDetails,
+    }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
       onSuccess(formData.email, res.credentials.tempPassword);
@@ -1114,62 +1130,160 @@ function OnboardVendorForm({
         </button>
       </div>
 
-      <div className="p-8 space-y-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5 col-span-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Name</label>
-            <input
-              required
-              value={formData.businessName}
-              onChange={e => setFormData({ ...formData, businessName: e.target.value })}
-              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
-              placeholder="e.g. Smash & Score Arena"
-            />
+      <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
+        {/* Basic Info */}
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">Basic Information</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Name</label>
+              <input
+                required
+                value={formData.businessName}
+                onChange={e => setFormData({ ...formData, businessName: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="e.g. Smash & Score Arena"
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Owner Full Name</label>
+              <input
+                required
+                value={formData.ownerFullName}
+                onChange={e => setFormData({ ...formData, ownerFullName: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="e.g. Rajesh Kumar"
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Login Email Address</label>
+              <input
+                required
+                type="email"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="vendor@example.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Type</label>
+              <select
+                value={formData.businessType}
+                onChange={e => setFormData({ ...formData, businessType: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] transition-colors appearance-none"
+              >
+                <option value="individual">Individual</option>
+                <option value="company">Company / LLP</option>
+                <option value="partnership">Partnership</option>
+              </select>
+            </div>
+            <div className="space-y-1.5 text-right">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">Commission %</label>
+              <input
+                type="number"
+                required
+                min="0"
+                max="100"
+                value={formData.commissionPct}
+                onChange={e => setFormData({ ...formData, commissionPct: Number(e.target.value) })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 text-right outline-none focus:border-[#8a9e60] transition-colors"
+              />
+            </div>
           </div>
-          <div className="space-y-1.5 col-span-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Owner Full Name</label>
-            <input
-              required
-              value={formData.ownerFullName}
-              onChange={e => setFormData({ ...formData, ownerFullName: e.target.value })}
-              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
-              placeholder="e.g. Rajesh Kumar"
-            />
+        </div>
+
+        {/* Address */}
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">Business Address</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Address Line 1</label>
+              <input
+                required
+                value={formData.address.addressLineOne}
+                onChange={e => setFormData({ ...formData, address: { ...formData.address, addressLineOne: e.target.value } })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="Building, Street, Area"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">City</label>
+              <input
+                required
+                value={formData.address.city}
+                onChange={e => setFormData({ ...formData, address: { ...formData.address, city: e.target.value } })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="e.g. Kochi"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">State</label>
+              <input
+                required
+                value={formData.address.state}
+                onChange={e => setFormData({ ...formData, address: { ...formData.address, state: e.target.value } })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="e.g. Kerala"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Pin Code</label>
+              <input
+                required
+                value={formData.address.pinCode}
+                onChange={e => setFormData({ ...formData, address: { ...formData.address, pinCode: e.target.value } })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="682001"
+              />
+            </div>
           </div>
-          <div className="space-y-1.5 col-span-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Login Email Address</label>
-            <input
-              required
-              type="email"
-              value={formData.email}
-              onChange={e => setFormData({ ...formData, email: e.target.value })}
-              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
-              placeholder="vendor@example.com"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Type</label>
-            <select
-              value={formData.businessType}
-              onChange={e => setFormData({ ...formData, businessType: e.target.value })}
-              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] transition-colors appearance-none"
-            >
-              <option value="individual">Individual</option>
-              <option value="company">Company / LLP</option>
-              <option value="partnership">Partnership</option>
-            </select>
-          </div>
-          <div className="space-y-1.5 text-right">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">Commission %</label>
-            <input
-              type="number"
-              required
-              min="0"
-              max="100"
-              value={formData.commissionPct}
-              onChange={e => setFormData({ ...formData, commissionPct: Number(e.target.value) })}
-              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 text-right outline-none focus:border-[#8a9e60] transition-colors"
-            />
+        </div>
+
+        {/* Banking Details */}
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">Banking Details</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Bank Name</label>
+              <input
+                required
+                value={formData.bankingDetails.bankName}
+                onChange={e => setFormData({ ...formData, bankingDetails: { ...formData.bankingDetails, bankName: e.target.value } })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="e.g. HDFC Bank"
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Account Holder Name</label>
+              <input
+                required
+                value={formData.bankingDetails.accountHolderName}
+                onChange={e => setFormData({ ...formData, bankingDetails: { ...formData.bankingDetails, accountHolderName: e.target.value } })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="As per bank records"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Account Number</label>
+              <input
+                required
+                value={formData.bankingDetails.accountNumber}
+                onChange={e => setFormData({ ...formData, bankingDetails: { ...formData.bankingDetails, accountNumber: e.target.value } })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="Account number"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">IFSC Code</label>
+              <input
+                required
+                value={formData.bankingDetails.ifsc}
+                onChange={e => setFormData({ ...formData, bankingDetails: { ...formData.bankingDetails, ifsc: e.target.value } })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+                placeholder="IFSC"
+              />
+            </div>
           </div>
         </div>
       </div>

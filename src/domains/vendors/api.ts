@@ -57,10 +57,10 @@ export const vendorsApi = {
     businessName: string;
     ownerFullName: string;
     businessType: string;
-    commissionPct?: number;
+    commissionPct?: string | number;
     payoutCycle?: string;
-    address?: Address;
-    bankingDetails?: BankingDetails;
+    address: Address;
+    bankingDetails: BankingDetails;
   }): Promise<VendorOnboardingResponse> => {
     return api.post<VendorOnboardingResponse>("/admin/onboard-vendor", {
       email: data.email,
@@ -71,7 +71,7 @@ export const vendorsApi = {
         ownerFullName: data.ownerFullName,
         address: data.address,
         bankingDetails: data.bankingDetails,
-        commissionPct: data.commissionPct,
+        commissionPct: data.commissionPct?.toString(),
         payoutCycle: data.payoutCycle,
       },
     });

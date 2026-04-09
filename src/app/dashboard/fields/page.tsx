@@ -950,7 +950,12 @@ export default function FieldsPage() {
                       <p className="mt-0.5 opacity-80 leading-relaxed">
                         {kycError}
                       </p>
-                          {/* Document Tabs */}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Document Tabs */}
               <div className="flex border-b border-gray-100 mb-4 transition-all">
                 {["documents", "upload_override"].map((tab) => (
                   <button
@@ -1076,22 +1081,7 @@ export default function FieldsPage() {
                     />
                   ))}
                 </div>
-              )}    </div>
-                      );
-                    },
-                  )
-                ) : (
-                  <div className="py-16 text-center border-2 border-dashed border-gray-100 rounded-3xl">
-                    <FileText
-                      size={40}
-                      className="text-gray-200 mx-auto mb-2"
-                    />
-                    <p className="text-sm font-bold text-gray-300">
-                      No documents uploaded yet
-                    </p>
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Reviewer Notes */}
               <div>
