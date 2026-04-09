@@ -18,6 +18,14 @@ export interface Address {
   googleMapsLink?: string;
 }
 
+export interface BankingDetails {
+  bankName: string;
+  accountHolderName: string;
+  accountNumber: string;
+  ifsc: string;
+  upiId?: string;
+}
+
 export interface VendorKyc {
   id: string;
   vendorId: string;

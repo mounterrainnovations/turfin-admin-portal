@@ -346,10 +346,17 @@
                 {
                   "key": "limit",
                   "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Filter by status: active, pending, suspended",
+                  "disabled": true
                 }
               ]
             },
             "description": "List vendor profiles with pagination metadata. Includes KYC details. Requires a super_admin bearer token."
+
           },
           "response": []
         },
@@ -680,7 +687,7 @@
                 }
               ]
             },
-            "method": "PATCH",
+            "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
@@ -852,288 +859,6 @@
             "description": "Review turf verification documents. Setting status to verified activates the turf; rejected or in_review keeps the turf pending."
           },
           "response": []
-        },
-        {
-          "name": "Sub-Admin Management",
-          "description": "Endpoints for managing sub-admin accounts and their permission-based roles.",
-          "item": [
-            {
-              "name": "List Sub-Admins",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins"]
-                },
-                "description": "Retrieve all users with admin-level roles and their assigned custom roles."
-              },
-              "response": []
-            },
-            {
-              "name": "Create Sub-Admin",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"email\": \"subadmin@example.com\",\n    \"password\": \"password123\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins"]
-                },
-                "description": "Create a new sub-admin account. Requires super_admin or sub_admin:manage."
-              },
-              "response": []
-            },
-            {
-              "name": "Get Sub-Admin Roles",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", ":id", "roles"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "{{userId}}"
-                    }
-                  ]
-                },
-                "description": "Fetch the specific roles assigned to an administrator."
-              },
-              "response": []
-            },
-            {
-              "name": "Assign Roles to Sub-Admin",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"roleIds\": [\"role-uuid-here\"]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", ":id", "roles"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "{{userId}}"
-                    }
-                  ]
-                },
-                "description": "Update the roles assigned to a sub-admin. Replaces existing assignments."
-              },
-              "response": []
-            },
-            {
-              "name": "List All Permissions",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins/permissions",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "permissions"]
-                },
-                "description": "Get a list of all available permission strings in the system (resource:action)."
-              },
-              "response": []
-            },
-            {
-              "name": "List Custom Roles",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins/roles",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "roles"]
-                },
-                "description": "List all custom roles and their associated permission arrays."
-              },
-              "response": []
-            },
-            {
-              "name": "Create Custom Role",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"name\": \"KYC Specialist\",\n    \"description\": \"Responsible for viewing and verifying vendor KYC\",\n    \"permissionIds\": [\"uuid-from-permissions-catalogue\"]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins/roles",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "roles"]
-                },
-                "description": "Create a new custom role with a set of permissions."
-              },
-              "response": []
-            },
-            {
-              "name": "Update Role Permissions",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"permissionIds\": [\"uuid-1\", \"uuid-2\"]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "roles", ":roleId", "permissions"],
-                  "variable": [
-                    {
-                      "key": "roleId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Update the list of permissions for a specific custom role."
-              },
-              "response": []
-            },
-            {
-              "name": "Delete Custom Role",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{accessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "roles", ":roleId"],
-                  "variable": [
-                    {
-                      "key": "roleId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Delete a custom role. Fails if the role has active assignments."
-              },
-              "response": []
-            }
-          ]
         }
       ]
     },
@@ -1521,6 +1246,75 @@
               ]
             },
             "description": "Get current status and metadata of turf documents."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Turf Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Turf Name\",\n    \"standardPricePaise\": 160000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/turfs/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Partially update turf fields like name, price, or operating hours."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Turf",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/turfs/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["turfs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{turfId}}"
+                }
+              ]
+            },
+            "description": "Soft-delete a turf field. This prevents new bookings."
           },
           "response": []
         }

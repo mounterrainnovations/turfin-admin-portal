@@ -16,11 +16,13 @@ import {
   CaretRight,
   CaretLeft,
   CalendarBlank,
+  MagnifyingGlass,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { vendorsApi, useVendorsList } from "@/domains/vendors/api";
+import { ApiError } from "@/lib/api-client";
 import {
   Vendor,
   KycStatus as DomainKycStatus,
@@ -142,8 +144,15 @@ function StatCard({
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function VendorsPage() {
   const queryClient = useQueryClient();
-  const [search] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(timer);
+  }, [search]);
   const [statusTab, setStatusTab] = useState<VendorStatus | "all">("all");
   const [actionMenu, setActionMenu] = useState<string | null>(null);
   const [onboardModalOpen, setOnboardModalOpen] = useState(false);
@@ -161,7 +170,7 @@ export default function VendorsPage() {
     page,
     limit: PAGE_SIZE,
     status: statusTab === "all" ? undefined : statusTab,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
   });
 
   const vendors = data?.data || [];
@@ -241,36 +250,57 @@ export default function VendorsPage() {
         />
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 shrink-0 space-y-4">
-        <div className="flex items-center gap-4">
-          {/* Search hidden for now */}
-
-
-          <div className="flex gap-1.5 ml-auto">
-            {(["all", "active", "pending", "suspended"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  setStatusTab(tab);
-                  setPage(1);
-                }}
-                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-sm ${statusTab === tab ? "text-white" : "bg-white border border-gray-100 text-gray-500 hover:bg-gray-50"}`}
-                style={statusTab === tab ? { backgroundColor: "#8a9e60" } : {}}
-              >
-                {tab === "all" ? "ALL" : tab.replace("_", " ").toUpperCase()}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setOnboardModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 shadow-sm shrink-0"
-            style={{ backgroundColor: "#8a9e60" }}
-          >
-            <Plus size={16} weight="bold" /> Onboard Vendor
-          </button>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 max-w-sm">
+          <MagnifyingGlass size={15} className="text-gray-400 shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by business name, owner, city…"
+            className="flex-1 outline-none text-sm text-gray-700 bg-transparent placeholder:text-gray-400"
+          />
         </div>
+
+        <button
+          onClick={() => setOnboardModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 shadow-sm shrink-0"
+          style={{ backgroundColor: "#8a9e60" }}
+        >
+          <Plus size={16} weight="bold" /> Onboard Vendor
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 gap-1">
+        {(["all", "active", "pending", "suspended"] as const).map((tab) => {
+          const isActive = statusTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => {
+                setStatusTab(tab);
+                setPage(1);
+              }}
+              className={`px-4 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                isActive
+                  ? "border-b-2 text-[#8a9e60]"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+              style={isActive ? { borderColor: "#8a9e60" } : {}}
+            >
+              {tab === "all" ? "All Vendors" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {isActive && meta?.total !== undefined && (
+                <span
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: "#8a9e60", color: "white" }}
+                >
+                  {meta.total}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Table */}
@@ -918,7 +948,7 @@ function OnboardVendorForm({
       queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
       onSuccess(formData.email, res.credentials.tempPassword);
     },
-    onError: (err: any) => {
+    onError: (err: ApiError) => {
       toast.error(err?.message || "Failed to onboard vendor");
     }
   });

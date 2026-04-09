@@ -24,12 +24,12 @@ import { AuditLogProvider } from "./audit-log-context";
 import { useSession } from "@/lib/auth";
 
 const disabledItems = [
-  "Dashboard",
-  "Bookings",
-  "Analytics",
-  "Notifications",
-  "App Management",
-  "Settings",
+  // "Dashboard",
+  // "Bookings",
+  // "Analytics",
+  // "Notifications",
+  // "App Management",
+  // "Settings",
 ];
 
 const navItems = [

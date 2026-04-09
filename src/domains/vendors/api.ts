@@ -6,6 +6,8 @@ import {
   KycStatus,
   VendorStatus,
   VendorListParams,
+  Address,
+  BankingDetails,
 } from "./types";
 import { useQuery } from "@tanstack/react-query";
 
@@ -39,22 +41,36 @@ export const vendorsApi = {
   },
 
   /**
-   * Onboards a and creates a new vendor profile + user identity.
+   * Fetches a specific vendor by ID.
+   */
+  getVendorById: async (vendorId: string): Promise<Vendor> => {
+    return api.get<Vendor>(`/admin/vendors/${vendorId}`);
+  },
+
+  /**
+   * Onboards a new vendor.
+   * Aligned with Postman: POST /admin/onboard-vendor
    */
   onboardVendor: async (data: {
     email: string;
+    password?: string;
     businessName: string;
     ownerFullName: string;
     businessType: string;
-    commissionPct: number;
-    payoutCycle: string;
+    commissionPct?: number;
+    payoutCycle?: string;
+    address?: Address;
+    bankingDetails?: BankingDetails;
   }): Promise<VendorOnboardingResponse> => {
-    return api.post<VendorOnboardingResponse>("/admin/vendors/onboard", {
-      identityOptions: { email: data.email },
-      vendorData: {
+    return api.post<VendorOnboardingResponse>("/admin/onboard-vendor", {
+      email: data.email,
+      password: data.password || Math.random().toString(36).slice(-10), // Generate temp pass if none
+      vendorProfile: {
         businessName: data.businessName,
-        ownerFullName: data.ownerFullName,
         businessType: data.businessType,
+        ownerFullName: data.ownerFullName,
+        address: data.address,
+        bankingDetails: data.bankingDetails,
         commissionPct: data.commissionPct,
         payoutCycle: data.payoutCycle,
       },
@@ -88,10 +104,29 @@ export const vendorsApi = {
   },
 
   /**
+   * Soft-deletes a vendor profile.
+   * Aligned with Postman: DELETE /admin/vendors/:vendorId
+   */
+  deleteVendor: async (vendorId: string): Promise<void> => {
+    return api.delete(`/admin/vendors/${vendorId}`);
+  },
+
+  /**
    * Retrieves the full KYC details for a vendor's application.
    */
   getVendorKyc: async (vendorId: string): Promise<VendorKyc | null> => {
     return api.get<VendorKyc>(`/admin/vendors/${vendorId}/kyc`);
+  },
+
+  /**
+   * Submits or partially updates vendor KYC documents (Override).
+   * Aligned with Postman: POST /admin/vendors/:vendorId/kyc
+   */
+  uploadVendorKyc: async (
+    vendorId: string,
+    documents: VendorKyc["documents"],
+  ): Promise<void> => {
+    return api.post(`/admin/vendors/${vendorId}/kyc`, { documents });
   },
 };
 

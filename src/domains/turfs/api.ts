@@ -31,6 +31,37 @@ export const turfsApi = {
     );
   },
 
+  /**
+   * Fetches a specific turf by ID.
+   * Aligned with Postman: GET /admin/turfs/:turfId
+   */
+  fetchTurfById: async (turfId: string): Promise<TurfResponse> => {
+    return api.get<TurfResponse>(`/admin/turfs/${turfId}`);
+  },
+
+  /**
+   * Uploads/updates turf verification documents via admin override.
+   * Aligned with Postman: PATCH /admin/turfs/:turfId/documents
+   */
+  uploadTurfDocuments: async (
+    turfId: string,
+    documents: NonNullable<TurfResponse["documents"]>["documents"],
+  ): Promise<void> => {
+    return api.patch(`/admin/turfs/${turfId}/documents`, { documents });
+  },
+
+  /**
+   * Retrieves the status and stored URLs of turf documents.
+   * Aligned with Postman: GET /admin/turfs/:turfId/documents
+   */
+  fetchTurfDocuments: async (
+    turfId: string,
+  ): Promise<TurfResponse["documents"]> => {
+    return api.get<TurfResponse["documents"]>(
+      `/admin/turfs/${turfId}/documents`,
+    );
+  },
+
   updateTurfStatus: async (
     turfId: string,
     status: TurfResponse["status"],
@@ -49,7 +80,10 @@ export const turfsApi = {
     });
   },
 
-  onboardTurf: async (vendorId: string, data: any): Promise<TurfResponse> => {
+  onboardTurf: async (
+    vendorId: string,
+    data: Partial<TurfResponse>,
+  ): Promise<TurfResponse> => {
     return api.post<TurfResponse>(`/admin/vendors/${vendorId}/turfs`, data);
   },
 };
