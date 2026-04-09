@@ -33,13 +33,43 @@ const disabledItems = [
 ];
 
 const navItems = [
-  { label: "Audit Log", icon: Scroll, href: "/dashboard/audit", permission: "audit:read" },
+  {
+    label: "Audit Log",
+    icon: Scroll,
+    href: "/dashboard/audit",
+    permission: "audit:read",
+  },
   { label: "Dashboard", icon: House, href: "/dashboard" }, // Dashboard usually visible to all admins
-  { label: "Bookings", icon: CalendarBlank, href: "/dashboard/bookings", permission: "booking:read" },
-  { label: "Vendors", icon: Handshake, href: "/dashboard/vendors", permission: "vendor:read" },
-  { label: "Fields", icon: MapPin, href: "/dashboard/fields", permission: "turf:read" },
-  { label: "Users", icon: Users, href: "/dashboard/users", permission: "user:read" },
-  { label: "Analytics", icon: ChartLineUp, href: "/dashboard/analytics", permission: "report:read" },
+  {
+    label: "Bookings",
+    icon: CalendarBlank,
+    href: "/dashboard/bookings",
+    permission: "booking:read",
+  },
+  {
+    label: "Vendors",
+    icon: Handshake,
+    href: "/dashboard/vendors",
+    permission: "vendor:read",
+  },
+  {
+    label: "Fields",
+    icon: MapPin,
+    href: "/dashboard/fields",
+    permission: "turf:read",
+  },
+  {
+    label: "Users",
+    icon: Users,
+    href: "/dashboard/users",
+    permission: "user:read",
+  },
+  {
+    label: "Analytics",
+    icon: ChartLineUp,
+    href: "/dashboard/analytics",
+    permission: "report:read",
+  },
   {
     label: "Notifications",
     icon: BellRinging,
@@ -181,7 +211,7 @@ export default function DashboardLayout({
                 {dateStr}
               </p>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-400 w-64 opacity-50 cursor-not-allowed transition-all">
                 <MagnifyingGlass size={16} weight="bold" />
                 <input
@@ -198,7 +228,7 @@ export default function DashboardLayout({
 
               <div className="w-[1px] h-6 bg-gray-200/60" />
 
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3">
                 <div className="flex flex-col items-end hidden sm:flex">
                   <p className="text-sm font-bold text-gray-900 leading-tight">
                     {session.email}
