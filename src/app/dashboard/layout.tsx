@@ -23,6 +23,15 @@ import NotificationPanel from "./components/NotificationPanel";
 import { AuditLogProvider } from "./audit-log-context";
 import { useSession } from "@/lib/auth";
 
+const disabledItems = [
+  "Dashboard",
+  "Bookings",
+  "Analytics",
+  "Notifications",
+  "App Management",
+  "Settings",
+];
+
 const navItems = [
   { label: "Audit Log", icon: Scroll, href: "/dashboard/audit", permission: "audit:read" },
   { label: "Dashboard", icon: House, href: "/dashboard" }, // Dashboard usually visible to all admins
@@ -122,17 +131,20 @@ export default function DashboardLayout({
           <nav className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto custom-scrollbar">
             {filteredNav.map(({ label, icon: Icon, href }) => {
               const active = pathname === href;
+              const disabled = disabledItems.includes(label);
               return (
                 <button
                   key={href}
-                  onClick={() => router.push(href)}
+                  onClick={() => !disabled && router.push(href)}
+                  disabled={disabled}
                   className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 w-full text-left group
-                  ${active ? "bg-white/15 text-white shadow-lg shadow-black/5" : "text-white/60 hover:bg-white/10 hover:text-white"}`}
+                  ${active ? "bg-white/15 text-white shadow-lg shadow-black/5" : "text-white/60 hover:bg-white/10 hover:text-white"}
+                  ${disabled ? "opacity-40 cursor-not-allowed grayscale" : ""}`}
                 >
                   <Icon
                     size={20}
                     weight={active ? "fill" : "regular"}
-                    className={`shrink-0 transition-transform group-hover:scale-110 ${active ? "text-white" : "text-white/60"}`}
+                    className={`shrink-0 transition-transform ${!disabled && "group-hover:scale-110"} ${active ? "text-white" : "text-white/60"}`}
                   />
                   {open && <span className="tracking-wide">{label}</span>}
                 </button>

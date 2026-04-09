@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  MagnifyingGlass,
   DownloadSimple,
   Scroll,
   X,
@@ -16,9 +15,13 @@ import {
   Eye,
   IdentificationCard,
   UserCircle,
+  CalendarCheck,
+  CreditCard,
+  Clock,
+  Storefront,
 } from "@phosphor-icons/react";
 import { useState, useMemo } from "react";
-import { useAuditLogs } from "@/domains/audit/api";
+import { auditApi, useAuditLogs } from "@/domains/audit/api";
 import { AuditCategory, AuditLogRecord } from "@/domains/audit/types";
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -30,9 +33,13 @@ const CATEGORY_CONFIG: Record<
   admin: { label: "Admin", color: "#8a9e60", bg: "#f0f4e8", Icon: Gear },
   kyc: { label: "KYC", color: "#f97316", bg: "#fff7ed", Icon: Handshake },
   turf: { label: "Turf", color: "#14b8a6", bg: "#f0fdfa", Icon: Buildings },
+  booking: { label: "Booking", color: "#6366f1", bg: "#eef2ff", Icon: CalendarCheck },
+  payment: { label: "Payment", color: "#ec4899", bg: "#fdf2f8", Icon: CreditCard },
+  slot: { label: "Slot", color: "#8b5cf6", bg: "#f5f3ff", Icon: Clock },
+  vendor: { label: "Vendor", color: "#10b981", bg: "#ecfdf5", Icon: Storefront },
 };
 
-const ALL_CATEGORIES: AuditCategory[] = ["auth", "admin", "kyc", "turf"];
+const ALL_CATEGORIES: AuditCategory[] = ["auth", "admin", "kyc", "turf", "booking", "payment", "slot", "vendor"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatTime(iso: string): string {
@@ -105,27 +112,52 @@ function JsonViewer({ data, label }: { data: any; label: string }) {
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── CSV Export Utility ────────────────────────────────────────────────────────
 export default function AuditPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [catFilter, setCatFilter] = useState<AuditCategory | "all">("all");
   const [selected, setSelected] = useState<AuditLogRecord | null>(null);
 
-  const { data, isLoading } = useAuditLogs({
+  async function handleExportCSV(category?: AuditCategory, actorId?: string) {
+    try {
+      const blob = await auditApi.exportCsv({ category, actorId });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `audit_log_export_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Export failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+  }
+
+  // Smart search: if it looks like a UUID, send as actorId
+  const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(search.trim().replace(/^user_/, ''));
+
+  const queryParams = {
     page,
     limit: 20,
-    category: catFilter === "all" ? undefined : catFilter,
-    search: search || undefined,
-  });
+    category: catFilter === "all" ? undefined : (catFilter as AuditCategory),
+    search: isUUID ? undefined : (search.trim() || undefined),
+    actorId: isUUID ? search.trim() : undefined,
+  };
 
-  const entries = data?.data || [];
-  const meta = data?.meta;
+  console.log("[Audit] Fetching logs with params:", queryParams);
+
+  const { data, isLoading } = useAuditLogs(queryParams);
+
+  const entries = useMemo(() => (data as any)?.data || [], [data]);
+  const meta = (data as any)?.meta;
 
   const grouped = useMemo(() => groupByDate(entries), [entries]);
 
-  const PAGE_SIZE = 20;
-  const totalPages = meta?.total ? Math.ceil(meta.total / PAGE_SIZE) : 1;
+  const totalLoaded = entries.length;
+  const totalPages = meta?.total ? Math.ceil(meta.total / 20) : 1;
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 65px)" }}>
@@ -151,29 +183,21 @@ export default function AuditPage() {
 
           <div className="flex items-center gap-1.5 ml-auto mr-4">
             <span className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
-              {meta?.total || 0} events
+              {meta?.total || 0} total events
             </span>
           </div>
 
-          <button className="flex items-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={() => handleExportCSV(catFilter === "all" ? undefined : catFilter, isUUID ? search.trim() : undefined)}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <DownloadSimple size={14} />
             Export CSV
           </button>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 w-64">
-            <MagnifyingGlass size={13} className="text-gray-400 shrink-0" />
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search event, actor, ID…"
-              className="flex-1 text-xs bg-transparent outline-none text-gray-700 placeholder-gray-400"
-            />
-          </div>
+          {/* Search hidden for now */}
 
           <div className="flex items-center gap-1.5 flex-wrap">
             <button

@@ -9,7 +9,7 @@
  * - Unified response/error handling
  */
 
-const BASE_URL =
+export const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
 
 export interface ApiResponse<T = any> {
@@ -27,7 +27,7 @@ export interface ApiResponse<T = any> {
   };
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   code: string;
   details?: any;
 

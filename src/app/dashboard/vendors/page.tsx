@@ -235,7 +235,7 @@ export default function VendorsPage() {
         />
         <StatCard
           label="Growth"
-          value="+12%"
+          value="-"
           sub="vs last month"
           icon={CalendarBlank}
           color="#3b82f6"

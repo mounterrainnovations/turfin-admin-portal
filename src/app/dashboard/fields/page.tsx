@@ -21,6 +21,9 @@ import { useTurfsList, turfsApi } from "@/domains/turfs/api";
 import { TurfResponse, TurfStatus } from "@/domains/turfs/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
+import { ErrorCodes } from "@/lib/error-codes";
+import { ApiError } from "@/lib/api-client";
+import Link from "next/link";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -68,7 +71,13 @@ function ActionsMenu({
       toast.success("Status updated successfully");
       setOpen(false);
     },
-    onError: () => toast.error("Failed to update status"),
+    onError: (error: ApiError) => {
+      if (error?.code === ErrorCodes.KYC_NOT_VERIFIED) {
+        toast.error("Vendor KYC must be verified first");
+      } else {
+        toast.error("Failed to update status");
+      }
+    },
   });
 
   useEffect(() => {
@@ -339,6 +348,7 @@ export default function FieldsPage() {
   );
   const [reviewNote, setReviewNote] = useState("");
   const [onboardModalOpen, setOnboardModalOpen] = useState(false);
+  const [kycError, setKycError] = useState<string | null>(null);
 
   const { data, isLoading } = useTurfsList({
     page,
@@ -368,12 +378,19 @@ export default function FieldsPage() {
       setDocsReviewTurf(null);
       setReviewNote("");
     },
-    onError: () => toast.error("Failed to submit review"),
+    onError: (error: ApiError) => {
+      if (error?.code === ErrorCodes.KYC_NOT_VERIFIED) {
+        setKycError(error.message || "Vendor KYC must be verified first");
+      } else {
+        toast.error("Failed to submit review");
+      }
+    },
   });
 
   function closeDocsModal() {
     setDocsReviewTurf(null);
     setReviewNote("");
+    setKycError(null);
   }
 
   const STATUS_TABS = [
@@ -682,6 +699,29 @@ export default function FieldsPage() {
                 </div>
               </div>
 
+              {/* KYC Error Alert */}
+              {kycError && (
+                <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex gap-3 text-red-700">
+                    <Prohibit size={20} weight="fill" className="shrink-0" />
+                    <div className="text-xs">
+                      <p className="font-bold">Blocking Requirement</p>
+                      <p className="mt-0.5 opacity-80 leading-relaxed">
+                        {kycError}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Link
+                      href="/dashboard/vendors"
+                      className="text-[10px] font-bold bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5"
+                    >
+                      <ShieldCheck size={12} weight="bold" /> GO TO VENDOR VERIFICATION
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               {/* Document list */}
               <div className="space-y-3">
                 {docsReviewTurf.documents?.documents &&
@@ -855,7 +895,13 @@ function OnboardFieldForm({ onClose, onSuccess }: { onClose: () => void; onSucce
   const mutation = useMutation({
     mutationFn: (data: any) => turfsApi.onboardTurf(selectedVendorId, data),
     onSuccess,
-    onError: (err: any) => toast.error(err?.message || "Failed to onboard field")
+    onError: (err: ApiError) => {
+      if (err?.code === ErrorCodes.KYC_NOT_VERIFIED) {
+        toast.error("Vendor KYC must be verified before onboarding fields");
+      } else {
+        toast.error(err?.message || "Failed to onboard field");
+      }
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {

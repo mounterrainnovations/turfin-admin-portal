@@ -208,9 +208,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/audit?page=1&limit=10",
+              "raw": "{{baseUrl}}/audit?page=1&limit=10&category=auth",
               "host": ["{{baseUrl}}"],
-              "path": ["audit"],
+              "path": [
+                "audit"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -219,10 +221,61 @@
                 {
                   "key": "limit",
                   "value": "10"
+                },
+                {
+                  "key": "category",
+                  "value": "auth",
+                  "description": "Filter by category: auth, kyc, turf, admin, booking, payment, slot, vendor"
+                },
+                {
+                  "key": "actorId",
+                  "value": "",
+                  "description": "Filter by actor identity ID",
+                  "disabled": true
                 }
               ]
             },
-            "description": "List all system audit logs with pagination metadata. Requires super_admin role."
+            "description": "List all system audit logs with pagination and optional filters. Requires super_admin role."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Audit Logs to CSV",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit/export/csv?category=auth",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "audit",
+                "export",
+                "csv"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "auth",
+                  "description": "Filter by category for export"
+                },
+                {
+                  "key": "actorId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Export all filtered audit logs to a CSV file. Uses streaming to handle large datasets."
           },
           "response": []
         }
@@ -1038,13 +1091,7 @@
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions",
                   "host": ["{{baseUrl}}"],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    "roles",
-                    ":roleId",
-                    "permissions"
-                  ],
+                  "path": ["admin", "sub-admins", "roles", ":roleId", "permissions"],
                   "variable": [
                     {
                       "key": "roleId",
@@ -1486,160 +1533,88 @@
         {
           "name": "List Sub-Admins",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/admin/sub-admins",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins"]
-            },
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins"] },
             "description": "List all identities with the 'sub_admin' role and their assigned custom roles."
           }
         },
         {
           "name": "Create Sub-Admin",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "POST",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"subadmin@example.com\",\n  \"password\": \"subadmin123\",\n  \"name\": \"Support User\"\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{baseUrl}}/admin/sub-admins",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins"]
-            }
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins"] }
           }
         },
         {
           "name": "Delete Sub-Admin",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/admin/sub-admins/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", ":id"]
-            },
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/:id", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", ":id"] },
             "description": "Permanently decommission a sub-admin. Revokes roles and deletes from Auth."
           }
         },
         {
           "name": "List Custom Roles",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/admin/sub-admins/roles",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", "roles"]
-            },
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/roles", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", "roles"] },
             "description": "List all custom (non-system) roles and their granular permissions."
           }
         },
         {
           "name": "Create Custom Role",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "POST",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Support Manager\",\n  \"description\": \"Full access to review KYC and turfs\",\n  \"permissionIds\": []\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{baseUrl}}/admin/sub-admins/roles",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", "roles"]
-            }
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/roles", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", "roles"] }
           }
         },
         {
           "name": "Assign Roles to Sub-Admin",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "PATCH",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"roleIds\": []\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", ":id", "roles"]
-            }
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/:id/roles", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", ":id", "roles"] }
           }
         },
         {
           "name": "Update Role Permissions",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "PATCH",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"permissionIds\": []\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "url": {
-              "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", "roles", ":roleId", "permissions"]
-            }
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", "roles", ":roleId", "permissions"] }
           }
         },
         {
           "name": "List All Available Permissions",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/admin/sub-admins/permissions",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", "permissions"]
-            },
+            "url": { "raw": "{{baseUrl}}/admin/sub-admins/permissions", "host": ["{{baseUrl}}"], "path": ["admin", "sub-admins", "permissions"] },
             "description": "Fetch the catalogue of all granular resource:action permissions defined in the system."
           }
         }
