@@ -9,7 +9,6 @@ import {
   WarningCircle,
   ClockCountdown,
   Plus,
-  MagnifyingGlass,
   DotsThreeVertical,
   X,
   Eye,
@@ -17,11 +16,17 @@ import {
   CaretRight,
   CaretLeft,
   CalendarBlank,
+  MagnifyingGlass,
+  Prohibit,
+  ArrowCounterClockwise,
+  MinusCircle,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { vendorsApi, useVendorsList } from "@/domains/vendors/api";
+import { ApiError } from "@/lib/api-client";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   Vendor,
   KycStatus as DomainKycStatus,
@@ -94,6 +99,16 @@ const statusCfg: Record<string, { label: string; cls: string; dot: string }> = {
     cls: "bg-gray-100 text-gray-500",
     dot: "bg-gray-400",
   },
+  maintenance: {
+    label: "Maintenance",
+    cls: "bg-orange-50 text-orange-700",
+    dot: "bg-orange-400",
+  },
+  banned: {
+    label: "Banned",
+    cls: "bg-rose-50 text-rose-700",
+    dot: "bg-rose-600",
+  },
 };
 
 function avatar(name: string) {
@@ -144,9 +159,15 @@ function StatCard({
 export default function VendorsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
   const [statusTab, setStatusTab] = useState<VendorStatus | "all">("all");
   const [actionMenu, setActionMenu] = useState<string | null>(null);
+  const [onboardModalOpen, setOnboardModalOpen] = useState(false);
+  const [onboardSuccessData, setOnboardSuccessData] = useState<{
+    email: string;
+    pass: string;
+  } | null>(null);
 
   // Modals
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
@@ -157,7 +178,7 @@ export default function VendorsPage() {
     page,
     limit: PAGE_SIZE,
     status: statusTab === "all" ? undefined : statusTab,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
   });
 
   const vendors = data?.data || [];
@@ -173,6 +194,20 @@ export default function VendorsPage() {
       toast.success("Vendor status updated");
       setActionMenu(null);
     },
+    onError: () => toast.error("Failed to update vendor status"),
+  });
+
+  const banMutation = useMutation({
+    mutationFn: ({ id, ban }: { id: string; ban: boolean }) =>
+      ban ? vendorsApi.banVendor(id) : vendorsApi.unbanVendor(id),
+    onSuccess: (_, { ban }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
+      toast.success(ban ? "Vendor banned successfully" : "Vendor unbanned successfully");
+      setActionMenu(null);
+      setSelectedVendor(null);
+    },
+    onError: (_, { ban }) =>
+      toast.error(ban ? "Failed to ban vendor" : "Failed to unban vendor"),
   });
 
   const kycReviewMutation = useMutation({
@@ -230,52 +265,65 @@ export default function VendorsPage() {
         />
         <StatCard
           label="Growth"
-          value="+12%"
+          value="-"
           sub="vs last month"
           icon={CalendarBlank}
           color="#3b82f6"
         />
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 shrink-0 space-y-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-80 shadow-inner">
-            <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 flex-1 max-w-sm shadow-sm opacity-60 cursor-not-allowed">
+          <MagnifyingGlass size={15} className="text-gray-400 shrink-0" />
+          <input
+            disabled
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by business name, owner, city…"
+            className="flex-1 outline-none text-sm text-gray-400 bg-transparent placeholder:text-gray-400 cursor-not-allowed"
+          />
+        </div>
+
+        <button
+          onClick={() => setOnboardModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 shadow-sm shrink-0"
+          style={{ backgroundColor: "#8a9e60" }}
+        >
+          <Plus size={16} weight="bold" /> Onboard Vendor
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 gap-1 overflow-x-auto scrollbar-hide">
+        {(["all", "active", "pending", "suspended", "inactive", "maintenance", "banned"] as const).map((tab) => {
+          const isActive = statusTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => {
+                setStatusTab(tab);
                 setPage(1);
               }}
-              placeholder="Search business, owner, city..."
-              className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
-            />
-          </div>
-
-          <div className="flex gap-1.5 ml-auto">
-            {(["all", "active", "pending", "suspended"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  setStatusTab(tab);
-                  setPage(1);
-                }}
-                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-sm ${statusTab === tab ? "text-white" : "bg-white border border-gray-100 text-gray-500 hover:bg-gray-50"}`}
-                style={statusTab === tab ? { backgroundColor: "#8a9e60" } : {}}
-              >
-                {tab === "all" ? "ALL" : tab.replace("_", " ").toUpperCase()}
-              </button>
-            ))}
-          </div>
-
-          <button
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 shadow-sm shrink-0"
-            style={{ backgroundColor: "#8a9e60" }}
-          >
-            <Plus size={16} weight="bold" /> Onboard Vendor
-          </button>
-        </div>
+              className={`px-4 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+                isActive
+                  ? "border-b-2 text-[#8a9e60]"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+              style={isActive ? { borderColor: "#8a9e60" } : {}}
+            >
+              {tab === "all" ? "All Vendors" : tab.charAt(0).toUpperCase() + tab.slice(1).replace(/_/g, " ")}
+              {isActive && meta?.total !== undefined && (
+                <span
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: "#8a9e60", color: "white" }}
+                >
+                  {meta.total}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Table */}
@@ -397,46 +445,76 @@ export default function VendorsPage() {
                             onClick={() =>
                               setActionMenu(actionMenu === v.id ? null : v.id)
                             }
-                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                           >
-                            <DotsThreeVertical size={16} weight="bold" />
+                            <DotsThreeVertical size={18} weight="bold" />
                           </button>
                           {actionMenu === v.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 min-w-[180px] animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 min-w-[190px] animate-in fade-in slide-in-from-top-1 duration-200">
+                              {/* KYC */}
                               <button
                                 onClick={() => {
                                   setKycReviewVendor(v);
                                   setActionMenu(null);
                                 }}
-                                className="w-full text-left px-4 py-2 text-xs text-blue-600 hover:bg-blue-50 flex items-center gap-2.5 font-bold"
+                                className="w-full text-left px-4 py-2 text-[10px] font-black text-blue-600 hover:bg-blue-50 flex items-center gap-2.5"
                               >
                                 <ShieldCheck size={14} /> Review KYC
                               </button>
-                              <div className="border-t border-gray-50 my-1.5" />
-                              {v.status === "suspended" ? (
+
+                              <div className="border-t border-gray-50 my-1" />
+
+                              {/* Ban / Unban */}
+                              {v.status === "banned" ? (
                                 <button
-                                  onClick={() =>
-                                    updateStatusMutation.mutate({
-                                      id: v.id,
-                                      status: "active",
-                                    })
-                                  }
-                                  className="w-full text-left px-4 py-2 text-xs text-green-600 hover:bg-green-50 flex items-center gap-2.5 font-bold"
+                                  onClick={() => banMutation.mutate({ id: v.id, ban: false })}
+                                  className="w-full text-left px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 flex items-center gap-2.5"
                                 >
-                                  <CheckCircle size={14} /> Reactivate
+                                  <ArrowCounterClockwise size={14} /> Unban Vendor
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() =>
-                                    updateStatusMutation.mutate({
-                                      id: v.id,
-                                      status: "suspended",
-                                    })
-                                  }
-                                  className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2.5 font-bold"
+                                  onClick={() => banMutation.mutate({ id: v.id, ban: true })}
+                                  className="w-full text-left px-4 py-2 text-[10px] font-black text-rose-600 hover:bg-rose-50 flex items-center gap-2.5"
                                 >
-                                  <XCircle size={14} /> Suspend
+                                  <Prohibit size={14} /> Ban Vendor
                                 </button>
+                              )}
+
+                              {/* Operational status — only when not banned */}
+                              {v.status !== "banned" && (
+                                <>
+                                  <div className="border-t border-gray-50 my-1" />
+                                  {(v.status === "suspended" || v.status === "inactive" || v.status === "maintenance") ? (
+                                    <button
+                                      onClick={() =>
+                                        updateStatusMutation.mutate({ id: v.id, status: "active" })
+                                      }
+                                      className="w-full text-left px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 flex items-center gap-2.5"
+                                    >
+                                      <CheckCircle size={14} /> Reactivate
+                                    </button>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          updateStatusMutation.mutate({ id: v.id, status: "suspended" })
+                                        }
+                                        className="w-full text-left px-4 py-2 text-[10px] font-black text-red-500 hover:bg-red-50 flex items-center gap-2.5"
+                                      >
+                                        <XCircle size={14} /> Suspend
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          updateStatusMutation.mutate({ id: v.id, status: "inactive" })
+                                        }
+                                        className="w-full text-left px-4 py-2 text-[10px] font-black text-gray-500 hover:bg-gray-50 flex items-center gap-2.5"
+                                      >
+                                        <MinusCircle size={14} /> Set Inactive
+                                      </button>
+                                    </>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}
@@ -633,17 +711,37 @@ export default function VendorsPage() {
                 )}
               </section>
             </div>
-            {/* Quick Review Button */}
-            <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            {/* Quick Actions */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2">
               <button
                 onClick={() => {
                   setSelectedVendor(null);
                   setKycReviewVendor(selectedVendor);
                 }}
-                className="w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all"
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
                 style={{ backgroundColor: "#8a9e60" }}
               >
                 <ShieldCheck size={14} /> Review KYC Documents
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedVendor) {
+                    banMutation.mutate({
+                      id: selectedVendor.id,
+                      ban: selectedVendor.status !== "banned",
+                    });
+                  }
+                }}
+                disabled={banMutation.isPending}
+                className={`w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm disabled:opacity-50 ${
+                  selectedVendor?.status === "banned" ? "bg-[#8a9e60]" : "bg-rose-500"
+                }`}
+              >
+                {selectedVendor?.status === "banned" ? (
+                  <><ArrowCounterClockwise size={14} weight="bold" /> Unban Vendor</>
+                ) : (
+                  <><Prohibit size={14} weight="bold" /> Ban Vendor</>
+                )}
               </button>
             </div>
           </div>
@@ -834,6 +932,194 @@ export default function VendorsPage() {
           onClick={() => setActionMenu(null)}
         />
       )}
+
+      {/* ── Onboard Vendor Modal ── */}
+      {onboardModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => !onboardSuccessData && setOnboardModalOpen(false)}
+          />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative animate-in zoom-in-95 duration-200">
+            {onboardSuccessData ? (
+              <div className="p-8 text-center space-y-6">
+                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle size={40} weight="fill" className="text-green-500" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Onboarding Successful!</h2>
+                  <p className="text-sm text-gray-400 font-medium mt-1">Vendor account created successfully.</p>
+                </div>
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 text-left space-y-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Login Email</p>
+                    <p className="text-sm font-bold text-gray-800">{onboardSuccessData.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Temporary Password</p>
+                    <div className="flex items-center justify-between bg-white border border-gray-100 px-3 py-2 rounded-xl mt-1">
+                      <code className="text-sm font-black text-[#8a9e60] tracking-wider">{onboardSuccessData.pass}</code>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(onboardSuccessData.pass);
+                          toast.success("Password copied");
+                        }}
+                        className="text-[10px] font-bold text-gray-400 hover:text-gray-600"
+                      >
+                        COPY
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-amber-600 font-medium mt-2">
+                       Please share these credentials with the vendor safely.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setOnboardModalOpen(false);
+                    setOnboardSuccessData(null);
+                  }}
+                  className="w-full py-3 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                  style={{ backgroundColor: "#8a9e60" }}
+                >
+                  DONE
+                </button>
+              </div>
+            ) : (
+              <OnboardVendorForm
+                onClose={() => setOnboardModalOpen(false)}
+                onSuccess={(email, pass) => setOnboardSuccessData({ email, pass })}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function OnboardVendorForm({ 
+  onClose, 
+  onSuccess 
+}: { 
+  onClose: () => void;
+  onSuccess: (email: string, pass: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    email: "",
+    businessName: "",
+    ownerFullName: "",
+    businessType: "individual",
+    commissionPct: 15,
+    payoutCycle: "weekly",
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: typeof formData) => vendorsApi.onboardVendor(data),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
+      onSuccess(formData.email, res.credentials.tempPassword);
+    },
+    onError: (err: ApiError) => {
+      toast.error(err?.message || "Failed to onboard vendor");
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    mutation.mutate(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col">
+      <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-gray-900 tracking-tight">Onboard New Vendor</h2>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Create a new vendor profile and identity</p>
+        </div>
+        <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-gray-50 text-gray-400">
+          <X size={20} weight="bold" />
+        </button>
+      </div>
+
+      <div className="p-8 space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Name</label>
+            <input
+              required
+              value={formData.businessName}
+              onChange={e => setFormData({ ...formData, businessName: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+              placeholder="e.g. Smash & Score Arena"
+            />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Owner Full Name</label>
+            <input
+              required
+              value={formData.ownerFullName}
+              onChange={e => setFormData({ ...formData, ownerFullName: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+              placeholder="e.g. Rajesh Kumar"
+            />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Login Email Address</label>
+            <input
+              required
+              type="email"
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+              placeholder="vendor@example.com"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Business Type</label>
+            <select
+              value={formData.businessType}
+              onChange={e => setFormData({ ...formData, businessType: e.target.value })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] transition-colors appearance-none"
+            >
+              <option value="individual">Individual</option>
+              <option value="company">Company / LLP</option>
+              <option value="partnership">Partnership</option>
+            </select>
+          </div>
+          <div className="space-y-1.5 text-right">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">Commission %</label>
+            <input
+              type="number"
+              required
+              min="0"
+              max="100"
+              value={formData.commissionPct}
+              onChange={e => setFormData({ ...formData, commissionPct: Number(e.target.value) })}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-800 text-right outline-none focus:border-[#8a9e60] transition-colors"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-8 py-5 border-t border-gray-50 bg-gray-50/30 flex gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all"
+        >
+          CANCEL
+        </button>
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="flex-1 py-3 text-xs font-bold text-white rounded-xl shadow-lg shadow-[#8a9e60]/20 hover:opacity-90 disabled:opacity-50 transition-all uppercase tracking-widest"
+          style={{ backgroundColor: "#8a9e60" }}
+        >
+          {mutation.isPending ? "Onboarding..." : "Onboard Vendor"}
+        </button>
+      </div>
+    </form>
   );
 }

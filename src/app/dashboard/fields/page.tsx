@@ -2,12 +2,11 @@
 
 import {
   MapPin,
-  MagnifyingGlass,
   CheckCircle,
   Prohibit,
   ShieldCheck,
   WarningCircle,
-  DotsThree,
+  DotsThreeVertical,
   X,
   Eye,
   Buildings,
@@ -15,12 +14,20 @@ import {
   CaretRight,
   CaretLeft,
   FileText,
+  MagnifyingGlass,
+  MinusCircle,
+  Wrench,
+  ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import { useTurfsList, turfsApi } from "@/domains/turfs/api";
 import { TurfResponse, TurfStatus } from "@/domains/turfs/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, UseMutationResult } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
+import { ErrorCodes } from "@/lib/error-codes";
+import { ApiError } from "@/lib/api-client";
+import { useDebounce } from "@/hooks/use-debounce";
+import Link from "next/link";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -42,6 +49,21 @@ const STATUS_CONFIG: Record<
     color: "bg-red-100 text-red-600",
     dot: "bg-red-500",
   },
+  inactive: {
+    label: "Inactive",
+    color: "bg-gray-100 text-gray-500",
+    dot: "bg-gray-400",
+  },
+  maintenance: {
+    label: "Maintenance",
+    color: "bg-orange-100 text-orange-700",
+    dot: "bg-orange-500",
+  },
+  banned: {
+    label: "Banned",
+    color: "bg-red-200 text-red-900 border border-red-300",
+    dot: "bg-red-800",
+  },
 };
 
 const PAGE_SIZE = 10;
@@ -49,27 +71,19 @@ const PAGE_SIZE = 10;
 // ─── Actions Menu ─────────────────────────────────────────────────────────────
 function ActionsMenu({
   turf,
-  onView,
   onReviewDocs,
+  statusMutation,
+  banMutation,
+  unbanMutation,
 }: {
   turf: TurfResponse;
-  onView: () => void;
   onReviewDocs: () => void;
+  statusMutation: UseMutationResult<any, any, { id: string; status: TurfStatus }, any>;
+  banMutation: UseMutationResult<any, any, string, any>;
+  unbanMutation: UseMutationResult<any, any, string, any>;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
-
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: TurfStatus }) =>
-      turfsApi.updateTurfStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
-      toast.success("Status updated successfully");
-      setOpen(false);
-    },
-    onError: () => toast.error("Failed to update status"),
-  });
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -86,59 +100,95 @@ function ActionsMenu({
         onClick={() => setOpen((o) => !o)}
         className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
       >
-        <DotsThree size={18} weight="bold" />
+        <DotsThreeVertical size={18} weight="bold" />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-8 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20">
+        <div className="absolute right-0 top-8 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 animate-in fade-in slide-in-from-top-1 duration-200">
+          {/* Main Actions */}
           <button
             onClick={() => {
-              onView();
               setOpen(false);
+              onReviewDocs();
             }}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-blue-600 hover:bg-blue-50 transition-colors"
           >
-            <Eye size={13} className="text-gray-400" /> View Details
+            <ShieldCheck size={14} /> Review Documents
           </button>
 
-          <button
-            onClick={() => {
-              onReviewDocs();
-              setOpen(false);
-            }}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors font-bold"
-          >
-            <ShieldCheck size={13} /> Review Documents
-          </button>
+          <div className="border-t border-gray-50 my-1" />
 
           {turf.status === "pending" && (
             <button
               onClick={() =>
                 statusMutation.mutate({ id: turf.id, status: "active" })
               }
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-green-600 hover:bg-green-50 transition-colors font-medium"
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 transition-colors"
             >
-              <CheckCircle size={13} /> Approve Field
+              <CheckCircle size={14} /> Approve Field
             </button>
           )}
-          {turf.status === "active" && (
-            <button
-              onClick={() =>
-                statusMutation.mutate({ id: turf.id, status: "suspended" })
-              }
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors"
-            >
-              <Prohibit size={13} /> Suspend Field
-            </button>
-          )}
-          {turf.status === "suspended" && (
+
+          {["suspended", "inactive", "maintenance"].includes(turf.status) && (
             <button
               onClick={() =>
                 statusMutation.mutate({ id: turf.id, status: "active" })
               }
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-green-600 hover:bg-green-50 transition-colors"
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 transition-colors"
             >
-              <CheckCircle size={13} /> Reinstate
+              <ArrowCounterClockwise size={14} /> Reactivate Field
+            </button>
+          )}
+
+          {turf.status === "active" && (
+            <>
+              <button
+                onClick={() =>
+                  statusMutation.mutate({ id: turf.id, status: "suspended" })
+                }
+                className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <Prohibit size={14} /> Suspend Field
+              </button>
+              <button
+                onClick={() =>
+                  statusMutation.mutate({ id: turf.id, status: "inactive" })
+                }
+                className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                <MinusCircle size={14} /> Set Inactive
+              </button>
+              <button
+                onClick={() =>
+                  statusMutation.mutate({
+                    id: turf.id,
+                    status: "maintenance",
+                  })
+                }
+                className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-orange-600 hover:bg-orange-50 transition-colors"
+              >
+                <Wrench size={14} /> Under Maintenance
+              </button>
+            </>
+          )}
+
+          {turf.status !== "banned" ? (
+            <button
+              onClick={() => {
+                if (confirm("Are you sure you want to BAN this turf?")) {
+                  banMutation.mutate(turf.id);
+                }
+              }}
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-red-700 hover:bg-red-100 transition-colors"
+            >
+              <ShieldCheck size={14} weight="fill" /> Ban Turf
+            </button>
+          ) : (
+            <button
+              onClick={() => unbanMutation.mutate(turf.id)}
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-green-700 hover:bg-green-100 transition-colors"
+            >
+              <ShieldCheck size={14} weight="fill" /> Unban Turf
             </button>
           )}
         </div>
@@ -147,50 +197,100 @@ function ActionsMenu({
   );
 }
 
-// ─── Detail Panel ─────────────────────────────────────────────────────────────
+// ─── Components ───────────────────────────────────────────────────────────────
+function StatCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  icon: React.ElementType;
+  color: string;
+}) {
+  return (
+    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm transition-all hover:shadow-md">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+          {label}
+        </span>
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm"
+          style={{ backgroundColor: color + "15" }}
+        >
+          <Icon size={16} weight="fill" style={{ color }} />
+        </div>
+      </div>
+      <p className="text-2xl font-bold text-gray-800">{value}</p>
+      <p className="text-[10px] text-gray-400 mt-1 font-medium">{sub}</p>
+    </div>
+  );
+}
+
 function FieldDetailPanel({
   turf,
   onClose,
+  onReviewDocs,
+  statusMutation,
+  banMutation,
+  unbanMutation,
 }: {
   turf: TurfResponse;
   onClose: () => void;
+  onReviewDocs: () => void;
+  statusMutation: UseMutationResult<any, any, { id: string; status: TurfStatus }, any>;
+  banMutation: UseMutationResult<any, any, string, any>;
+  unbanMutation: UseMutationResult<any, any, string, any>;
 }) {
   const sc = STATUS_CONFIG[turf.status] || STATUS_CONFIG.pending;
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 w-[420px] bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-100 animate-in slide-in-from-right duration-300">
+    <div className="fixed right-0 top-0 bottom-0 w-[480px] bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-100 animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div
-        className="shrink-0 px-5 py-4 flex items-start justify-between"
+        className="shrink-0 p-6 flex items-start justify-between border-b border-gray-100"
         style={{ background: "linear-gradient(135deg,#8a9e60,#6e8245)" }}
       >
-        <div className="flex-1 min-w-0 pr-3">
-          <p className="text-white/60 text-[11px] font-medium mb-0.5">
-            {turf.id}
-          </p>
-          <h2 className="text-white font-bold text-base leading-tight truncate">
-            {turf.name}
-          </h2>
-          <p className="text-white/60 text-[11px] mt-0.5 flex items-center gap-1">
-            <MapPin size={10} /> {turf.address.city}, {turf.address.state}
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            <span
-              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${sc.color}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-              {sc.label}
-            </span>
-            <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full capitalize">
-              {turf.surfaceType?.replace(/_/g, " ")}
-            </span>
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white text-xl font-bold border border-white/30 shadow-lg shrink-0 overflow-hidden">
+            {turf.documents?.documents.fieldPhotos?.[0] ? (
+              <img
+                src={turf.documents.documents.fieldPhotos[0]}
+                alt={turf.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              "T"
+            )}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-white font-bold text-lg leading-tight truncate">
+              {turf.name}
+            </h2>
+            <p className="text-white/70 text-[11px] font-mono mt-1 truncate">
+              {turf.id}
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <span
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 bg-white/20 text-white border border-white/10`}
+              >
+                <span className={`w-1 h-1 rounded-full ${sc.dot}`} />
+                {sc.label.toUpperCase()}
+              </span>
+              <span className="text-[9px] bg-white/10 text-white/80 px-2 py-0.5 rounded-full capitalize border border-white/5">
+                {turf.surfaceType?.replace(/_/g, " ")}
+              </span>
+            </div>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="text-white/60 hover:text-white shrink-0 mt-0.5"
+          className="text-white/60 hover:text-white shrink-0"
         >
-          <X size={20} />
+          <X size={20} weight="bold" />
         </button>
       </div>
 
@@ -324,13 +424,86 @@ function FieldDetailPanel({
           )}
         </div>
       </div>
+
+      {/* Quick Actions */}
+      <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2">
+        <button
+          onClick={() => {
+            onClose();
+            onReviewDocs();
+          }}
+          className="w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
+          style={{ backgroundColor: "#8a9e60" }}
+        >
+          <ShieldCheck size={14} /> Review Documents
+        </button>
+
+        {turf.status === "active" ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                statusMutation.mutate({ id: turf.id, status: "suspended" });
+              }}
+              disabled={statusMutation.isPending}
+              className="py-2 rounded-lg text-[10px] font-bold text-red-600 border border-red-100 bg-white hover:bg-red-50 transition-all disabled:opacity-50"
+            >
+              SUSPEND
+            </button>
+            <button
+              onClick={() => {
+                statusMutation.mutate({
+                  id: turf.id,
+                  status: "maintenance",
+                });
+              }}
+              disabled={statusMutation.isPending}
+              className="py-2 rounded-lg text-[10px] font-bold text-orange-600 border border-orange-100 bg-white hover:bg-orange-50 transition-all disabled:opacity-50"
+            >
+              MAINTENANCE
+            </button>
+          </div>
+        ) : (
+          turf.status !== "banned" && (
+            <button
+              onClick={() => {
+                statusMutation.mutate({ id: turf.id, status: "active" });
+              }}
+              disabled={statusMutation.isPending}
+              className="w-full py-2.5 rounded-xl text-xs font-bold text-green-600 border border-green-100 bg-white hover:bg-green-50 transition-all disabled:opacity-50"
+            >
+              {turf.status === "pending" ? "APPROVE FIELD" : "ACTIVATE FIELD"}
+            </button>
+          )
+        )}
+
+        {turf.status === "banned" ? (
+          <button
+            onClick={() => unbanMutation.mutate(turf.id)}
+            disabled={unbanMutation.isPending}
+            className="w-full py-2.5 rounded-xl text-xs font-bold text-green-700 border border-green-200 bg-green-50 hover:bg-green-100 transition-all disabled:opacity-50"
+          >
+            UNBAN FIELD
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to BAN this turf?")) {
+                banMutation.mutate(turf.id);
+              }
+            }}
+            disabled={banMutation.isPending}
+            className="w-full py-2.5 rounded-xl text-xs font-bold text-red-700 border border-red-200 bg-red-50 hover:bg-red-100 transition-all disabled:opacity-50"
+          >
+            BAN FIELD
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function FieldsPage() {
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [statusTab, setStatusTab] = useState<TurfStatus | "all">("all");
   const [selected, setSelected] = useState<TurfResponse | null>(null);
@@ -338,18 +511,50 @@ export default function FieldsPage() {
     null,
   );
   const [reviewNote, setReviewNote] = useState("");
+  const [onboardModalOpen, setOnboardModalOpen] = useState(false);
+  const [kycError, setKycError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
 
   const { data, isLoading } = useTurfsList({
     page,
     limit: PAGE_SIZE,
     status: statusTab === "all" ? undefined : statusTab,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
   });
 
   const turfs = data?.data || [];
   const meta = data?.meta;
   const totalPages = meta?.total ? Math.ceil(meta.total / PAGE_SIZE) : 1;
   const queryClient = useQueryClient();
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: TurfStatus }) =>
+      turfsApi.updateTurfStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+      toast.success("Turf status updated");
+    },
+    onError: () => toast.error("Failed to update status"),
+  });
+
+  const banMutation = useMutation({
+    mutationFn: (id: string) => turfsApi.banTurf(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+      toast.success("Turf banned successfully");
+    },
+    onError: () => toast.error("Failed to ban turf"),
+  });
+
+  const unbanMutation = useMutation({
+    mutationFn: (id: string) => turfsApi.unbanTurf(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+      toast.success("Turf unbanned successfully");
+    },
+    onError: () => toast.error("Failed to unban turf"),
+  });
 
   const docsReviewMutation = useMutation({
     mutationFn: ({
@@ -367,12 +572,19 @@ export default function FieldsPage() {
       setDocsReviewTurf(null);
       setReviewNote("");
     },
-    onError: () => toast.error("Failed to submit review"),
+    onError: (error: ApiError) => {
+      if (error?.code === ErrorCodes.KYC_NOT_VERIFIED) {
+        setKycError(error.message || "Vendor KYC must be verified first");
+      } else {
+        toast.error("Failed to submit review");
+      }
+    },
   });
 
   function closeDocsModal() {
     setDocsReviewTurf(null);
     setReviewNote("");
+    setKycError(null);
   }
 
   const STATUS_TABS = [
@@ -380,222 +592,256 @@ export default function FieldsPage() {
     { key: "active", label: "Active" },
     { key: "pending", label: "Pending" },
     { key: "suspended", label: "Suspended" },
+    { key: "inactive", label: "Inactive" },
+    { key: "maintenance", label: "Maintenance" },
+    { key: "banned", label: "Banned" },
   ];
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Header & Filters */}
-      <div className="p-6 pb-0 shrink-0">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold text-gray-900">Field Management</h1>
-          <button
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#8a9e60" }}
-          >
-            <Plus size={16} weight="bold" /> Onboard Field
-          </button>
+    <div className="px-6 py-5 space-y-6 h-full flex flex-col">
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4 shrink-0">
+        <StatCard
+          label="Total Fields"
+          value={String(meta?.total || 0)}
+          sub="Across all status"
+          icon={Buildings}
+          color="#8a9e60"
+        />
+        <StatCard
+          label="Booked Today"
+          value="-"
+          sub="Confirmed sessions"
+          icon={CheckCircle}
+          color="#22c55e"
+        />
+        <StatCard
+          label="Pending Review"
+          value="-"
+          sub="Requires attention"
+          icon={WarningCircle}
+          color="#f59e0b"
+        />
+        <StatCard
+          label="Active Fields"
+          value="-"
+          sub="Now live on app"
+          icon={ShieldCheck}
+          color="#3b82f6"
+        />
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 flex-1 max-w-sm shadow-sm opacity-60 cursor-not-allowed">
+          <MagnifyingGlass size={15} className="text-gray-400 shrink-0" />
+          <input
+            disabled
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, address, city…"
+            className="flex-1 outline-none text-sm text-gray-400 bg-transparent placeholder:text-gray-400 cursor-not-allowed"
+          />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
-          <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-80">
-              <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
-              <input
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search turf name, location, ID..."
-                className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
-              />
-            </div>
+        <button
+          onClick={() => setOnboardModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 shadow-sm shrink-0"
+          style={{ backgroundColor: "#8a9e60" }}
+        >
+          <Plus size={16} weight="bold" /> Onboard Field
+        </button>
+      </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1.5 ml-auto">
-              {STATUS_TABS.map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => {
-                    setStatusTab(t.key as TurfStatus | "all");
-                    setPage(1);
-                  }}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                    statusTab === t.key
-                      ? "text-white"
-                      : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                  }`}
-                  style={
-                    statusTab === t.key ? { backgroundColor: "#8a9e60" } : {}
-                  }
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 gap-1">
+        {STATUS_TABS.map((t) => {
+          const isActive = statusTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => {
+                setStatusTab(t.key as TurfStatus | "all");
+                setPage(1);
+              }}
+              className={`px-4 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                isActive
+                  ? "border-b-2 text-[#8a9e60]"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+              style={isActive ? { borderColor: "#8a9e60" } : {}}
+            >
+              {t.label}
+              {/* Count placeholder - can be improved if api provides per-status counts */}
+              {isActive && meta?.total !== undefined && (
+                <span
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: "#8a9e60", color: "white" }}
                 >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+                  {meta.total}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-hidden px-6 pb-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-full flex flex-col overflow-hidden">
-          <div className="overflow-x-auto overflow-y-auto flex-1">
-            <table className="w-full">
-              <thead className="bg-gray-50/80 sticky top-0 z-10">
-                <tr>
-                  {[
-                    "Turf Detail",
-                    "Category",
-                    "Status",
-                    "Price",
-                    "KYC Status",
-                    "Created",
-                    "",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-4 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex-1 flex flex-col overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto flex-1">
+          <table className="w-full">
+            <thead className="bg-gray-50/80 sticky top-0 z-10">
+              <tr>
+                {[
+                  "Turf Detail",
+                  "Category",
+                  "Status",
+                  "Price",
+                  "KYC Status",
+                  "Created",
+                  "",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="text-left px-4 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-              <tbody className="divide-y divide-gray-50">
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td colSpan={7} className="px-4 py-4">
-                        <div className="h-4 bg-gray-100 rounded w-3/4"></div>
-                      </td>
-                    </tr>
-                  ))
-                ) : turfs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-20 text-center">
-                      <Buildings
-                        size={32}
-                        className="text-gray-200 mx-auto mb-3"
-                      />
-                      <p className="text-sm text-gray-400">No fields found</p>
+            <tbody className="divide-y divide-gray-50">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={7} className="px-4 py-4">
+                      <div className="h-4 bg-gray-100 rounded w-3/4"></div>
                     </td>
                   </tr>
-                ) : (
-                  turfs.map((turf) => {
-                    const sc =
-                      STATUS_CONFIG[turf.status] || STATUS_CONFIG.pending;
-                    const kycStatus = turf.documents?.status || "missing";
+                ))
+              ) : turfs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-20 text-center">
+                    <Buildings
+                      size={32}
+                      className="text-gray-200 mx-auto mb-3"
+                    />
+                    <p className="text-sm text-gray-400">No fields found</p>
+                  </td>
+                </tr>
+              ) : (
+                turfs.map((turf) => {
+                  const sc =
+                    STATUS_CONFIG[turf.status] || STATUS_CONFIG.pending;
+                  const kycStatus = turf.documents?.status || "missing";
 
-                    return (
-                      <tr
-                        key={turf.id}
-                        onClick={() => setSelected(turf)}
-                        className="hover:bg-gray-50/60 transition-colors cursor-pointer"
-                      >
-                        <td className="px-4 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-100">
-                              {turf.documents?.documents?.fieldPhotos?.[0] ? (
-                                <img
-                                  src={turf.documents.documents.fieldPhotos[0]}
-                                  alt={turf.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-green-50 flex items-center justify-center text-[10px] font-bold text-green-700">
-                                  TURF
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-gray-800 text-sm truncate">
-                                {turf.name}
-                              </p>
-                              <p className="text-[10px] text-gray-400 truncate flex items-center gap-1">
-                                <MapPin size={9} /> {turf.address.city},{" "}
-                                {turf.address.state}
-                              </p>
-                            </div>
+                  return (
+                    <tr
+                      key={turf.id}
+                      onClick={() => setSelected(turf)}
+                      className="hover:bg-gray-50/60 transition-colors cursor-pointer"
+                    >
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-100">
+                            {turf.documents?.documents?.fieldPhotos?.[0] ? (
+                              <img
+                                src={turf.documents.documents.fieldPhotos[0]}
+                                alt={turf.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-green-50 flex items-center justify-center text-[10px] font-bold text-green-700">
+                                TURF
+                              </div>
+                            )}
                           </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="text-xs font-medium text-gray-600 capitalize">
-                            {turf.surfaceType?.replace(/_/g, " ")}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${sc.color}`}
-                          >
-                            <span
-                              className={`w-1 h-1 rounded-full ${sc.dot}`}
-                            />
-                            {sc.label.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <p className="text-sm font-bold text-gray-800">
-                            ₹{turf.standardPricePaise / 100}
-                          </p>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${kycStatus === "verified" ? "bg-green-50 text-green-600" : kycStatus === "rejected" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}
-                          >
-                            {kycStatus.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <p className="text-[10px] text-gray-500 font-mono">
-                            {new Date(turf.createdAt).toLocaleDateString()}
-                          </p>
-                        </td>
-                        <td
-                          className="px-4 py-4 text-right"
-                          onClick={(e) => e.stopPropagation()}
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-800 text-sm truncate">
+                              {turf.name}
+                            </p>
+                            <p className="text-[10px] text-gray-400 truncate flex items-center gap-1">
+                              <MapPin size={9} /> {turf.address.city},{" "}
+                              {turf.address.state}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-xs font-medium text-gray-600 capitalize">
+                          {turf.surfaceType?.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${sc.color}`}
                         >
-                          <ActionsMenu
-                            turf={turf}
-                            onView={() => setSelected(turf)}
-                            onReviewDocs={() => setDocsReviewTurf(turf)}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          <span className={`w-1 h-1 rounded-full ${sc.dot}`} />
+                          {sc.label.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-sm font-bold text-gray-800">
+                          ₹{turf.standardPricePaise / 100}
+                        </p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${kycStatus === "verified" ? "bg-green-50 text-green-600" : kycStatus === "rejected" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}
+                        >
+                          {kycStatus.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-[10px] text-gray-500 font-mono">
+                          {new Date(turf.createdAt).toLocaleDateString()}
+                        </p>
+                      </td>
+                      <td
+                        className="px-4 py-4 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ActionsMenu
+                          turf={turf}
+                          statusMutation={statusMutation}
+                          banMutation={banMutation}
+                          unbanMutation={unbanMutation}
+                          onReviewDocs={() => setDocsReviewTurf(turf)}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Footer / Pagination */}
-          <div className="shrink-0 border-t border-gray-100 px-6 py-3 flex items-center justify-between bg-gray-50/30">
-            <p className="text-xs text-gray-400 font-medium">
-              Showing <span className="text-gray-700">{turfs.length}</span> of{" "}
-              {meta?.total || 0} fields
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 disabled:opacity-30 hover:bg-white transition-all shadow-sm"
-              >
-                <CaretLeft size={14} weight="bold" />
-              </button>
-              <span className="text-[11px] font-bold text-gray-600 px-3">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 disabled:opacity-30 hover:bg-white transition-all shadow-sm"
-              >
-                <CaretRight size={14} weight="bold" />
-              </button>
-            </div>
+        {/* Footer / Pagination */}
+        <div className="shrink-0 border-t border-gray-100 px-6 py-3 flex items-center justify-between bg-gray-50/30">
+          <p className="text-xs text-gray-400 font-medium">
+            Showing <span className="text-gray-700">{turfs.length}</span> of{" "}
+            {meta?.total || 0} fields
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 disabled:opacity-30 hover:bg-white transition-all shadow-sm"
+            >
+              <CaretLeft size={14} weight="bold" />
+            </button>
+            <span className="text-[11px] font-bold text-gray-600 px-3">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-500 disabled:opacity-30 hover:bg-white transition-all shadow-sm"
+            >
+              <CaretRight size={14} weight="bold" />
+            </button>
           </div>
         </div>
       </div>
@@ -607,7 +853,16 @@ export default function FieldsPage() {
             className="fixed inset-0 bg-black/10 z-40 backdrop-blur-[2px]"
             onClick={() => setSelected(null)}
           />
-          <FieldDetailPanel turf={selected} onClose={() => setSelected(null)} />
+          {selected && (
+            <FieldDetailPanel
+              turf={selected}
+              statusMutation={statusMutation}
+              banMutation={banMutation}
+              unbanMutation={unbanMutation}
+              onClose={() => setSelected(null)}
+              onReviewDocs={() => setDocsReviewTurf(selected)}
+            />
+          )}
         </>
       )}
 
@@ -626,7 +881,7 @@ export default function FieldsPage() {
                   Review Turf Documents
                 </h2>
                 <p className="text-xs text-gray-400 font-medium mt-0.5">
-                  {docsReviewTurf.name} · {docsReviewTurf.id}
+                  {docsReviewTurf!.name} · {docsReviewTurf!.id}
                 </p>
               </div>
               <button
@@ -645,7 +900,7 @@ export default function FieldsPage() {
                   Current Document Status:
                 </span>
                 {(() => {
-                  const s = docsReviewTurf.documents?.status || "missing";
+                  const s = docsReviewTurf!.documents?.status || "missing";
                   const cls =
                     s === "verified"
                       ? "bg-green-50 text-green-700"
@@ -679,6 +934,30 @@ export default function FieldsPage() {
                   </p>
                 </div>
               </div>
+
+              {/* KYC Error Alert */}
+              {kycError && (
+                <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex gap-3 text-red-700">
+                    <Prohibit size={20} weight="fill" className="shrink-0" />
+                    <div className="text-xs">
+                      <p className="font-bold">Blocking Requirement</p>
+                      <p className="mt-0.5 opacity-80 leading-relaxed">
+                        {kycError}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Link
+                      href="/dashboard/vendors"
+                      className="text-[10px] font-bold bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5"
+                    >
+                      <ShieldCheck size={12} weight="bold" /> GO TO VENDOR
+                      VERIFICATION
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               {/* Document list */}
               <div className="space-y-3">
@@ -807,6 +1086,272 @@ export default function FieldsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Onboard Field Modal ── */}
+      {onboardModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => setOnboardModalOpen(false)}
+          />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden relative animate-in zoom-in-95 duration-200 flex flex-col">
+            <OnboardFieldForm
+              onClose={() => setOnboardModalOpen(false)}
+              onSuccess={() => {
+                setOnboardModalOpen(false);
+                queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+                toast.success("Field onboarded successfully");
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function OnboardFieldForm({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [step, setStep] = useState(1);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+
+  const [formData, setFormData] = useState({
+    name: "",
+    sports: [] as string[],
+    surfaceType: "artificial_turf",
+    standardPricePaise: 150000,
+    addressLineOne: "",
+    city: "",
+    state: "",
+    pinCode: "",
+    weekdayOpen: "06:00:00",
+    weekdayClose: "23:00:00",
+    weekendOpen: "06:00:00",
+    weekendClose: "23:00:00",
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: {
+      name: string;
+      sports: string[];
+      surfaceType: string;
+      standardPricePaise: number;
+      address: {
+        addressLineOne: string;
+        city: string;
+        state: string;
+        pinCode: string;
+      };
+      weekdayOpen: string;
+      weekdayClose: string;
+      weekendOpen: string;
+      weekendClose: string;
+    }) => turfsApi.onboardTurf(selectedVendorId, data),
+    onSuccess,
+    onError: (err: ApiError) => {
+      if (err?.code === ErrorCodes.KYC_NOT_VERIFIED) {
+        toast.error("Vendor KYC must be verified before onboarding fields");
+      } else {
+        toast.error(err?.message || "Failed to onboard field");
+      }
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedVendorId) return toast.error("Please select a vendor first");
+    mutation.mutate({
+      ...formData,
+      address: {
+        addressLineOne: formData.addressLineOne,
+        city: formData.city,
+        state: formData.state,
+        pinCode: formData.pinCode,
+      },
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]">
+      <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-gray-900 tracking-tight">
+            Onboard New Field
+          </h2>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">
+            Step {step} of 2: {step === 1 ? "Select Vendor" : "Field Details"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 rounded-full hover:bg-gray-50 text-gray-400"
+        >
+          <X size={20} weight="bold" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        {step === 1 ? (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Assign to Vendor (ID)
+              </label>
+              <input
+                required
+                value={selectedVendorId}
+                onChange={(e) => setSelectedVendorId(e.target.value)}
+                placeholder="Enter Vendor ID (e.g. vend_...)"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 outline-none focus:border-[#8a9e60] transition-colors"
+              />
+              <p className="text-[10px] text-gray-400 italic mt-2">
+                Currently, please provide the unique Vendor ID. You can find
+                this in the Vendors dashboard.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Field Name
+              </label>
+              <input
+                required
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="e.g. Center Court - Smash Arena"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Surface Type
+              </label>
+              <select
+                value={formData.surfaceType}
+                onChange={(e) =>
+                  setFormData({ ...formData, surfaceType: e.target.value })
+                }
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] appearance-none"
+              >
+                <option value="natural_grass">Natural Grass</option>
+                <option value="artificial_turf">Artificial Turf</option>
+                <option value="clay">Clay</option>
+                <option value="hard_court">Hard Court</option>
+              </select>
+            </div>
+            <div className="space-y-1.5 text-right">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">
+                Price (paise/hr)
+              </label>
+              <input
+                type="number"
+                required
+                value={formData.standardPricePaise}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    standardPricePaise: Number(e.target.value),
+                  })
+                }
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 text-right outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2 mt-2">
+              <p className="text-[10px] font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                <MapPin size={12} weight="fill" className="text-[#8a9e60]" />{" "}
+                Location Details
+              </p>
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <input
+                required
+                value={formData.addressLineOne}
+                onChange={(e) =>
+                  setFormData({ ...formData, addressLineOne: e.target.value })
+                }
+                placeholder="Address line 1"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <input
+                required
+                value={formData.city}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
+                }
+                placeholder="City"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <input
+                required
+                value={formData.state}
+                onChange={(e) =>
+                  setFormData({ ...formData, state: e.target.value })
+                }
+                placeholder="State"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="px-8 py-5 border-t border-gray-50 bg-gray-50/30 flex gap-3">
+        {step === 1 ? (
+          <>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl"
+            >
+              CANCEL
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                selectedVendorId.trim()
+                  ? setStep(2)
+                  : toast.error("Enter Vendor ID")
+              }
+              className="flex-1 py-3 text-xs font-bold text-white rounded-xl shadow-lg shadow-[#8a9e60]/20"
+              style={{ backgroundColor: "#8a9e60" }}
+            >
+              NEXT: FIELD INFO
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl"
+            >
+              BACK
+            </button>
+            <button
+              type="submit"
+              disabled={mutation.isPending}
+              className="flex-1 py-3 text-xs font-bold text-white rounded-xl shadow-lg shadow-[#8a9e60]/20 disabled:opacity-50"
+              style={{ backgroundColor: "#8a9e60" }}
+            >
+              {mutation.isPending ? "CREATING..." : "ONBOARD FIELD"}
+            </button>
+          </>
+        )}
+      </div>
+    </form>
   );
 }

@@ -1,6 +1,6 @@
 export type BusinessType = "individual" | "company" | "partnership";
 
-export type VendorStatus = "active" | "pending" | "suspended" | "inactive";
+export type VendorStatus = "active" | "inactive" | "pending" | "suspended" | "maintenance" | "banned";
 
 export type KycStatus =
   | "pending"
@@ -16,6 +16,14 @@ export interface Address {
   state: string;
   pinCode: string;
   googleMapsLink?: string;
+}
+
+export interface BankingDetails {
+  bankName: string;
+  accountHolderName: string;
+  accountNumber: string;
+  ifsc: string;
+  upiId?: string;
 }
 
 export interface VendorKyc {

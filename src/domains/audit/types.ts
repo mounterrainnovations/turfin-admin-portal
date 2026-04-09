@@ -1,4 +1,4 @@
-export type AuditCategory = "auth" | "admin" | "kyc" | "turf";
+export type AuditCategory = "auth" | "admin" | "kyc" | "turf" | "booking" | "payment" | "slot" | "vendor";
 
 export interface AuditLogRecord {
   id: string;
