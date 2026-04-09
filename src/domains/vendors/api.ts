@@ -92,7 +92,7 @@ export const vendorsApi = {
   },
 
   /**
-   * Updates the operational status of a vendor.
+   * Updates the operational status of a vendor (suspended / inactive).
    */
   updateVendorStatus: async (
     vendorId: string,
@@ -101,6 +101,22 @@ export const vendorsApi = {
     return api.patch<Vendor>(`/admin/vendors/${vendorId}/status`, {
       status,
     });
+  },
+
+  /**
+   * Bans a vendor and disables their login identity.
+   * Aligned with Postman: POST /admin/vendors/:vendorId/ban
+   */
+  banVendor: async (vendorId: string): Promise<Vendor> => {
+    return api.post<Vendor>(`/admin/vendors/${vendorId}/ban`, {});
+  },
+
+  /**
+   * Unbans a vendor and restores their identity to active status.
+   * Aligned with Postman: POST /admin/vendors/:vendorId/unban
+   */
+  unbanVendor: async (vendorId: string): Promise<Vendor> => {
+    return api.post<Vendor>(`/admin/vendors/${vendorId}/unban`, {});
   },
 
   /**

@@ -6,7 +6,7 @@ import {
   Prohibit,
   ShieldCheck,
   WarningCircle,
-  DotsThree,
+  DotsThreeVertical,
   X,
   Eye,
   Buildings,
@@ -15,11 +15,14 @@ import {
   CaretLeft,
   FileText,
   MagnifyingGlass,
+  MinusCircle,
+  Wrench,
+  ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import { useTurfsList, turfsApi } from "@/domains/turfs/api";
 import { TurfResponse, TurfStatus } from "@/domains/turfs/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, UseMutationResult } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { ErrorCodes } from "@/lib/error-codes";
 import { ApiError } from "@/lib/api-client";
@@ -45,32 +48,41 @@ const STATUS_CONFIG: Record<
     color: "bg-red-100 text-red-600",
     dot: "bg-red-500",
   },
+  inactive: {
+    label: "Inactive",
+    color: "bg-gray-100 text-gray-500",
+    dot: "bg-gray-400",
+  },
+  maintenance: {
+    label: "Maintenance",
+    color: "bg-orange-100 text-orange-700",
+    dot: "bg-orange-500",
+  },
+  banned: {
+    label: "Banned",
+    color: "bg-red-200 text-red-900 border border-red-300",
+    dot: "bg-red-800",
+  },
 };
 
 const PAGE_SIZE = 10;
 
 // ─── Actions Menu ─────────────────────────────────────────────────────────────
-function ActionsMenu({ turf }: { turf: TurfResponse }) {
+function ActionsMenu({
+  turf,
+  onReviewDocs,
+  statusMutation,
+  banMutation,
+  unbanMutation,
+}: {
+  turf: TurfResponse;
+  onReviewDocs: () => void;
+  statusMutation: UseMutationResult<any, any, { id: string; status: TurfStatus }, any>;
+  banMutation: UseMutationResult<any, any, string, any>;
+  unbanMutation: UseMutationResult<any, any, string, any>;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
-
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: TurfStatus }) =>
-      turfsApi.updateTurfStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
-      toast.success("Status updated successfully");
-      setOpen(false);
-    },
-    onError: (error: ApiError) => {
-      if (error?.code === ErrorCodes.KYC_NOT_VERIFIED) {
-        toast.error("Vendor KYC must be verified first");
-      } else {
-        toast.error("Failed to update status");
-      }
-    },
-  });
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -87,39 +99,95 @@ function ActionsMenu({ turf }: { turf: TurfResponse }) {
         onClick={() => setOpen((o) => !o)}
         className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
       >
-        <DotsThree size={18} weight="bold" />
+        <DotsThreeVertical size={18} weight="bold" />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-8 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20">
+        <div className="absolute right-0 top-8 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 animate-in fade-in slide-in-from-top-1 duration-200">
+          {/* Main Actions */}
+          <button
+            onClick={() => {
+              setOpen(false);
+              onReviewDocs();
+            }}
+            className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-blue-600 hover:bg-blue-50 transition-colors"
+          >
+            <ShieldCheck size={14} /> Review Documents
+          </button>
+
+          <div className="border-t border-gray-50 my-1" />
+
           {turf.status === "pending" && (
             <button
               onClick={() =>
                 statusMutation.mutate({ id: turf.id, status: "active" })
               }
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-green-600 hover:bg-green-50 transition-colors font-medium"
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 transition-colors"
             >
-              <CheckCircle size={13} /> Approve Field
+              <CheckCircle size={14} /> Approve Field
             </button>
           )}
-          {turf.status === "active" && (
-            <button
-              onClick={() =>
-                statusMutation.mutate({ id: turf.id, status: "suspended" })
-              }
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors font-medium"
-            >
-              <Prohibit size={13} /> Suspend Field
-            </button>
-          )}
-          {turf.status === "suspended" && (
+
+          {["suspended", "inactive", "maintenance"].includes(turf.status) && (
             <button
               onClick={() =>
                 statusMutation.mutate({ id: turf.id, status: "active" })
               }
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-green-600 hover:bg-green-50 transition-colors font-medium"
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 transition-colors"
             >
-              <CheckCircle size={13} /> Reinstate
+              <ArrowCounterClockwise size={14} /> Reactivate Field
+            </button>
+          )}
+
+          {turf.status === "active" && (
+            <>
+              <button
+                onClick={() =>
+                  statusMutation.mutate({ id: turf.id, status: "suspended" })
+                }
+                className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <Prohibit size={14} /> Suspend Field
+              </button>
+              <button
+                onClick={() =>
+                  statusMutation.mutate({ id: turf.id, status: "inactive" })
+                }
+                className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                <MinusCircle size={14} /> Set Inactive
+              </button>
+              <button
+                onClick={() =>
+                  statusMutation.mutate({
+                    id: turf.id,
+                    status: "maintenance",
+                  })
+                }
+                className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-orange-600 hover:bg-orange-50 transition-colors"
+              >
+                <Wrench size={14} /> Under Maintenance
+              </button>
+            </>
+          )}
+
+          {turf.status !== "banned" ? (
+            <button
+              onClick={() => {
+                if (confirm("Are you sure you want to BAN this turf?")) {
+                  banMutation.mutate(turf.id);
+                }
+              }}
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-red-700 hover:bg-red-100 transition-colors"
+            >
+              <ShieldCheck size={14} weight="fill" /> Ban Turf
+            </button>
+          ) : (
+            <button
+              onClick={() => unbanMutation.mutate(turf.id)}
+              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-green-700 hover:bg-green-100 transition-colors"
+            >
+              <ShieldCheck size={14} weight="fill" /> Unban Turf
             </button>
           )}
         </div>
@@ -165,10 +233,16 @@ function FieldDetailPanel({
   turf,
   onClose,
   onReviewDocs,
+  statusMutation,
+  banMutation,
+  unbanMutation,
 }: {
   turf: TurfResponse;
   onClose: () => void;
   onReviewDocs: () => void;
+  statusMutation: UseMutationResult<any, any, { id: string; status: TurfStatus }, any>;
+  banMutation: UseMutationResult<any, any, string, any>;
+  unbanMutation: UseMutationResult<any, any, string, any>;
 }) {
   const sc = STATUS_CONFIG[turf.status] || STATUS_CONFIG.pending;
 
@@ -350,8 +424,8 @@ function FieldDetailPanel({
         </div>
       </div>
 
-      {/* Quick Review Button */}
-      <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+      {/* Quick Actions */}
+      <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2">
         <button
           onClick={() => {
             onClose();
@@ -362,6 +436,66 @@ function FieldDetailPanel({
         >
           <ShieldCheck size={14} /> Review Documents
         </button>
+
+        {turf.status === "active" ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                statusMutation.mutate({ id: turf.id, status: "suspended" });
+              }}
+              disabled={statusMutation.isPending}
+              className="py-2 rounded-lg text-[10px] font-bold text-red-600 border border-red-100 bg-white hover:bg-red-50 transition-all disabled:opacity-50"
+            >
+              SUSPEND
+            </button>
+            <button
+              onClick={() => {
+                statusMutation.mutate({
+                  id: turf.id,
+                  status: "maintenance",
+                });
+              }}
+              disabled={statusMutation.isPending}
+              className="py-2 rounded-lg text-[10px] font-bold text-orange-600 border border-orange-100 bg-white hover:bg-orange-50 transition-all disabled:opacity-50"
+            >
+              MAINTENANCE
+            </button>
+          </div>
+        ) : (
+          turf.status !== "banned" && (
+            <button
+              onClick={() => {
+                statusMutation.mutate({ id: turf.id, status: "active" });
+              }}
+              disabled={statusMutation.isPending}
+              className="w-full py-2.5 rounded-xl text-xs font-bold text-green-600 border border-green-100 bg-white hover:bg-green-50 transition-all disabled:opacity-50"
+            >
+              {turf.status === "pending" ? "APPROVE FIELD" : "ACTIVATE FIELD"}
+            </button>
+          )
+        )}
+
+        {turf.status === "banned" ? (
+          <button
+            onClick={() => unbanMutation.mutate(turf.id)}
+            disabled={unbanMutation.isPending}
+            className="w-full py-2.5 rounded-xl text-xs font-bold text-green-700 border border-green-200 bg-green-50 hover:bg-green-100 transition-all disabled:opacity-50"
+          >
+            UNBAN FIELD
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to BAN this turf?")) {
+                banMutation.mutate(turf.id);
+              }
+            }}
+            disabled={banMutation.isPending}
+            className="w-full py-2.5 rounded-xl text-xs font-bold text-red-700 border border-red-200 bg-red-50 hover:bg-red-100 transition-all disabled:opacity-50"
+          >
+            BAN FIELD
+          </button>
+        )}
       </div>
     </div>
   );
@@ -399,6 +533,34 @@ export default function FieldsPage() {
   const totalPages = meta?.total ? Math.ceil(meta.total / PAGE_SIZE) : 1;
   const queryClient = useQueryClient();
 
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: TurfStatus }) =>
+      turfsApi.updateTurfStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+      toast.success("Turf status updated");
+    },
+    onError: () => toast.error("Failed to update status"),
+  });
+
+  const banMutation = useMutation({
+    mutationFn: (id: string) => turfsApi.banTurf(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+      toast.success("Turf banned successfully");
+    },
+    onError: () => toast.error("Failed to ban turf"),
+  });
+
+  const unbanMutation = useMutation({
+    mutationFn: (id: string) => turfsApi.unbanTurf(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+      toast.success("Turf unbanned successfully");
+    },
+    onError: () => toast.error("Failed to unban turf"),
+  });
+
   const docsReviewMutation = useMutation({
     mutationFn: ({
       id,
@@ -435,6 +597,9 @@ export default function FieldsPage() {
     { key: "active", label: "Active" },
     { key: "pending", label: "Pending" },
     { key: "suspended", label: "Suspended" },
+    { key: "inactive", label: "Inactive" },
+    { key: "maintenance", label: "Maintenance" },
+    { key: "banned", label: "Banned" },
   ];
 
   return (
@@ -648,7 +813,13 @@ export default function FieldsPage() {
                         className="px-4 py-4 text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <ActionsMenu turf={turf} />
+                        <ActionsMenu
+                          turf={turf}
+                          statusMutation={statusMutation}
+                          banMutation={banMutation}
+                          unbanMutation={unbanMutation}
+                          onReviewDocs={() => setDocsReviewTurf(turf)}
+                        />
                       </td>
                     </tr>
                   );
@@ -696,6 +867,9 @@ export default function FieldsPage() {
           {selected && (
             <FieldDetailPanel
               turf={selected}
+              statusMutation={statusMutation}
+              banMutation={banMutation}
+              unbanMutation={unbanMutation}
               onClose={() => setSelected(null)}
               onReviewDocs={() => setDocsReviewTurf(selected)}
             />
@@ -973,7 +1147,22 @@ function OnboardFieldForm({
   });
 
   const mutation = useMutation({
-    mutationFn: (data: any) => turfsApi.onboardTurf(selectedVendorId, data),
+    mutationFn: (data: {
+      name: string;
+      sports: string[];
+      surfaceType: string;
+      standardPricePaise: number;
+      address: {
+        addressLineOne: string;
+        city: string;
+        state: string;
+        pinCode: string;
+      };
+      weekdayOpen: string;
+      weekdayClose: string;
+      weekendOpen: string;
+      weekendClose: string;
+    }) => turfsApi.onboardTurf(selectedVendorId, data),
     onSuccess,
     onError: (err: ApiError) => {
       if (err?.code === ErrorCodes.KYC_NOT_VERIFIED) {

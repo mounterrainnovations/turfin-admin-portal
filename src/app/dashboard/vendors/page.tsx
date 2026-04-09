@@ -17,6 +17,9 @@ import {
   CaretLeft,
   CalendarBlank,
   MagnifyingGlass,
+  Prohibit,
+  ArrowCounterClockwise,
+  MinusCircle,
 } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -94,6 +97,16 @@ const statusCfg: Record<string, { label: string; cls: string; dot: string }> = {
     label: "Inactive",
     cls: "bg-gray-100 text-gray-500",
     dot: "bg-gray-400",
+  },
+  maintenance: {
+    label: "Maintenance",
+    cls: "bg-orange-50 text-orange-700",
+    dot: "bg-orange-400",
+  },
+  banned: {
+    label: "Banned",
+    cls: "bg-rose-50 text-rose-700",
+    dot: "bg-rose-600",
   },
 };
 
@@ -186,6 +199,20 @@ export default function VendorsPage() {
       toast.success("Vendor status updated");
       setActionMenu(null);
     },
+    onError: () => toast.error("Failed to update vendor status"),
+  });
+
+  const banMutation = useMutation({
+    mutationFn: ({ id, ban }: { id: string; ban: boolean }) =>
+      ban ? vendorsApi.banVendor(id) : vendorsApi.unbanVendor(id),
+    onSuccess: (_, { ban }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "vendors"] });
+      toast.success(ban ? "Vendor banned successfully" : "Vendor unbanned successfully");
+      setActionMenu(null);
+      setSelectedVendor(null);
+    },
+    onError: (_, { ban }) =>
+      toast.error(ban ? "Failed to ban vendor" : "Failed to unban vendor"),
   });
 
   const kycReviewMutation = useMutation({
@@ -273,8 +300,8 @@ export default function VendorsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 gap-1">
-        {(["all", "active", "pending", "suspended"] as const).map((tab) => {
+      <div className="flex border-b border-gray-200 gap-1 overflow-x-auto scrollbar-hide">
+        {(["all", "active", "pending", "suspended", "inactive", "maintenance", "banned"] as const).map((tab) => {
           const isActive = statusTab === tab;
           return (
             <button
@@ -283,14 +310,14 @@ export default function VendorsPage() {
                 setStatusTab(tab);
                 setPage(1);
               }}
-              className={`px-4 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+              className={`px-4 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${
                 isActive
                   ? "border-b-2 text-[#8a9e60]"
                   : "text-gray-400 hover:text-gray-600"
               }`}
               style={isActive ? { borderColor: "#8a9e60" } : {}}
             >
-              {tab === "all" ? "All Vendors" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === "all" ? "All Vendors" : tab.charAt(0).toUpperCase() + tab.slice(1).replace(/_/g, " ")}
               {isActive && meta?.total !== undefined && (
                 <span
                   className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
@@ -423,46 +450,76 @@ export default function VendorsPage() {
                             onClick={() =>
                               setActionMenu(actionMenu === v.id ? null : v.id)
                             }
-                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                           >
-                            <DotsThreeVertical size={16} weight="bold" />
+                            <DotsThreeVertical size={18} weight="bold" />
                           </button>
                           {actionMenu === v.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 min-w-[180px] animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 min-w-[190px] animate-in fade-in slide-in-from-top-1 duration-200">
+                              {/* KYC */}
                               <button
                                 onClick={() => {
                                   setKycReviewVendor(v);
                                   setActionMenu(null);
                                 }}
-                                className="w-full text-left px-4 py-2 text-xs text-blue-600 hover:bg-blue-50 flex items-center gap-2.5 font-bold"
+                                className="w-full text-left px-4 py-2 text-[10px] font-black text-blue-600 hover:bg-blue-50 flex items-center gap-2.5"
                               >
                                 <ShieldCheck size={14} /> Review KYC
                               </button>
-                              <div className="border-t border-gray-50 my-1.5" />
-                              {v.status === "suspended" ? (
+
+                              <div className="border-t border-gray-50 my-1" />
+
+                              {/* Ban / Unban */}
+                              {v.status === "banned" ? (
                                 <button
-                                  onClick={() =>
-                                    updateStatusMutation.mutate({
-                                      id: v.id,
-                                      status: "active",
-                                    })
-                                  }
-                                  className="w-full text-left px-4 py-2 text-xs text-green-600 hover:bg-green-50 flex items-center gap-2.5 font-bold"
+                                  onClick={() => banMutation.mutate({ id: v.id, ban: false })}
+                                  className="w-full text-left px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 flex items-center gap-2.5"
                                 >
-                                  <CheckCircle size={14} /> Reactivate
+                                  <ArrowCounterClockwise size={14} /> Unban Vendor
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() =>
-                                    updateStatusMutation.mutate({
-                                      id: v.id,
-                                      status: "suspended",
-                                    })
-                                  }
-                                  className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2.5 font-bold"
+                                  onClick={() => banMutation.mutate({ id: v.id, ban: true })}
+                                  className="w-full text-left px-4 py-2 text-[10px] font-black text-rose-600 hover:bg-rose-50 flex items-center gap-2.5"
                                 >
-                                  <XCircle size={14} /> Suspend
+                                  <Prohibit size={14} /> Ban Vendor
                                 </button>
+                              )}
+
+                              {/* Operational status — only when not banned */}
+                              {v.status !== "banned" && (
+                                <>
+                                  <div className="border-t border-gray-50 my-1" />
+                                  {(v.status === "suspended" || v.status === "inactive" || v.status === "maintenance") ? (
+                                    <button
+                                      onClick={() =>
+                                        updateStatusMutation.mutate({ id: v.id, status: "active" })
+                                      }
+                                      className="w-full text-left px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 flex items-center gap-2.5"
+                                    >
+                                      <CheckCircle size={14} /> Reactivate
+                                    </button>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          updateStatusMutation.mutate({ id: v.id, status: "suspended" })
+                                        }
+                                        className="w-full text-left px-4 py-2 text-[10px] font-black text-red-500 hover:bg-red-50 flex items-center gap-2.5"
+                                      >
+                                        <XCircle size={14} /> Suspend
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          updateStatusMutation.mutate({ id: v.id, status: "inactive" })
+                                        }
+                                        className="w-full text-left px-4 py-2 text-[10px] font-black text-gray-500 hover:bg-gray-50 flex items-center gap-2.5"
+                                      >
+                                        <MinusCircle size={14} /> Set Inactive
+                                      </button>
+                                    </>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}
@@ -659,17 +716,37 @@ export default function VendorsPage() {
                 )}
               </section>
             </div>
-            {/* Quick Review Button */}
-            <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            {/* Quick Actions */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2">
               <button
                 onClick={() => {
                   setSelectedVendor(null);
                   setKycReviewVendor(selectedVendor);
                 }}
-                className="w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all"
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"
                 style={{ backgroundColor: "#8a9e60" }}
               >
                 <ShieldCheck size={14} /> Review KYC Documents
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedVendor) {
+                    banMutation.mutate({
+                      id: selectedVendor.id,
+                      ban: selectedVendor.status !== "banned",
+                    });
+                  }
+                }}
+                disabled={banMutation.isPending}
+                className={`w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm disabled:opacity-50 ${
+                  selectedVendor?.status === "banned" ? "bg-[#8a9e60]" : "bg-rose-500"
+                }`}
+              >
+                {selectedVendor?.status === "banned" ? (
+                  <><ArrowCounterClockwise size={14} weight="bold" /> Unban Vendor</>
+                ) : (
+                  <><Prohibit size={14} weight="bold" /> Ban Vendor</>
+                )}
               </button>
             </div>
           </div>

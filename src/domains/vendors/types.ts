@@ -1,6 +1,6 @@
 export type BusinessType = "individual" | "company" | "partnership";
 
-export type VendorStatus = "active" | "pending" | "suspended" | "inactive";
+export type VendorStatus = "active" | "inactive" | "pending" | "suspended" | "maintenance" | "banned";
 
 export type KycStatus =
   | "pending"

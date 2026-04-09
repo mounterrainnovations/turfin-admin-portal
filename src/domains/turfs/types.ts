@@ -1,4 +1,10 @@
-export type TurfStatus = "active" | "pending" | "suspended";
+export type TurfStatus =
+  | "active"
+  | "inactive"
+  | "pending"
+  | "suspended"
+  | "maintenance"
+  | "banned";
 
 export interface TurfResponse {
   id: string;

@@ -41,8 +41,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signup",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "signup"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signup"
+              ]
             },
             "description": "Register a new end_user account. Creates auth identity + user profile in a single step."
           },
@@ -79,8 +84,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signup",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "signup"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signup"
+              ]
             },
             "description": "Register a new vendor_owner account. Creates auth identity + vendor profile + empty KYC record in a single atomic transaction. Includes optional financial terms (payoutCycle, commissionPct)."
           },
@@ -117,8 +127,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signin",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "signin"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signin"
+              ]
             },
             "description": "Login with email + password."
           },
@@ -155,8 +170,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/refresh",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "refresh"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
             },
             "description": "Rotate access + refresh tokens."
           },
@@ -179,10 +199,43 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/signout",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "signout"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signout"
+              ]
             },
             "description": "Revoke refresh token (logout)."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Request a password reset link via email. This sends a native Supabase reset link to the user."
           },
           "response": []
         }
@@ -209,8 +262,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/audit?page=1&limit=10&category=auth",
-              "host": ["{{baseUrl}}"],
-              "path": ["audit"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -223,7 +280,13 @@
                 {
                   "key": "category",
                   "value": "auth",
-                  "description": "Filter by category: auth, kyc, turf, admin, booking, payment, slot, vendor"
+                  "description": "Filter by category: auth, kyc, booking, payment, slot, admin, vendor, turf"
+                },
+                {
+                  "key": "eventType",
+                  "value": "AUTH_LOGIN",
+                  "description": "Filter by specific audit action: AUTH_LOGIN, AUTH_SIGNUP, TURF_CREATE, etc.",
+                  "disabled": true
                 },
                 {
                   "key": "actorId",
@@ -254,8 +317,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/audit/export/csv?category=auth",
-              "host": ["{{baseUrl}}"],
-              "path": ["audit", "export", "csv"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit",
+                "export",
+                "csv"
+              ],
               "query": [
                 {
                   "key": "category",
@@ -296,8 +365,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/users?page=1&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "users"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -306,6 +380,12 @@
                 {
                   "key": "limit",
                   "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Filter by status: active, inactive, banned, under_review",
+                  "disabled": true
                 }
               ]
             },
@@ -330,8 +410,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/vendors?page=1&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "vendors"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vendors"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -370,8 +455,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/turfs?page=1&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "turfs"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "turfs"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -380,6 +470,12 @@
                 {
                   "key": "limit",
                   "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Filter by status: active, inactive, pending, maintenance, suspended, banned",
+                  "disabled": true
                 }
               ]
             },
@@ -404,8 +500,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/vendors/:vendorId",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "vendors", ":vendorId"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vendors",
+                ":vendorId"
+              ],
               "variable": [
                 {
                   "key": "vendorId",
@@ -434,8 +536,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/users/:userId",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "users", ":userId"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                ":userId"
+              ],
               "variable": [
                 {
                   "key": "userId",
@@ -464,8 +572,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/users/:userId/ban",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "users", ":userId", "ban"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                ":userId",
+                "ban"
+              ],
               "variable": [
                 {
                   "key": "userId",
@@ -494,8 +609,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/users/:userId/unban",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "users", ":userId", "unban"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                ":userId",
+                "unban"
+              ],
               "variable": [
                 {
                   "key": "userId",
@@ -524,8 +646,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/vendors/:vendorId/ban",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "vendors", ":vendorId", "ban"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vendors",
+                ":vendorId",
+                "ban"
+              ],
               "variable": [
                 {
                   "key": "vendorId",
@@ -554,8 +683,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/vendors/:vendorId/unban",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "vendors", ":vendorId", "unban"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vendors",
+                ":vendorId",
+                "unban"
+              ],
               "variable": [
                 {
                   "key": "vendorId",
@@ -584,8 +720,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/vendors/:vendorId",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "vendors", ":vendorId"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vendors",
+                ":vendorId"
+              ],
               "variable": [
                 {
                   "key": "vendorId",
@@ -637,8 +779,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/admin/onboard-vendor",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "onboard-vendor"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "onboard-vendor"
+              ]
             },
             "description": "Create a vendor_owner identity, vendor profile, and empty KYC record in one transaction. Use this when ops/admin creates the vendor directly."
           },
@@ -684,8 +831,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/admin/vendors/:vendorId/turfs",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "vendors", ":vendorId", "turfs"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vendors",
+                ":vendorId",
+                "turfs"
+              ],
               "variable": [
                 {
                   "key": "vendorId",
@@ -714,8 +868,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/turfs/:turfId",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "turfs", ":turfId"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "turfs",
+                ":turfId"
+              ],
               "variable": [
                 {
                   "key": "turfId",
@@ -753,8 +913,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/admin/vendors/:vendorId/kyc",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "vendors", ":vendorId", "kyc"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vendors",
+                ":vendorId",
+                "kyc"
+              ],
               "variable": [
                 {
                   "key": "vendorId",
@@ -792,8 +959,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/admin/vendors/:vendorId/kyc/review",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "vendors", ":vendorId", "kyc", "review"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vendors",
+                ":vendorId",
+                "kyc",
+                "review"
+              ],
               "variable": [
                 {
                   "key": "vendorId",
@@ -831,8 +1006,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/admin/turfs/:turfId/documents",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "turfs", ":turfId", "documents"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "turfs",
+                ":turfId",
+                "documents"
+              ],
               "variable": [
                 {
                   "key": "turfId",
@@ -861,8 +1043,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/admin/turfs/:turfId/documents",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "turfs", ":turfId", "documents"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "turfs",
+                ":turfId",
+                "documents"
+              ],
               "variable": [
                 {
                   "key": "turfId",
@@ -900,8 +1089,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/admin/turfs/:turfId/documents/review",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "turfs", ":turfId", "documents", "review"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "turfs",
+                ":turfId",
+                "documents",
+                "review"
+              ],
               "variable": [
                 {
                   "key": "turfId",
@@ -910,6 +1107,52 @@
               ]
             },
             "description": "Review turf verification documents. Setting status to verified activates the turf; rejected or in_review keeps the turf pending."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Sub-Admin Password (Override)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"newPassword\": \"new_secure_password_123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/sub-admins/:identityId/password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins",
+                ":identityId",
+                "password"
+              ],
+              "variable": [
+                {
+                  "key": "identityId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Directly update a sub-admin password using admin override permissions. Only works if target user is a sub-admin."
           },
           "response": []
         }
@@ -936,8 +1179,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
             },
             "description": "Retrieve current logged-in user profile."
           },
@@ -969,8 +1217,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
             },
             "description": "Update specific fields of the user profile."
           },
@@ -993,8 +1246,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
             },
             "description": "Soft-delete current user's account."
           },
@@ -1023,8 +1281,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/vendors/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["vendors", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors",
+                "me"
+              ]
             },
             "description": "Retrieve the profile of the vendor associated with the current identity."
           },
@@ -1056,8 +1319,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/vendors/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["vendors", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors",
+                "me"
+              ]
             },
             "description": "Partially update vendor fields like businessName, address, or bankingDetails."
           },
@@ -1095,8 +1363,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/kyc/me/submit",
-              "host": ["{{baseUrl}}"],
-              "path": ["kyc", "me", "submit"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kyc",
+                "me",
+                "submit"
+              ]
             },
             "description": "Submit or merge KYC document URLs. Status moves to pending if essential docs are present."
           },
@@ -1119,8 +1393,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/kyc/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["kyc", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kyc",
+                "me"
+              ]
             },
             "description": "Retrieve the current KYC verification status and stored document metadata."
           },
@@ -1172,8 +1451,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/turfs",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "turfs"
+              ]
             },
             "description": "Create a new turf field. Automatically initializes a corresponding turf document record with not_started status."
           },
@@ -1196,8 +1479,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/turfs/my-turfs",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs", "my-turfs"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "turfs",
+                "my-turfs"
+              ]
             },
             "description": "List all turfs owned by the authenticated vendor."
           },
@@ -1220,8 +1508,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/turfs/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs", ":id"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "turfs",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -1259,8 +1552,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/turfs/:turfId/documents",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs", ":turfId", "documents"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "turfs",
+                ":turfId",
+                "documents"
+              ],
               "variable": [
                 {
                   "key": "turfId",
@@ -1289,8 +1588,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/turfs/:turfId/documents",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs", ":turfId", "documents"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "turfs",
+                ":turfId",
+                "documents"
+              ],
               "variable": [
                 {
                   "key": "turfId",
@@ -1328,8 +1633,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/turfs/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs", ":id"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "turfs",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -1358,8 +1668,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/turfs/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["turfs", ":id"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "turfs",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -1383,14 +1698,23 @@
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
               ]
             },
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/admin/sub-admins",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins"
+              ]
             },
             "description": "List all identities with the 'sub_admin' role and their assigned custom roles."
           }
@@ -1401,19 +1725,32 @@
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
               ]
             },
             "method": "POST",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"subadmin@example.com\",\n  \"password\": \"subadmin123\",\n  \"name\": \"Support User\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/sub-admins",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins"
+              ]
             }
           }
         },
@@ -1423,14 +1760,24 @@
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
               ]
             },
             "method": "DELETE",
             "url": {
               "raw": "{{baseUrl}}/admin/sub-admins/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins",
+                ":id"
+              ]
             },
             "description": "Permanently decommission a sub-admin. Revokes roles and deletes from Auth."
           }
@@ -1441,14 +1788,24 @@
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
               ]
             },
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/admin/sub-admins/roles",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", "roles"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins",
+                "roles"
+              ]
             },
             "description": "List all custom (non-system) roles and their granular permissions."
           }
@@ -1459,19 +1816,33 @@
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
               ]
             },
             "method": "POST",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Support Manager\",\n  \"description\": \"Full access to review KYC and turfs\",\n  \"permissionIds\": []\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/sub-admins/roles",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", "roles"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins",
+                "roles"
+              ]
             }
           }
         },
@@ -1481,19 +1852,34 @@
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
               ]
             },
             "method": "PATCH",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"roleIds\": []\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", ":id", "roles"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins",
+                ":id",
+                "roles"
+              ]
             }
           }
         },
@@ -1503,19 +1889,35 @@
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
               ]
             },
             "method": "PATCH",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"permissionIds\": []\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", "roles", ":roleId", "permissions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins",
+                "roles",
+                ":roleId",
+                "permissions"
+              ]
             }
           }
         },
@@ -1525,14 +1927,24 @@
             "auth": {
               "type": "bearer",
               "bearer": [
-                { "key": "token", "value": "{{accessToken}}", "type": "string" }
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
               ]
             },
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/admin/sub-admins/permissions",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "sub-admins", "permissions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "sub-admins",
+                "permissions"
+              ]
             },
             "description": "Fetch the catalogue of all granular resource:action permissions defined in the system."
           }
@@ -1550,8 +1962,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/server",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "server"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "server"
+              ]
             },
             "description": "Basic server health check."
           },
@@ -1564,8 +1981,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/database",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "database"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "database"
+              ]
             },
             "description": "Check database connectivity health."
           },

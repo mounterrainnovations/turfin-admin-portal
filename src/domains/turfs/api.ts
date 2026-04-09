@@ -86,6 +86,20 @@ export const turfsApi = {
   ): Promise<TurfResponse> => {
     return api.post<TurfResponse>(`/admin/vendors/${vendorId}/turfs`, data);
   },
+
+  /**
+   * Bans a turf.
+   */
+  banTurf: async (turfId: string): Promise<TurfResponse> => {
+    return api.post<TurfResponse>(`/admin/turfs/${turfId}/ban`, {});
+  },
+
+  /**
+   * Unbans a turf.
+   */
+  unbanTurf: async (turfId: string): Promise<TurfResponse> => {
+    return api.post<TurfResponse>(`/admin/turfs/${turfId}/unban`, {});
+  },
 };
 
 export function useTurfsList(params?: TurfListParams) {
