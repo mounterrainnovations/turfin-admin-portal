@@ -1021,7 +1021,7 @@ export default function VendorsPage() {
                         // Immediately update single document via API
                         const currentDocs =
                           kycReviewVendor.kyc?.documents || {};
-                        vendorsApi
+                        return vendorsApi
                           .uploadVendorKyc(kycReviewVendor.id, {
                             ...currentDocs,
                             [field]: path,
@@ -1130,7 +1130,7 @@ export default function VendorsPage() {
             className="absolute inset-0 bg-black/60 backdrop-blur-md"
             onClick={() => !onboardSuccessData && setOnboardModalOpen(false)}
           />
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl overflow-hidden relative animate-in zoom-in-95 duration-200">
             {onboardSuccessData ? (
               <div className="p-8 text-center space-y-6">
                 <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto">
@@ -1212,7 +1212,7 @@ export default function VendorsPage() {
             className="absolute inset-0 bg-black/60 backdrop-blur-md"
             onClick={() => setEditingVendor(null)}
           />
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl overflow-hidden relative animate-in zoom-in-95 duration-200">
             <UpdateVendorForm
               vendor={editingVendor}
               onClose={() => setEditingVendor(null)}
@@ -1298,7 +1298,7 @@ function UpdateVendorForm({
         </button>
       </div>
 
-      <div className="p-8 space-y-10 max-h-[70vh] overflow-y-auto bg-white">
+      <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-10 max-h-[85vh] overflow-y-auto bg-white">
         {/* Basic Info */}
         <section className="space-y-6">
           <div className="flex items-center gap-2">
@@ -1307,7 +1307,7 @@ function UpdateVendorForm({
               Basic Information
             </h3>
           </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+          <div className="grid grid-cols-1 gap-5">
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
                 Business Name
@@ -1387,7 +1387,7 @@ function UpdateVendorForm({
               Banking Details
             </h3>
           </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+          <div className="grid grid-cols-1 gap-5">
             <div className="space-y-2 col-span-2">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
                 Bank Name
@@ -1426,7 +1426,7 @@ function UpdateVendorForm({
                 }
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-2">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
                 Account Number
               </label>
@@ -1445,7 +1445,7 @@ function UpdateVendorForm({
                 }
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-2">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">
                 IFSC Code
               </label>
@@ -1646,13 +1646,13 @@ function OnboardVendorForm({
         </button>
       </div>
 
-      <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
+      <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-10 max-h-[85vh] overflow-y-auto">
         {/* Basic Info */}
         <div className="space-y-4">
           <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">
             Basic Information
           </h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1.5 col-span-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
                 Business Name
@@ -1742,7 +1742,7 @@ function OnboardVendorForm({
           <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">
             Business Address
           </h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1.5 col-span-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
                 Address Line 1
@@ -1822,7 +1822,7 @@ function OnboardVendorForm({
           <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-2">
             Banking Details
           </h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1.5 col-span-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
                 Bank Name
@@ -1863,7 +1863,7 @@ function OnboardVendorForm({
                 placeholder="As per bank records"
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 col-span-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
                 Account Number
               </label>
@@ -1883,7 +1883,7 @@ function OnboardVendorForm({
                 placeholder="Account number"
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 col-span-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
                 IFSC Code
               </label>

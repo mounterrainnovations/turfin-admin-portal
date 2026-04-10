@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Handshake,
   MapPin,
   CheckCircle,
   Prohibit,
@@ -19,6 +20,8 @@ import {
   Wrench,
   ArrowCounterClockwise,
   CloudArrowUp,
+  PencilSimple,
+  PencilSimpleLine,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import { useTurfsList, turfsApi } from "@/domains/turfs/api";
@@ -80,12 +83,14 @@ const PAGE_SIZE = 10;
 function ActionsMenu({
   turf,
   onReviewDocs,
+  onEdit,
   statusMutation,
   banMutation,
   unbanMutation,
 }: {
   turf: TurfResponse;
   onReviewDocs: () => void;
+  onEdit: () => void;
   statusMutation: UseMutationResult<
     any,
     any,
@@ -129,17 +134,38 @@ function ActionsMenu({
             <ShieldCheck size={14} /> Review Documents
           </button>
 
+          <button
+            onClick={() => {
+              setOpen(false);
+              onEdit();
+            }}
+            className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <PencilSimpleLine size={14} /> Edit Field Profile
+          </button>
+
           <div className="border-t border-gray-50 my-1" />
 
           {turf.status === "pending" && (
-            <button
-              onClick={() =>
-                statusMutation.mutate({ id: turf.id, status: "active" })
-              }
-              className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 transition-colors"
-            >
-              <CheckCircle size={14} /> Approve Field
-            </button>
+            <div className="group relative">
+              <button
+                disabled={turf.vendorStatus !== "active"}
+                onClick={() =>
+                  statusMutation.mutate({ id: turf.id, status: "active" })
+                }
+                className="flex items-center gap-2.5 w-full px-4 py-2 text-[10px] font-black text-green-600 hover:bg-green-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <CheckCircle size={14} /> Approve Field
+              </button>
+              {turf.vendorStatus !== "active" && (
+                <div className="absolute right-full top-0 mr-2 w-48 bg-gray-900 text-white text-[9px] font-bold p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none shadow-xl border border-white/10">
+                  <div className="flex gap-1.5 items-start">
+                    <WarningCircle size={12} weight="fill" className="text-amber-400 shrink-0 mt-0.5" />
+                    <span>Vendor KYC must be verified and status must be "Active" before you can approve this field.</span>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {["suspended", "inactive", "maintenance"].includes(turf.status) && (
@@ -247,6 +273,7 @@ function FieldDetailPanel({
   turf,
   onClose,
   onReviewDocs,
+  onEdit,
   statusMutation,
   banMutation,
   unbanMutation,
@@ -255,6 +282,7 @@ function FieldDetailPanel({
   turf: TurfResponse;
   onClose: () => void;
   onReviewDocs: () => void;
+  onEdit: () => void;
   statusMutation: UseMutationResult<
     any,
     any,
@@ -306,12 +334,20 @@ function FieldDetailPanel({
             </div>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="text-white/60 hover:text-white shrink-0"
-        >
-          <X size={20} weight="bold" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onEdit}
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-2 text-xs font-bold"
+          >
+            <PencilSimple size={14} weight="bold" /> EDIT
+          </button>
+          <button
+            onClick={onClose}
+            className="text-white/60 hover:text-white p-1"
+          >
+            <X size={20} weight="bold" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -354,8 +390,41 @@ function FieldDetailPanel({
             </p>
           </div>
         </div>
+        
+        {/* Associated Vendor Section */}
+        <div className="bg-[#8a9e60]/5 rounded-2xl p-4 border border-[#8a9e60]/10">
+          <div className="flex items-center gap-2 mb-3">
+            <Handshake size={14} className="text-[#8a9e60]" weight="fill" />
+            <span className="text-[10px] font-bold text-[#8a9e60] uppercase tracking-widest">
+              Associated Vendor
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-[10px] font-black shadow-sm"
+                style={{ backgroundColor: "#8a9e60" }}
+              >
+                {turf.vendorName ? turf.vendorName.charAt(0).toUpperCase() : "V"}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-800 truncate">
+                  {turf.vendorName || "Individual Vendor"}
+                </p>
+                <p className="text-[10px] text-gray-400 font-mono mt-0.5">
+                  ID: {turf.vendorId}
+                </p>
+              </div>
+            </div>
+            <span
+              className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${turf.vendorStatus === "active" ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"}`}
+            >
+              {(turf.vendorStatus || "pending").toUpperCase()}
+            </span>
+          </div>
+        </div>
 
-        {/* Time Slots */}
+        {/* Categories / Sports */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-gray-50 rounded-xl p-3">
             <p className="text-[10px] text-gray-400 uppercase">Weekday</p>
@@ -483,15 +552,25 @@ function FieldDetailPanel({
           </div>
         ) : (
           turf.status !== "banned" && (
-            <button
-              onClick={() => {
-                statusMutation.mutate({ id: turf.id, status: "active" });
-              }}
-              disabled={statusMutation.isPending}
-              className="w-full py-2.5 rounded-xl text-xs font-bold text-green-600 border border-green-100 bg-white hover:bg-green-50 transition-all disabled:opacity-50"
-            >
-              {turf.status === "pending" ? "APPROVE FIELD" : "ACTIVATE FIELD"}
-            </button>
+            <div className="group relative">
+              <button
+                onClick={() => {
+                  statusMutation.mutate({ id: turf.id, status: "active" });
+                }}
+                disabled={statusMutation.isPending || (turf.status === "pending" && turf.vendorStatus !== "active")}
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-green-600 border border-green-100 bg-white hover:bg-green-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {turf.status === "pending" ? "APPROVE FIELD" : "ACTIVATE FIELD"}
+              </button>
+              {turf.status === "pending" && turf.vendorStatus !== "active" && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 p-2 bg-gray-900 text-white text-[9px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none shadow-xl border border-white/10">
+                  <div className="flex gap-1.5 items-start">
+                    <WarningCircle size={12} weight="fill" className="text-amber-400 shrink-0 mt-0.5" />
+                    <span>Vendor KYC must be verified before field approval</span>
+                  </div>
+                </div>
+              )}
+            </div>
           )
         )}
 
@@ -529,6 +608,7 @@ export default function FieldsPage() {
   const [docsReviewTurf, setDocsReviewTurf] = useState<TurfResponse | null>(
     null,
   );
+  const [editTurf, setEditTurf] = useState<TurfResponse | null>(null);
   const [docsTab, setDocsTab] = useState<"documents" | "upload_override">(
     "documents",
   );
@@ -557,7 +637,13 @@ export default function FieldsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
       toast.success("Turf status updated");
     },
-    onError: () => toast.error("Failed to update status"),
+    onError: (error: ApiError) => {
+      if (error?.code === ErrorCodes.KYC_NOT_VERIFIED) {
+        toast.error(error.message || "Vendor KYC must be verified first");
+      } else {
+        toast.error("Failed to update status");
+      }
+    },
   });
 
   const banMutation = useMutation({
@@ -576,6 +662,17 @@ export default function FieldsPage() {
       toast.success("Turf unbanned successfully");
     },
     onError: () => toast.error("Failed to unban turf"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: Partial<TurfResponse>) =>
+      turfsApi.updateTurf(editTurf!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
+      toast.success("Turf updated successfully");
+      setEditTurf(null);
+    },
+    onError: () => toast.error("Failed to update turf"),
   });
 
   const docsReviewMutation = useMutation({
@@ -730,6 +827,7 @@ export default function FieldsPage() {
               <tr>
                 {[
                   "Turf Detail",
+                  "Vendor",
                   "Category",
                   "Status",
                   "Price",
@@ -751,14 +849,14 @@ export default function FieldsPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan={7} className="px-4 py-4">
+                    <td colSpan={8} className="px-4 py-4">
                       <div className="h-4 bg-gray-100 rounded w-3/4"></div>
                     </td>
                   </tr>
                 ))
               ) : turfs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-20 text-center">
+                  <td colSpan={8} className="py-20 text-center">
                     <Buildings
                       size={32}
                       className="text-gray-200 mx-auto mb-3"
@@ -798,8 +896,25 @@ export default function FieldsPage() {
                               {turf.name}
                             </p>
                             <p className="text-[10px] text-gray-400 truncate flex items-center gap-1">
-                              <MapPin size={9} /> {turf.address.city},{" "}
-                              {turf.address.state}
+                              <MapPin size={9} /> {turf.address.city}, {turf.address.state}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black text-white shadow-sm"
+                            style={{ backgroundColor: "#8a9e60" }}
+                          >
+                            {turf.vendorName ? turf.vendorName.charAt(0).toUpperCase() : "V"}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-gray-800 truncate">
+                              {turf.vendorName || "Individual Vendor"}
+                            </p>
+                            <p className="text-[9px] text-gray-400 font-medium truncate uppercase tracking-tighter">
+                              ID: {turf.vendorId.split("-")[0]}
                             </p>
                           </div>
                         </div>
@@ -823,11 +938,18 @@ export default function FieldsPage() {
                         </p>
                       </td>
                       <td className="px-4 py-4">
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${kycStatus === "verified" ? "bg-green-50 text-green-600" : kycStatus === "rejected" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}
-                        >
-                          {kycStatus.toUpperCase()}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full w-fit ${kycStatus === "verified" ? "bg-green-50 text-green-600" : kycStatus === "rejected" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}
+                          >
+                            DOCS: {kycStatus.toUpperCase()}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full w-fit ${turf.vendorStatus === "active" ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-400"}`}
+                          >
+                            VENDOR: {(turf.vendorStatus || "pending").toUpperCase()}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         <p className="text-[10px] text-gray-500 font-mono">
@@ -844,6 +966,7 @@ export default function FieldsPage() {
                           banMutation={banMutation}
                           unbanMutation={unbanMutation}
                           onReviewDocs={() => setDocsReviewTurf(turf)}
+                          onEdit={() => setEditTurf(turf)}
                         />
                       </td>
                     </tr>
@@ -897,6 +1020,7 @@ export default function FieldsPage() {
               unbanMutation={unbanMutation}
               onClose={() => setSelected(null)}
               onReviewDocs={() => setDocsReviewTurf(selected)}
+              onEdit={() => setEditTurf(selected)}
               handleViewDoc={handleViewDoc}
             />
           )}
@@ -1096,7 +1220,7 @@ export default function FieldsPage() {
                       onUploadComplete={(path) => {
                         const currentDocs =
                           docsReviewTurf.documents?.documents || {};
-                        turfsApi
+                        return turfsApi
                           .uploadTurfDocuments(docsReviewTurf.id, {
                             ...currentDocs,
                             [field]: path,
@@ -1179,11 +1303,11 @@ export default function FieldsPage() {
                     notes: reviewNote,
                   })
                 }
-                disabled={docsReviewMutation.isPending}
-                className="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-all disabled:opacity-60"
+                disabled={docsReviewMutation.isPending || docsReviewTurf.vendorStatus !== "active"}
+                className="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#8a9e60" }}
               >
-                ✓ APPROVE DOCS
+                {docsReviewTurf.vendorStatus !== "active" ? "KYC PENDING" : "✓ APPROVE DOCS"}
               </button>
             </div>
           </div>
@@ -1205,6 +1329,24 @@ export default function FieldsPage() {
                 queryClient.invalidateQueries({ queryKey: ["admin", "turfs"] });
                 toast.success("Field onboarded successfully");
               }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Field Modal ── */}
+      {editTurf && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => setEditTurf(null)}
+          />
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl overflow-hidden relative animate-in zoom-in-95 duration-200 flex flex-col">
+            <EditFieldForm
+              turf={editTurf}
+              isPending={updateMutation.isPending}
+              onClose={() => setEditTurf(null)}
+              onSubmit={(data) => updateMutation.mutate(data)}
             />
           </div>
         </div>
@@ -1482,6 +1624,271 @@ function OnboardFieldForm({
             </button>
           </>
         )}
+      </div>
+    </form>
+  );
+}
+
+function EditFieldForm({
+  turf,
+  isPending,
+  onClose,
+  onSubmit,
+}: {
+  turf: TurfResponse;
+  isPending: boolean;
+  onClose: () => void;
+  onSubmit: (data: Partial<TurfResponse>) => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: turf.name,
+    surfaceType: turf.surfaceType,
+    standardPricePaise: turf.standardPricePaise,
+    addressLineOne: turf.address.addressLineOne,
+    city: turf.address.city,
+    state: turf.address.state,
+    pinCode: turf.address.pinCode,
+    weekdayOpen: turf.weekdayOpen.slice(0, 8),
+    weekdayClose: turf.weekdayClose.slice(0, 8),
+    weekendOpen: turf.weekendOpen.slice(0, 8),
+    weekendClose: turf.weekendClose.slice(0, 8),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const { addressLineOne, city, state, pinCode, ...restData } = formData;
+    onSubmit({
+      ...restData,
+      address: {
+        ...turf.address,
+        addressLineOne,
+        city,
+        state,
+        pinCode,
+      },
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]">
+      <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-gray-900/10">
+            <PencilSimpleLine size={24} weight="bold" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">
+              Edit Field Profile
+            </h2>
+            <p className="text-xs text-gray-400 font-medium mt-0.5">
+              {turf.name} · {turf.id}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 rounded-full hover:bg-gray-50 text-gray-400"
+        >
+          <X size={20} weight="bold" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+              Field Name
+            </label>
+            <input
+              required
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+            />
+          </div>
+
+          <div className="space-y-1.5 col-span-2 bg-gray-50/50 border border-gray-100 rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Handshake size={14} className="text-gray-400" />
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  Assigned Vendor
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-gray-300">
+                READ-ONLY
+              </span>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 text-[10px] font-bold">
+                {turf.vendorName ? turf.vendorName.charAt(0).toUpperCase() : "V"}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-700">
+                  {turf.vendorName || "Individual Vendor"}
+                </p>
+                <p className="text-[10px] text-gray-400 font-mono">
+                  {turf.vendorId}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+              Surface Type
+            </label>
+            <select
+              value={formData.surfaceType}
+              onChange={(e) =>
+                setFormData({ ...formData, surfaceType: e.target.value })
+              }
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60] appearance-none"
+            >
+              <option value="natural_grass">Natural Grass</option>
+              <option value="artificial_turf">Artificial Turf</option>
+              <option value="concrete">Concrete</option>
+              <option value="wooden">Wooden</option>
+              <option value="synthetic">Synthetic</option>
+            </select>
+          </div>
+          <div className="space-y-1.5 text-right">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-1">
+              Price (paise/hr)
+            </label>
+            <input
+              type="number"
+              required
+              value={formData.standardPricePaise}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  standardPricePaise: Number(e.target.value),
+                })
+              }
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 text-right outline-none focus:border-[#8a9e60]"
+            />
+          </div>
+
+          <div className="col-span-2 grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Weekday Timing
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  step="1"
+                  value={formData.weekdayOpen}
+                  onChange={(e) => setFormData({ ...formData, weekdayOpen: e.target.value })}
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 font-mono focus:border-[#8a9e60] outline-none"
+                />
+                <span className="text-gray-300">-</span>
+                <input
+                  type="time"
+                  step="1"
+                  value={formData.weekdayClose}
+                  onChange={(e) => setFormData({ ...formData, weekdayClose: e.target.value })}
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 font-mono focus:border-[#8a9e60] outline-none"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                Weekend Timing
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                   type="time"
+                   step="1"
+                   value={formData.weekendOpen}
+                   onChange={(e) => setFormData({ ...formData, weekendOpen: e.target.value })}
+                   className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 font-mono focus:border-[#8a9e60] outline-none"
+                />
+                <span className="text-gray-300">-</span>
+                <input
+                   type="time"
+                   step="1"
+                   value={formData.weekendClose}
+                   onChange={(e) => setFormData({ ...formData, weekendClose: e.target.value })}
+                   className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 font-mono focus:border-[#8a9e60] outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5 col-span-2 mt-2">
+            <p className="text-[10px] font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+              <MapPin size={12} weight="fill" className="text-[#8a9e60]" />{" "}
+              Location Details
+            </p>
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <input
+              required
+              value={formData.addressLineOne}
+              onChange={(e) =>
+                setFormData({ ...formData, addressLineOne: e.target.value })
+              }
+              placeholder="Address line 1"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <input
+              required
+              value={formData.city}
+              onChange={(e) =>
+                setFormData({ ...formData, city: e.target.value })
+              }
+              placeholder="City"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <input
+              required
+              value={formData.state}
+              onChange={(e) =>
+                setFormData({ ...formData, state: e.target.value })
+              }
+              placeholder="State"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <input
+              required
+              value={formData.pinCode}
+              onChange={(e) =>
+                setFormData({ ...formData, pinCode: e.target.value })
+              }
+              placeholder="PIN Code"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#8a9e60]"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-8 py-5 border-t border-gray-50 bg-gray-50/30 flex gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl"
+        >
+          CANCEL
+        </button>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex-2 py-3 text-xs font-bold text-white rounded-xl shadow-lg shadow-gray-900/10 disabled:opacity-50"
+          style={{ backgroundColor: "#111" }}
+        >
+          {isPending ? "SAVING..." : "UPDATE FIELD PROFILE"}
+        </button>
       </div>
     </form>
   );

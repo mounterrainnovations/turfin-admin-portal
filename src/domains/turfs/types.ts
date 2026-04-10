@@ -9,6 +9,8 @@ export type TurfStatus =
 export interface TurfResponse {
   id: string;
   vendorId: string;
+  vendorStatus?: string;
+  vendorName?: string;
   name: string;
   sports: string[];
   amenities: string[];
