@@ -387,7 +387,8 @@ export default function UsersPage() {
   const [activeTab, setActiveTab] = useState<"all" | UserStatus>("all");
   const [actionMenu, setActionMenu] = useState<string | null>(null);
 
-  const [selected, setSelected] = useState<AppUser | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = users.find((u) => u.id === selectedId) || null;
   const [banModal, setBanModal] = useState<AppUser | null>(null);
   const [banReason, setBanReason] = useState("");
   const [page, setPage] = useState(1);
@@ -423,13 +424,6 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       hotToast.success("User status updated successfully");
       setBanModal(null);
-      // Update selected user in view if applicable
-      if (selected && selected.id === banModal?.id) {
-        setSelected({
-          ...selected,
-          status: selected.status === "banned" ? "active" : "banned",
-        });
-      }
     },
     onError: (err) => {
       hotToast.error(
@@ -621,7 +615,7 @@ export default function UsersPage() {
                   return (
                     <tr
                       key={u.id}
-                      onClick={() => setSelected(u)}
+                      onClick={() => setSelectedId(u.id)}
                       className="hover:bg-gray-50/60 transition-colors cursor-pointer group"
                     >
                       <td className="px-4 py-4 whitespace-nowrap">
@@ -777,11 +771,11 @@ export default function UsersPage() {
         <>
           <div
             className="fixed inset-0 bg-black/10 z-40 backdrop-blur-[2px]"
-            onClick={() => setSelected(null)}
+            onClick={() => setSelectedId(null)}
           />
           <UserDetailPanel
             user={selected}
-            onClose={() => setSelected(null)}
+            onClose={() => setSelectedId(null)}
             onBanAction={() => {
               setBanModal(selected);
               setActionMenu(null);

@@ -174,7 +174,8 @@ export default function VendorsPage() {
   } | null>(null);
 
   // Modals
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const selectedVendor = vendors.find((v) => v.id === selectedVendorId) || null;
   const [kycReviewVendor, setKycReviewVendor] = useState<Vendor | null>(null);
   const [kycTab, setKycTab] = useState<"documents" | "upload_override">(
     "documents",
@@ -214,7 +215,7 @@ export default function VendorsPage() {
         ban ? "Vendor banned successfully" : "Vendor unbanned successfully",
       );
       setActionMenu(null);
-      setSelectedVendor(null);
+      setSelectedVendorId(null);
     },
     onError: (_, { ban }) =>
       toast.error(ban ? "Failed to ban vendor" : "Failed to unban vendor"),
@@ -416,7 +417,7 @@ export default function VendorsPage() {
                   return (
                     <tr
                       key={v.id}
-                      onClick={() => setSelectedVendor(v)}
+                      onClick={() => setSelectedVendorId(v.id)}
                       className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
                     >
                       <td className="px-4 py-4">
@@ -612,7 +613,7 @@ export default function VendorsPage() {
         <>
           <div
             className="fixed inset-0 bg-black/10 z-40 backdrop-blur-[1px]"
-            onClick={() => setSelectedVendor(null)}
+                  onClick={() => setSelectedVendorId(null)}
           />
           <div className="fixed right-0 top-0 bottom-0 w-[480px] bg-white h-full shadow-2xl z-50 flex flex-col border-l border-gray-100 animate-in slide-in-from-right duration-300">
             <div
@@ -642,7 +643,7 @@ export default function VendorsPage() {
                   <PencilSimple size={14} weight="bold" /> EDIT
                 </button>
                 <button
-                  onClick={() => setSelectedVendor(null)}
+                        onClick={() => setSelectedVendorId(null)}
                   className="text-white/60 hover:text-white p-1"
                 >
                   <X size={20} weight="bold" />
@@ -820,7 +821,7 @@ export default function VendorsPage() {
             <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2">
               <button
                 onClick={() => {
-                  setSelectedVendor(null);
+                  setSelectedVendorId(null);
                   setKycReviewVendor(selectedVendor);
                 }}
                 className="w-full py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm"

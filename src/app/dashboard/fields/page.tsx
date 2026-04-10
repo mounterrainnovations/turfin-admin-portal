@@ -604,7 +604,8 @@ function FieldDetailPanel({
 export default function FieldsPage() {
   const [page, setPage] = useState(1);
   const [statusTab, setStatusTab] = useState<TurfStatus | "all">("all");
-  const [selected, setSelected] = useState<TurfResponse | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = turfs.find((t) => t.id === selectedId) || null;
   const [docsReviewTurf, setDocsReviewTurf] = useState<TurfResponse | null>(
     null,
   );
@@ -873,7 +874,7 @@ export default function FieldsPage() {
                   return (
                     <tr
                       key={turf.id}
-                      onClick={() => setSelected(turf)}
+                      onClick={() => setSelectedId(turf.id)}
                       className="hover:bg-gray-50/60 transition-colors cursor-pointer"
                     >
                       <td className="px-4 py-4">
@@ -1006,25 +1007,34 @@ export default function FieldsPage() {
       </div>
 
       {/* Details Panel Overlay */}
-      {selected && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/10 z-40 backdrop-blur-[2px]"
-            onClick={() => setSelected(null)}
-          />
-          {selected && (
+      {selectedId && (
+        <div
+          className="fixed inset-0 bg-black/10 z-40 backdrop-blur-[1px]"
+          onClick={() => setSelectedId(null)}
+        />
+      )}
+      {selectedId && (
+        <div className="contents">
+          {selected ? (
             <FieldDetailPanel
               turf={selected}
+              onClose={() => setSelectedId(null)}
+              onReviewDocs={() => setDocsReviewTurf(selected)}
+              onEdit={() => setEditTurf(selected)}
               statusMutation={statusMutation}
               banMutation={banMutation}
               unbanMutation={unbanMutation}
-              onClose={() => setSelected(null)}
-              onReviewDocs={() => setDocsReviewTurf(selected)}
-              onEdit={() => setEditTurf(selected)}
               handleViewDoc={handleViewDoc}
             />
+          ) : (
+            <div className="fixed right-0 top-0 bottom-0 w-[480px] bg-white shadow-2xl z-50 flex items-center justify-center border-l border-gray-100">
+              <div className="flex flex-col items-center gap-2">
+                <ArrowCounterClockwise size={32} className="animate-spin text-gray-200" />
+                <p className="text-xs text-gray-400">Loading or moved...</p>
+              </div>
+            </div>
           )}
-        </>
+        </div>
       )}
 
       {/* ── Turf Document Review Modal ── */}

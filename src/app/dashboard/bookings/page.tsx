@@ -438,7 +438,8 @@ function ActionsMenu({ booking, onView, onEmail }: { booking: Booking; onView: (
 export default function BookingsPage() {
   const [activeTab, setActiveTab]     = useState("all");
   const [search, setSearch]           = useState("");
-  const [selected, setSelected]       = useState<Booking | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = bookings.find((b) => b.id === selectedId) || null;
   const [emailBooking, setEmailBooking] = useState<Booking | null>(null);
   const [page, setPage]               = useState(1);
 
@@ -590,7 +591,7 @@ export default function BookingsPage() {
                     const p = PAYMENT_CONFIG[b.paymentStatus];
                     const isActive = selected?.id === b.id;
                     return (
-                      <tr key={b.id} onClick={() => setSelected(isActive ? null : b)}
+                      <tr key={b.id} onClick={() => setSelectedId(selectedId === b.id ? null : b.id)}
                         className={`cursor-pointer transition-colors ${isActive ? "bg-[#8a9e60]/5" : "hover:bg-gray-50/60"}`}>
                         <td className="px-4 py-3.5">
                           <span className="font-mono text-xs font-semibold text-gray-700">{b.id}</span>
@@ -644,7 +645,7 @@ export default function BookingsPage() {
           <div className="fixed right-0 top-0 bottom-0 w-[400px] bg-white border-l border-gray-100 shadow-2xl flex flex-col z-50 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0" style={{ background: "linear-gradient(135deg,#8a9e60,#6e8245)" }}>
               <div><p className="text-white font-bold text-sm">{selected.id}</p><p className="text-white/70 text-xs mt-0.5">Booked {selected.bookedAt}</p></div>
-              <button onClick={() => setSelected(null)} className="text-white/70 hover:text-white"><X size={20} /></button>
+              <button onClick={() => setSelectedId(null)} className="text-white/70 hover:text-white"><X size={20} /></button>
             </div>
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
               <div className="flex items-center gap-2 flex-wrap">
