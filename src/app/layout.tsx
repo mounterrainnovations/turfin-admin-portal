@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const manrope = Manrope({
+const manrope = localFont({
+  src: "../../public/fonts/manrope-latin.woff2",
   variable: "--font-manrope",
-  subsets: ["latin"],
+  display: "swap",
+  weight: "200 800",
 });
 
 export const metadata: Metadata = {
