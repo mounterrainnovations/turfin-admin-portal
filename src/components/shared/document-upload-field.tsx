@@ -10,7 +10,7 @@ interface DocumentUploadFieldProps {
   moduleId: string;
   fieldKey: string;
   currentUrl?: string;
-  onUploadComplete: (path: string) => void;
+  onUploadComplete: (path: string) => Promise<void> | void;
 }
 
 export function DocumentUploadField({
@@ -22,6 +22,7 @@ export function DocumentUploadField({
   onUploadComplete,
 }: DocumentUploadFieldProps) {
   const { upload, isUploading } = useSecureUpload({ module, moduleId });
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
 
@@ -36,8 +37,16 @@ export function DocumentUploadField({
 
     const path = await upload(file, fieldKey);
     if (path) {
-      onUploadComplete(path);
-      toast.success(`${label} uploaded`);
+      setIsSaving(true);
+      try {
+        await onUploadComplete(path);
+        toast.success(`${label} uploaded`);
+      } catch (error: any) {
+        console.error("Failed to save upload reference:", error);
+        toast.error(error.message || `Failed to link ${label}`);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -91,10 +100,12 @@ export function DocumentUploadField({
           accept="image/*,.pdf"
         />
 
-        {isUploading ? (
+        {isUploading || isSaving ? (
           <div className="flex items-center gap-2 text-[#8a9e60]">
             <ClockCountdown size={18} className="animate-spin" />
-            <span className="text-xs font-bold uppercase tracking-wider">Uploading...</span>
+            <span className="text-xs font-bold uppercase tracking-wider">
+              {isUploading ? "Uploading..." : "Linking..."}
+            </span>
           </div>
         ) : currentUrl ? (
           <>

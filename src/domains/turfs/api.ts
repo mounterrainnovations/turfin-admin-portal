@@ -88,6 +88,16 @@ export const turfsApi = {
   },
 
   /**
+   * Updates a turf.
+   */
+  updateTurf: async (
+    turfId: string,
+    data: Partial<TurfResponse>,
+  ): Promise<TurfResponse> => {
+    return api.patch<TurfResponse>(`/admin/turfs/${turfId}`, data);
+  },
+
+  /**
    * Bans a turf.
    */
   banTurf: async (turfId: string): Promise<TurfResponse> => {
