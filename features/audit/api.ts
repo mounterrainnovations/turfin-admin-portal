@@ -45,6 +45,34 @@ function readRecord(value: unknown): Record<string, unknown> | undefined {
   return isRecord(value) ? value : undefined;
 }
 
+function redactSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactSecrets);
+  }
+
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const redacted: Record<string, unknown> = {};
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const normalized = key.toLowerCase();
+    if (
+      normalized.includes("password") ||
+      normalized.includes("token") ||
+      normalized.includes("authorization") ||
+      normalized.includes("secret")
+    ) {
+      redacted[key] = "***";
+    } else {
+      redacted[key] = redactSecrets(nestedValue);
+    }
+  }
+
+  return redacted;
+}
+
 function findStringDeep(value: unknown, keys: string[]): string | undefined {
   if (!isRecord(value)) return undefined;
 
@@ -125,6 +153,9 @@ function adaptAuditEntry(item: unknown, index: number): AuditEntry {
     readRecord(record.resource) ??
     readRecord(record.entity) ??
     readRecord(record.target);
+  const payload = readRecord(record.payload) ?? {};
+  const metadata = readRecord(record.metadata) ?? {};
+  const responseMeta = readRecord(metadata.response);
 
   const eventType =
     readString(record.eventType) ??
@@ -156,6 +187,7 @@ function adaptAuditEntry(item: unknown, index: number): AuditEntry {
     category: normalizeCategory(record.category),
     action,
     description,
+    actorId: readString(record.actorId) ?? "-",
     actor: {
       name:
         readString(actor.name) ??
@@ -200,6 +232,45 @@ function adaptAuditEntry(item: unknown, index: number): AuditEntry {
       readString(record.outcome) ??
       "-",
     eventType,
+    targetType:
+      readString(record.targetType) ??
+      readString(record.target_type) ??
+      readString(resource?.type) ??
+      "-",
+    targetId:
+      readString(record.targetId) ??
+      readString(record.target_id) ??
+      readString(resource?.id) ??
+      "-",
+    ipAddress:
+      readString(record.ipAddress) ??
+      readString(record.ip) ??
+      readString(actor.ipAddress) ??
+      readString(actor.ip) ??
+      "-",
+    userAgent:
+      readString(record.userAgent) ??
+      readString(record.user_agent) ??
+      "-",
+    route:
+      readString(metadata.route) ??
+      "-",
+    url:
+      readString(metadata.url) ??
+      "-",
+    method:
+      readString(metadata.method) ??
+      "-",
+    httpStatus:
+      typeof metadata.httpStatus === "number"
+        ? String(metadata.httpStatus)
+        : readString(metadata.httpStatus) ?? "-",
+    durationMs:
+      typeof metadata.durationMs === "number"
+        ? `${metadata.durationMs}ms`
+        : readString(metadata.durationMs) ?? "-",
+    payloadData: redactSecrets(payload),
+    responseData: redactSecrets(responseMeta),
   };
 }
 

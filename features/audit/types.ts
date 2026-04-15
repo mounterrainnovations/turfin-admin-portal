@@ -17,6 +17,7 @@ export interface AuditEntry {
   category: BackendAuditCategory;
   action: string;
   description: string;
+  actorId: string;
   actor: {
     name: string;
     email: string;
@@ -32,6 +33,17 @@ export interface AuditEntry {
   severity: AuditSeverity;
   status: string;
   eventType: string;
+  targetType: string;
+  targetId: string;
+  ipAddress: string;
+  userAgent: string;
+  route: string;
+  url: string;
+  method: string;
+  httpStatus: string;
+  durationMs: string;
+  payloadData: unknown;
+  responseData: unknown;
 }
 
 export interface AuditListResult {
