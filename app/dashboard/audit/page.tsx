@@ -2,41 +2,50 @@
 
 import {
   MagnifyingGlass, DownloadSimple, Scroll, X,
-  SignIn, Handshake, Users, CalendarBlank, BellRinging,
-  DeviceMobile, Gear, Key,
+  SignIn, Handshake, Users, CalendarBlank,
+  Key, CurrencyDollar, MapPin,
 } from "@phosphor-icons/react";
-import { useState, useMemo } from "react";
-import { useAuditLog, AuditCategory, AuditSeverity } from "../audit-log-context";
+import { useEffect, useMemo, useState } from "react";
+import { useToast } from "@/features/toast/toast-context";
+import { exportAuditCsv, listAuditLogs } from "@/features/audit/api";
+import type { AuditEntry, AuditSeverity, BackendAuditCategory } from "@/features/audit/types";
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const CATEGORY_CONFIG: Record<AuditCategory, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-  auth:         { label: "Auth",          color: "#3b82f6", bg: "#eff6ff", Icon: SignIn        },
-  vendor:       { label: "Vendors",       color: "#8a9e60", bg: "#f0f4e8", Icon: Handshake     },
-  user:         { label: "Users",         color: "#8b5cf6", bg: "#f5f3ff", Icon: Users         },
-  booking:      { label: "Bookings",      color: "#14b8a6", bg: "#f0fdfa", Icon: CalendarBlank },
-  notification: { label: "Notifications", color: "#f97316", bg: "#fff7ed", Icon: BellRinging   },
-  app:          { label: "App",           color: "#6366f1", bg: "#eef2ff", Icon: DeviceMobile  },
-  settings:     { label: "Settings",      color: "#6b7280", bg: "#f9fafb", Icon: Gear          },
-  role:         { label: "Roles",         color: "#ef4444", bg: "#fef2f2", Icon: Key           },
+const CATEGORY_CONFIG: Record<BackendAuditCategory, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
+  auth:    { label: "Auth",    color: "#3b82f6", bg: "#eff6ff", Icon: SignIn },
+  kyc:     { label: "KYC",     color: "#8a9e60", bg: "#f0f4e8", Icon: Handshake },
+  booking: { label: "Booking", color: "#14b8a6", bg: "#f0fdfa", Icon: CalendarBlank },
+  payment: { label: "Payment", color: "#f97316", bg: "#fff7ed", Icon: CurrencyDollar },
+  slot:    { label: "Slot",    color: "#0f766e", bg: "#ecfeff", Icon: CalendarBlank },
+  admin:   { label: "Admin",   color: "#ef4444", bg: "#fef2f2", Icon: Key },
+  vendor:  { label: "Vendor",  color: "#6e8245", bg: "#f4f7ee", Icon: Handshake },
+  turf:    { label: "Turf",    color: "#6366f1", bg: "#eef2ff", Icon: MapPin },
+  user:    { label: "User",    color: "#8b5cf6", bg: "#f5f3ff", Icon: Users },
 };
 
 const SEVERITY_CONFIG: Record<AuditSeverity, { label: string; cls: string }> = {
-  info:     { label: "Info",     cls: "bg-blue-50 text-blue-500"   },
+  info:     { label: "Info",     cls: "bg-blue-50 text-blue-500" },
   warning:  { label: "Warning",  cls: "bg-amber-50 text-amber-600" },
-  critical: { label: "Critical", cls: "bg-red-50 text-red-600"     },
+  critical: { label: "Critical", cls: "bg-red-50 text-red-600" },
+  "-":      { label: "-",        cls: "bg-gray-100 text-gray-500" },
 };
 
-const ALL_CATEGORIES: AuditCategory[] = [
-  "auth", "vendor", "user", "booking", "notification", "app", "settings", "role",
+const ALL_CATEGORIES: BackendAuditCategory[] = [
+  "auth", "kyc", "booking", "payment", "slot", "admin", "vendor", "turf", "user",
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+
   const now = new Date();
   const yesterday = new Date();
   yesterday.setDate(now.getDate() - 1);
@@ -49,8 +58,8 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-function groupByDate(entries: ReturnType<typeof useAuditLog>["entries"]) {
-  const map = new Map<string, typeof entries>();
+function groupByDate(entries: AuditEntry[]) {
+  const map = new Map<string, AuditEntry[]>();
   for (const e of entries) {
     const key = formatDate(e.ts);
     if (!map.has(key)) map.set(key, []);
@@ -61,19 +70,62 @@ function groupByDate(entries: ReturnType<typeof useAuditLog>["entries"]) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AuditPage() {
-  const { entries } = useAuditLog();
+  const { showToast } = useToast();
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState("");
-  const [catFilter, setCatFilter] = useState<AuditCategory | "all">("all");
+  const [catFilter, setCatFilter] = useState<BackendAuditCategory | "all">("all");
   const [sevFilter, setSevFilter] = useState<AuditSeverity | "all">("all");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadAuditLogs() {
+      setLoading(true);
+
+      try {
+        const result = await listAuditLogs({
+          category: catFilter,
+          page: 1,
+          limit: 100,
+        });
+
+        if (!active) return;
+        setEntries(result.entries);
+      } catch (error) {
+        if (!active) return;
+
+        const message = error instanceof Error ? error.message : "Unable to load audit logs.";
+        setEntries([]);
+        showToast({
+          tone: "error",
+          title: "Audit log unavailable",
+          description: message,
+        });
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadAuditLogs();
+
+    return () => {
+      active = false;
+    };
+  }, [catFilter, showToast]);
 
   const filtered = useMemo(() => {
     return entries.filter(e => {
-      if (catFilter !== "all" && e.category !== catFilter) return false;
       if (sevFilter !== "all" && e.severity !== sevFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         return (
           e.action.toLowerCase().includes(q) ||
+          e.description.toLowerCase().includes(q) ||
+          e.eventType.toLowerCase().includes(q) ||
           e.actor.name.toLowerCase().includes(q) ||
           e.actor.email.toLowerCase().includes(q) ||
           (e.resource?.label ?? "").toLowerCase().includes(q)
@@ -81,7 +133,7 @@ export default function AuditPage() {
       }
       return true;
     });
-  }, [entries, catFilter, sevFilter, search]);
+  }, [entries, sevFilter, search]);
 
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
 
@@ -90,6 +142,39 @@ export default function AuditPage() {
     critical: entries.filter(e => e.severity === "critical").length,
     warning:  entries.filter(e => e.severity === "warning").length,
   }), [entries]);
+
+  async function handleExportCsv() {
+    if (exporting) return;
+
+    setExporting(true);
+
+    try {
+      const result = await exportAuditCsv({ category: catFilter });
+      const url = window.URL.createObjectURL(result.blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = result.fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      showToast({
+        tone: "success",
+        title: "Audit CSV exported",
+        description: "The audit log export has been downloaded.",
+        durationMs: 2200,
+      });
+    } catch (error) {
+      showToast({
+        tone: "error",
+        title: "CSV export failed",
+        description: error instanceof Error ? error.message : "Unable to export audit logs.",
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 65px)" }}>
@@ -125,9 +210,13 @@ export default function AuditPage() {
             )}
           </div>
 
-          <button className="flex items-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+          <button
+            onClick={() => void handleExportCsv()}
+            disabled={exporting}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
+          >
             <DownloadSimple size={14} />
-            Export CSV
+            {exporting ? "Exporting..." : "Export CSV"}
           </button>
         </div>
 
@@ -193,7 +282,12 @@ export default function AuditPage() {
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Severity</span>
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
+            <Scroll size={32} weight="thin" />
+            <p className="text-sm font-medium">Loading audit log...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
             <Scroll size={32} weight="thin" />
             <p className="text-sm font-medium">No events match your filters</p>
@@ -237,20 +331,20 @@ export default function AuditPage() {
 
                     {/* Action + resource */}
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{entry.action}</p>
+                      <p className="text-xs font-semibold text-gray-800 truncate">{entry.action || "-"}</p>
                       {entry.resource && (
                         <p className="text-[10px] text-gray-400 truncate mt-0.5">
-                          {entry.resource.type} · {entry.resource.label}
+                          {entry.resource.type || "-"} · {entry.resource.label || "-"}
                         </p>
                       )}
                       {!entry.resource && (
-                        <p className="text-[10px] text-gray-400 truncate mt-0.5">{entry.description}</p>
+                        <p className="text-[10px] text-gray-400 truncate mt-0.5">{entry.description || "-"}</p>
                       )}
                     </div>
 
                     {/* Actor: email only */}
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-600 truncate">{entry.actor.email}</p>
+                      <p className="text-xs font-medium text-gray-600 truncate">{entry.actor.email || "-"}</p>
                     </div>
 
                     {/* Severity badge */}
