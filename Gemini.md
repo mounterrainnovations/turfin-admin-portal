@@ -87,3 +87,7 @@ always choose adapting the data layer to fit the current UI.
 Unless explicitly requested otherwise, every task in this repo should be treated as:
 
 "Keep the UI exactly as it is. Only remove hardcoding and connect to the real backend progressively."
+
+## TO FOllow
+
+Always run build when finishing and fix issues
