@@ -62,7 +62,7 @@ const TOAST_STYLES: Record<
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const timersRef = useRef<Record<string, ReturnType<typeof window.setTimeout>>>({});
+  const timersRef = useRef<Record<string, any>>({});
 
   const dismissToast = useCallback((id: string) => {
     const timer = timersRef.current[id];

@@ -1,4 +1,4 @@
-import { ReactElementType } from "react";
+import { ElementType } from "react";
 import {
   Users, Star, MapPin, SoccerBall, Lightning, Buildings,
   ArrowCounterClockwise, Trophy, Cloud, ClockCountdown,
@@ -17,7 +17,7 @@ export const INIT_HISTORY: SentNotif[] = [
 ];
 
 export const AUDIENCE_OPTIONS: {
-  key: AudienceKey; label: string; icon: ReactElementType; reach: number; desc: string;
+  key: AudienceKey; label: string; icon: ElementType; reach: number; desc: string;
 }[] = [
   { key: "all",      label: "All Users",      icon: Users,          reach: 1240, desc: "Every registered user"       },
   { key: "active",   label: "Active Users",   icon: CheckCircle,    reach: 834,  desc: "Booked in last 30 days"      },

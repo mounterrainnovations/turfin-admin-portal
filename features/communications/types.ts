@@ -1,4 +1,4 @@
-import { ReactElementType } from "react";
+import { ElementType } from "react";
 
 export type AudienceKey = "all" | "active" | "inactive" | "vip" | "city" | "sport";
 export type NotifStatus = "sent" | "scheduled" | "failed";
@@ -17,7 +17,7 @@ export interface SentNotif {
 
 export interface NotifTemplate {
   name: string;
-  icon: ReactElementType;
+  icon: ElementType;
   color: string;
   title: string;
   message: string;
