@@ -9,6 +9,8 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import NotificationPanel from "./components/NotificationPanel";
 import { AuditLogProvider } from "./audit-log-context";
+import { AuthGuard } from "@/features/auth/components/auth-guard";
+import { useAuth } from "@/features/auth/hooks";
 
 const navItems = [
   { label: "Audit Log", icon: Scroll,        href: "/dashboard/audit"     },
@@ -28,8 +30,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [open, setOpen] = useState(true);
   const pathname = usePathname();
   const router   = useRouter();
+  const { session, logout } = useAuth();
 
   return (
+    <AuthGuard>
     <AuditLogProvider>
     <div className="flex h-screen bg-gray-50 overflow-hidden">
 
@@ -64,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="p-2 border-t border-white/10">
           <button
-            onClick={() => router.push("/")}
+            onClick={logout}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:bg-white/10 hover:text-white w-full transition-colors"
           >
             <SignOut size={18} className="shrink-0" />
@@ -100,11 +104,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <NotificationPanel />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#8a9e60" }}>
-                AD
+                {(session?.displayName || session?.email || "A")[0].toUpperCase()}
               </div>
               <div className="text-xs leading-tight">
-                <p className="font-semibold text-gray-700">Admin</p>
-                <p className="text-gray-400">Super Admin</p>
+                <p className="font-semibold text-gray-700">{session?.displayName || session?.email || "Admin"}</p>
+                <p className="text-gray-400">
+                  {session?.role === "super_admin" ? "Super Admin" : "System Admin"}
+                </p>
               </div>
             </div>
           </div>
@@ -117,5 +123,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     </div>
     </AuditLogProvider>
+    </AuthGuard>
   );
 }

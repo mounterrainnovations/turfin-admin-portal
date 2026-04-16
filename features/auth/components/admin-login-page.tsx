@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { saveAdminSession } from "@/features/auth/session";
+import { useEffect, useState } from "react";
+import { saveAdminSession, getAdminSession } from "@/features/auth/session";
 import { signInAdmin } from "@/features/auth/api";
 import { useToast } from "@/features/toast/toast-context";
 import { getAdminSignInErrorMessage } from "@/features/auth/error-messages";
@@ -13,6 +13,18 @@ export function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const session = getAdminSession();
+    if (session) {
+      router.replace("/dashboard");
+    } else {
+      setIsChecking(false);
+    }
+  }, [router]);
+
+  if (isChecking) return null;
 
   async function handleLogin() {
     if (isSubmitting) return;
