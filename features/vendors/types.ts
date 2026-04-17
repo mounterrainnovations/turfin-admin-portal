@@ -55,6 +55,8 @@ export interface Vendor {
   businessRegistrationNumber?: string;
   status: VendorStatus;
   kycStatus: KycStatus;
+  verification?: Record<string, boolean>;
+  reviewerNotes?: string;
   address: VendorAddress;
   bankingDetails: BankingDetails;
   payoutCycle: PayoutCycle;
@@ -62,6 +64,10 @@ export interface Vendor {
   revenue?: number; // Calculated or from separate endpoint if exists
   joinedAt: string;
   deletedAt?: string;
+  kyc?: {
+    status: KycStatus;
+    verification: Record<string, boolean>;
+  };
   
   // UI helper fields (not all in backend, but used by UI)
   fields?: any[];
@@ -103,6 +109,12 @@ export interface UpdateVendorDto {
   businessRegistrationNumber?: string;
   payoutCycle?: PayoutCycle;
   address?: VendorAddress;
+}
+
+export interface KycReviewDto {
+  status: KycStatus;
+  reviewerNotes?: string;
+  verification?: Record<string, boolean>;
 }
 
 export interface VendorListResult {

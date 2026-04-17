@@ -5,9 +5,19 @@ import {
   Prohibit, DotsThree, X, Phone, Envelope, CaretDown, Eye,
   ArrowsClockwise, Buildings, Star, Wrench, Funnel,
   CaretLeft, CaretRight, LockSimple, LockSimpleOpen,
-  Plus, UploadSimple, FileText, ArrowLeft,
+  Plus, UploadSimple, FileText, ArrowLeft, ShieldCheck,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
+import { 
+  listTurfs, 
+  updateTurfStatus, 
+  reviewTurfDocuments, 
+  banTurf, 
+  unbanTurf,
+  STATUS_CONFIG as TURF_STATUS_CONFIG,
+  TurfReviewDto
+} from "@/features/turfs";
+import { useToast } from "@/features/toast/toast-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type FieldStatus = "active" | "inactive" | "pending" | "maintenance" | "suspended";
@@ -19,6 +29,7 @@ interface Field {
   vendor: { name: string; phone: string; email: string; avatar: string };
   location: { address: string; city: string; zone: string };
   status: FieldStatus;
+  verification?: Record<string, boolean>;
   pricePerHour: number;
   peakPricePerHour: number;
   capacity: number;
@@ -44,10 +55,10 @@ const STATUS_CONFIG: Record<FieldStatus, { label: string; color: string; dot: st
   suspended:   { label: "Suspended",   color: "bg-red-100 text-red-600",     dot: "bg-red-500"    },
 };
 
-const SPORTS_LIST    = ["Football", "Cricket", "Tennis", "Badminton", "Basketball", "Hockey", "Volleyball", "Kabaddi"];
-const FACILITIES_LIST= ["Parking", "Floodlights", "Changing Room", "Cafeteria", "Equipment Rental", "First Aid", "WiFi", "CCTV", "Drinking Water"];
-const SURFACE_LIST   = ["Natural Grass", "Artificial Turf", "Hardcourt", "Clay", "Wooden", "Synthetic"];
-const STATES_LIST    = ["Maharashtra", "Karnataka", "Delhi", "Gujarat", "Tamil Nadu", "Telangana", "West Bengal", "Rajasthan", "Uttar Pradesh", "Punjab", "Kerala", "Haryana"];
+const SPORTS_LIST    = ["Football", "Cricket", "Tennis", "Badminton", "Basketball", "Hockey", "Volleyball", "Kabaddi", "Box Cricket", "Futsal", "Pickleball", "Throwball", "Netball", "Handball", "Dodgeball"];
+const FACILITIES_LIST= ["Parking", "Flood Lights", "Changing Room", "Cafeteria", "Equipment Rental", "First Aid", "WiFi", "CCTV", "Drinking Water"];
+const SURFACE_LIST   = ["Natural Grass", "Artificial Turf", "Concrete", "Wooden", "Synthetic"];
+const STATES_LIST    = ["Maharashtra", "Karnataka", "Delhi", "Gujarat", "Tamil Nadu", "Telangana", "West Bengal", "Rajasthan", "Uttar Pradesh", "Punjab", "Kerala", "Haryana", "Madhya Pradesh"];
 
 const ONBOARD_STEPS = ["Vendor Info", "Field Details", "Location", "Pricing & Hours", "Amenities", "KYC"];
 
@@ -297,7 +308,105 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-function FieldDetailPanel({ field, onClose }: { field: Field; onClose: () => void }) {
+function DocReviewSection({ 
+  verification, 
+  onReview,
+  isPending 
+}: { 
+  verification: Record<string, boolean>, 
+  onReview: (status: any, v: any) => Promise<void>,
+  isPending: boolean
+}) {
+  const [localVerif, setLocalVerif] = useState(verification);
+  
+  // Sync local state if props change (e.g. after a background refresh)
+  useEffect(() => {
+    setLocalVerif(verification);
+  }, [verification]);
+  const [isSubmiting, setIsSubmiting] = useState(false);
+
+  const toggle = (key: string) => {
+    setLocalVerif(prev => {
+      const cur = prev[key];
+      const next = cur === true ? false : cur === false ? undefined : true;
+      const res = { ...prev };
+      if (next === undefined) delete res[key];
+      else res[key] = next;
+      return res;
+    });
+  };
+
+  const allVerified = KYC_DOCS_FIELD.every(d => localVerif[d.key] === true);
+
+  return (
+    <div className="bg-amber-50/50 rounded-xl border border-amber-100 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Document Verification</p>
+        <ShieldCheck size={18} className="text-amber-600" weight="fill" />
+      </div>
+
+      <div className="space-y-2">
+        {KYC_DOCS_FIELD.map(doc => {
+          const s = localVerif[doc.key];
+          return (
+            <div key={doc.key} className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-amber-100/50">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-700 truncate">{doc.label}</p>
+                <button className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 mt-0.5">
+                  <FileText size={10} /> View Document
+                </button>
+              </div>
+              <button 
+                onClick={() => toggle(doc.key)}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${
+                  s === true ? "bg-green-500 border-transparent text-white" : 
+                  s === false ? "bg-red-500 border-transparent text-white" : 
+                  "bg-white border-gray-200 text-gray-300 hover:border-amber-400"
+                }`}
+                title={s === true ? "Verified" : s === false ? "Rejected" : "Pending"}
+              >
+                {s === true ? <CheckCircle size={14} weight="fill" /> : 
+                 s === false ? <XCircle size={14} weight="fill" /> : 
+                 <ClockCountdown size={14} />}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {isPending && (
+        <div className="flex gap-2 pt-1">
+          <button 
+            disabled={isSubmiting}
+            onClick={async () => {
+              setIsSubmiting(true);
+              await onReview("rejected", localVerif);
+              setIsSubmiting(false);
+            }}
+            className="flex-1 py-1.5 rounded-lg text-[10px] font-bold border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+          >
+            REJECT ALL
+          </button>
+          <button 
+            disabled={isSubmiting}
+            onClick={async () => {
+              setIsSubmiting(true);
+              await onReview(allVerified ? "active" : "pending-resubmission", localVerif);
+              setIsSubmiting(false);
+            }}
+            className="flex-2 py-1.5 rounded-lg text-[10px] font-bold text-white hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: "#8a9e60", flex: 2 }}
+          >
+            {allVerified ? "APPROVE & ACTIVATE" : "SAVE & REQUEST RESUBMIT"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FieldDetailPanel({ field, onClose, onRefresh }: { field: Field; onClose: () => void; onRefresh: () => void }) {
+  const { showToast } = useToast();
   const [tab, setTab] = useState<"overview" | "schedule" | "analytics">("overview");
   const sc = STATUS_CONFIG[field.status];
 
@@ -485,6 +594,15 @@ function FieldDetailPanel({ field, onClose }: { field: Field; onClose: () => voi
                 ))}
               </div>
             </div>
+
+            {/* Documents / Verification (Only if pending or has verification data) */}
+            {(field.status === "pending" || field.verification) && (
+              <DocReviewSection 
+                verification={field.verification || {}} 
+                onReview={handleDocReview}
+                isPending={field.status === "pending"}
+              />
+            )}
 
             {/* Vendor */}
             <div>
@@ -899,6 +1017,7 @@ function FieldDetailPanel({ field, onClose }: { field: Field; onClose: () => voi
         <div className="space-y-2">
           {field.status === "pending" && (
             <button
+              onClick={() => handleStatusChange("active")}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 flex items-center justify-center gap-2 transition-opacity"
               style={{ backgroundColor: "#8a9e60" }}
             >
@@ -907,6 +1026,7 @@ function FieldDetailPanel({ field, onClose }: { field: Field; onClose: () => voi
           )}
           {field.status === "inactive" && (
             <button
+              onClick={() => handleStatusChange("active")}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 flex items-center justify-center gap-2 transition-opacity"
               style={{ backgroundColor: "#8a9e60" }}
             >
@@ -915,6 +1035,7 @@ function FieldDetailPanel({ field, onClose }: { field: Field; onClose: () => voi
           )}
           {field.status === "suspended" && (
             <button
+              onClick={handleUnban}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 flex items-center justify-center gap-2 transition-opacity"
               style={{ backgroundColor: "#8a9e60" }}
             >
@@ -922,17 +1043,26 @@ function FieldDetailPanel({ field, onClose }: { field: Field; onClose: () => voi
             </button>
           )}
           {field.status === "active" && (
-            <button className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center justify-center gap-2 transition-colors">
+            <button 
+              onClick={() => handleStatusChange("inactive")}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center justify-center gap-2 transition-colors"
+            >
               <XCircle size={16} /> Deactivate Field
             </button>
           )}
           {(field.status === "active" || field.status === "inactive") && (
-            <button className="w-full py-2.5 rounded-xl text-sm font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center gap-2 transition-colors">
+            <button 
+              onClick={() => handleStatusChange("maintenance")}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center gap-2 transition-colors"
+            >
               <Wrench size={16} /> Mark as Maintenance
             </button>
           )}
           {field.status !== "suspended" && (
-            <button className="w-full py-2.5 rounded-xl text-sm font-semibold bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center gap-2 transition-colors">
+            <button 
+              onClick={handleBan}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center gap-2 transition-colors"
+            >
               <Prohibit size={16} /> Suspend Field
             </button>
           )}
@@ -940,6 +1070,46 @@ function FieldDetailPanel({ field, onClose }: { field: Field; onClose: () => voi
       </div>
     </div>
   );
+
+  async function handleStatusChange(newStatus: string) {
+    try {
+      await updateTurfStatus(field.id, newStatus);
+      showToast({ title: "Status Updated", description: `Field status changed to ${newStatus}`, tone: "success" });
+      onRefresh();
+    } catch (err: any) {
+      showToast({ title: "Error", description: err.message, tone: "error" });
+    }
+  }
+
+  async function handleBan() {
+    try {
+      await banTurf(field.id);
+      showToast({ title: "Field Suspended", description: `Field ${field.name} has been suspended.`, tone: "error" });
+      onRefresh();
+    } catch (err: any) {
+      showToast({ title: "Error", description: err.message, tone: "error" });
+    }
+  }
+
+  async function handleUnban() {
+    try {
+      await unbanTurf(field.id);
+      showToast({ title: "Field Reinstated", description: `Field ${field.name} is now active.`, tone: "success" });
+      onRefresh();
+    } catch (err: any) {
+      showToast({ title: "Error", description: err.message, tone: "error" });
+    }
+  }
+
+  async function handleDocReview(status: "active" | "rejected" | "pending-resubmission", verification: Record<string, boolean>) {
+    try {
+      await reviewTurfDocuments(field.id, { status, verification });
+      showToast({ title: "Review Submitted", description: `Field verification updated to ${status}`, tone: "success" });
+      onRefresh();
+    } catch (err: any) {
+      showToast({ title: "Error", description: err.message, tone: "error" });
+    }
+  }
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -978,16 +1148,92 @@ export default function FieldsPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Derived counts
-  const total       = fields.length;
-  const activeCount = fields.filter(f => f.status === "active").length;
-  const inactiveCount  = fields.filter(f => f.status === "inactive").length;
-  const pendingCount   = fields.filter(f => f.status === "pending").length;
-  const maintCount     = fields.filter(f => f.status === "maintenance").length;
-  const suspendedCount = fields.filter(f => f.status === "suspended").length;
+  const [fields, setFields] = useState<Field[]>([]);
+  const [total, setTotal]         = useState(0);
+  const [loading, setLoading]     = useState(true);
 
-  const allSports = ["All", ...Array.from(new Set(fields.flatMap(f => f.sports)))];
-  const allCities = ["All", ...Array.from(new Set(fields.map(f => f.location.city)))];
+  useEffect(() => {
+    if (selected) {
+      const match = fields.find(f => f.id === selected.id);
+      if (match) setSelected(match);
+    }
+  }, [fields]);
+
+  const { showToast } = useToast();
+
+  const [activeCount, setActiveCount] = useState(0);
+  const [inactiveCount, setInactiveCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [maintCount, setMaintCount] = useState(0);
+  const [suspendedCount, setSuspendedCount] = useState(0);
+
+  const refreshData = async () => {
+    setLoading(true);
+    try {
+      const res = await listTurfs({ 
+        page: 1, 
+        limit: 100, 
+        status: statusTab === 'all' ? undefined : statusTab,
+        sportType: sportFilter === 'All' ? undefined : sportFilter.toLowerCase(),
+        city: cityFilter === 'All' ? undefined : cityFilter,
+      });
+      
+      const adapted: Field[] = res.items.map(t => ({
+        id: t.id,
+        name: t.name,
+        sports: (t.sports || []).map(s => s.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')),
+        vendor: {
+          name: t.vendorBusinessName || t.vendor?.businessName || "Unknown",
+          phone: t.vendorPhone || t.vendor?.phone || "-",
+          email: t.vendor?.email || "-",
+          avatar: (t.vendorBusinessName || t.vendor?.businessName || "U").slice(0, 2).toUpperCase(),
+        },
+        location: {
+          address: t.address.houseNumber ? `${t.address.houseNumber}, ${t.address.towerBlock}` : t.address.landmark || (t.address.latitude ? `${t.address.latitude}, ${t.address.longitude}` : t.address.pinCode),
+          city: t.address.city,
+          zone: t.address.state,
+        },
+        status: t.status as FieldStatus,
+        verification: t.verification || t.documents?.verification || {},
+        pricePerHour: (t.standardPricePaise || 0) / 100,
+        peakPricePerHour: ((t.standardPricePaise || 0) / 100) * 1.5,
+        capacity: t.capacity || 0,
+        size: t.sizeFormat || "-",
+        surface: (t.surfaceType || "artificial_turf").replace(/_/g, " ").split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+        rating: t.rating || 0,
+        totalReviews: t.totalReviews || 0,
+        todayBookings: t.todayBookings || 0,
+        totalBookings: t.totalBookings || 0,
+        totalRevenue: (t.totalRevenuePaise || 0) / 100,
+        amenities: (t.amenities || []).map(a => a.replace(/_/g, " ").split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')),
+        operatingHours: (t.weekdayOpen && t.weekdayClose) ? `${t.weekdayOpen.slice(0, 5)} – ${t.weekdayClose.slice(0, 5)}` : "—",
+        listedAt: new Date(t.createdAt || t.listedAt || new Date().toISOString()).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' }),
+        description: t.description || "No description provided.",
+      }));
+
+      setFields(adapted);
+      setTotal(res.total);
+
+      // Counts from adapted list (since it's limited to 100, this is just for the dashboard view)
+      setActiveCount(adapted.filter(f => f.status === 'active').length);
+      setInactiveCount(adapted.filter(f => f.status === 'inactive').length);
+      setPendingCount(adapted.filter(f => f.status === 'pending').length);
+      setMaintCount(adapted.filter(f => f.status === 'maintenance').length);
+      setSuspendedCount(adapted.filter(f => f.status === 'suspended').length);
+
+    } catch (err: any) {
+      showToast({ title: "Error", description: err.message || "Failed to load turfs", tone: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshData();
+  }, [statusTab, sportFilter, cityFilter]);
+
+  const allSports = ["All", ...SPORTS_LIST];
+  const allCities = ["All", "Mumbai", "Pune", "Bangalore", "Delhi", "Hyderabad", "Chennai", "Nashik"];
 
   const filtered = fields.filter(f => {
     const q = search.toLowerCase();
@@ -996,10 +1242,7 @@ export default function FieldsPage() {
       f.vendor.name.toLowerCase().includes(q) ||
       f.location.city.toLowerCase().includes(q) ||
       f.id.toLowerCase().includes(q);
-    const matchStatus = statusTab === "all" || f.status === statusTab;
-    const matchSport  = sportFilter === "All" || f.sports.includes(sportFilter);
-    const matchCity   = cityFilter === "All"  || f.location.city === cityFilter;
-    return matchSearch && matchStatus && matchSport && matchCity;
+    return matchSearch;
   });
 
   const STATUS_TABS = [
@@ -1184,11 +1427,11 @@ export default function FieldsPage() {
                     >
                       {/* Field */}
                       <td className="px-4 py-3.5">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold text-gray-800 text-sm">{field.name}</p>
+                        <div className="min-w-[180px]">
+                          <p className="font-semibold text-gray-800 text-sm mb-1">{field.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             {field.sports.map(s => (
-                              <span key={s} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">{s}</span>
+                              <span key={s} className="text-[10px] bg-gray-50 text-gray-500 border border-gray-100 px-1.5 py-0.5 rounded-md font-medium whitespace-nowrap">{s}</span>
                             ))}
                           </div>
                           <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
@@ -1229,20 +1472,8 @@ export default function FieldsPage() {
                       </td>
 
                       {/* Today's Slots */}
-                      <td className="px-4 py-3.5">
-                        {field.status === "active" ? (
-                          <div>
-                            <p className="text-xs font-semibold text-gray-700">{field.todayBookings} / 17 booked</p>
-                            <div className="w-24 bg-gray-100 rounded-full h-1.5 mt-1.5">
-                              <div
-                                className="h-1.5 rounded-full"
-                                style={{ width: `${(field.todayBookings / 17) * 100}%`, backgroundColor: "#8a9e60" }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
+                      <td className="px-4 py-3.5 text-center">
+                        <span className="text-xs text-gray-400">—</span>
                       </td>
 
                       {/* Rating */}
@@ -1360,9 +1591,9 @@ export default function FieldsPage() {
                     <select value={formData.vendorId} onChange={e => setField("vendorId", e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white">
                       <option value="">Select a vendor...</option>
-                      {Array.from(new Set(fields.map(f => f.vendor.name))).map(v => (
-                        <option key={v} value={v}>{v}</option>
-                      ))}
+                      {/* Note: In a real app we'd fetch actual vendors here */}
+                      <option value="v1">Riaz Turf</option>
+                      <option value="v2">GreenZone FC</option>
                     </select>
                   </div>
                 </div>
@@ -1547,7 +1778,7 @@ export default function FieldsPage() {
       {selected && (
         <>
           <div className="fixed inset-0 bg-black/10 z-40" onClick={() => setSelected(null)} />
-          <FieldDetailPanel field={selected} onClose={() => setSelected(null)} />
+          <FieldDetailPanel field={selected} onClose={() => setSelected(null)} onRefresh={refreshData} />
         </>
       )}
     </div>

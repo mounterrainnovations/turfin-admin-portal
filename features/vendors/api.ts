@@ -1,5 +1,5 @@
 import { getAdminSession } from "@/features/auth/session";
-import { Vendor, AdminOnboardVendorDto, UpdateVendorDto, VendorListResult } from "./types";
+import { Vendor, AdminOnboardVendorDto, UpdateVendorDto, VendorListResult, KycReviewDto } from "./types";
 
 function getApiUrl() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -65,6 +65,9 @@ export async function listVendors(params: { page?: number; limit?: number; statu
     // Ensure nested fields are handled or defaulted
     address: v.address || {},
     bankingDetails: v.bankingDetails || {},
+    // Extract verification and kycStatus from nested kyc object
+    verification: v.kyc?.verification || {},
+    kycStatus: v.kyc?.status || v.kycStatus || "pending",
     // Backend uses joinedAt or createdAt? DTO.md says JoinedAt
     joinedAt: v.joinedAt || v.createdAt || new Date().toISOString(),
   }));
@@ -119,6 +122,18 @@ export async function unbanVendor(vendorId: string): Promise<void> {
   const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}/unban`, {
     method: "POST",
     headers: { Authorization: `Bearer ${getAccessToken()}` },
+  });
+  await handleResponse(response);
+}
+
+export async function reviewVendorKyc(vendorId: string, dto: KycReviewDto): Promise<void> {
+  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}/kyc/review`, {
+    method: "PATCH",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getAccessToken()}` 
+    },
+    body: JSON.stringify(dto),
   });
   await handleResponse(response);
 }

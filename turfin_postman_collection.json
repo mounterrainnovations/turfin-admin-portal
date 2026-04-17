@@ -880,7 +880,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"status\": \"verified\",\n    \"reviewerNotes\": \"Approved by Admin.\"\n}",
+                      "raw": "{\n    \"status\": \"verified\",\n    \"reviewerNotes\": \"Approved by Admin.\",\n    \"verification\": {\n        \"identityProof\": true,\n        \"addressProof\": true,\n        \"businessRegistration\": true,\n        \"gstCertificate\": true,\n        \"cancelledCheque\": true\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -999,7 +999,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"status\": \"verified\",\n    \"reviewerNotes\": \"Turf docs look solid.\"\n}",
+                      "raw": "{\n    \"status\": \"verified\",\n    \"reviewerNotes\": \"Turf docs look solid.\",\n    \"verification\": {\n        \"propertyDocument\": true,\n        \"municipalNoc\": true,\n        \"liabilityInsurance\": true,\n        \"fieldPhotos\": true\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
