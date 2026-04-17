@@ -119,26 +119,31 @@ export default function VendorsPage() {
   const { showToast } = useToast();
 
   // ── Data Fetching ──────────────────────────────────────────────────────────
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await listVendors({ page, limit, status: activeTab });
-      setVendors(res.items);
-      setTotal(res.total);
-    } catch (err: any) {
-      showToast({ title: "Error", description: err.message || "Failed to load vendors", tone: "error" });
-    } finally {
-      setIsLoading(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      setIsLoading(true);
+      try {
+        const res = await listVendors({ page, limit, status: activeTab });
+        if (!active) return;
+        setVendors(res.items || []);
+        setTotal(res.total || 0);
+      } catch (err: any) {
+        if (!active) return;
+        showToast({ title: "Vendor data unavailable", description: err.message || "Failed to load vendors", tone: "error" });
+      } finally {
+        if (active) setIsLoading(false);
+      }
     }
-  }, [showToast, page, limit, activeTab]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    load();
+    return () => { active = false; };
+  }, [page, limit, activeTab, showToast, refreshTrigger]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [activeTab]);
+  const refreshData = () => setRefreshTrigger(p => p + 1);
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const filtered = vendors.filter(v => {
@@ -195,7 +200,7 @@ export default function VendorsPage() {
       await onboardVendor(dto);
       showToast({ title: "Success", description: `${formData.businessName} onboarded successfully.`, tone: "success" });
       closeOnboard();
-      fetchData();
+      refreshData();
     } catch (err: any) {
       showToast({ title: "Error", description: err.message || "Failed to onboard vendor", tone: "error" });
     }
@@ -229,7 +234,7 @@ export default function VendorsPage() {
       showToast({ title: "Success", description: `${editForm.businessName} updated successfully.`, tone: "success" });
       setEditVendor(null);
       setEditForm(null);
-      fetchData();
+      refreshData();
     } catch (err: any) {
       showToast({ title: "Error", description: err.message || "Failed to update vendor", tone: "error" });
     }
@@ -254,7 +259,7 @@ export default function VendorsPage() {
     try {
       showToast({ title: "KYC Verified", description: `${kycVendor.businessName} KYC verified.`, tone: "success" });
       setKycVendor(null);
-      fetchData();
+      refreshData();
     } catch (err: any) {
       showToast({ title: "Error", description: err.message || "Failed to verify KYC", tone: "error" });
     }
@@ -265,7 +270,7 @@ export default function VendorsPage() {
     try {
       showToast({ title: "KYC Rejected", description: `${kycVendor.businessName} KYC rejected.`, tone: "error" });
       setKycVendor(null);
-      fetchData();
+      refreshData();
     } catch (err: any) {
       showToast({ title: "Error", description: err.message || "Failed to reject KYC", tone: "error" });
     }
@@ -276,7 +281,7 @@ export default function VendorsPage() {
     try {
       showToast({ title: "Resubmission Requested", description: `Requested resubmission for ${kycVendor.businessName}.`, tone: "warning" });
       setKycVendor(null);
-      fetchData();
+      refreshData();
     } catch (err: any) {
       showToast({ title: "Error", description: err.message || "Failed to request resubmission", tone: "error" });
     }
@@ -299,7 +304,7 @@ export default function VendorsPage() {
       }
       setConfirmModal(null);
       setBanReason("");
-      fetchData();
+      refreshData();
     } catch (err: any) {
       showToast({ title: "Error", description: err.message || "Action failed", tone: "error" });
     }
@@ -353,7 +358,7 @@ export default function VendorsPage() {
           // Note: Local count is only for items in current page. In a full system, 
           // we'd use metadata from the API for each status.
           return (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+            <button key={tab} onClick={() => { setActiveTab(tab); setPage(1); }}
               className={`px-4 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === tab ? "border-b-2 text-[#8a9e60]" : "text-gray-400 hover:text-gray-600"}`}
               style={activeTab === tab ? { borderColor: "#8a9e60" } : {}}>
               {tab === "all" ? "All Vendors" : tab.charAt(0).toUpperCase() + tab.slice(1)}

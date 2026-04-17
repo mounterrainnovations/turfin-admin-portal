@@ -74,6 +74,14 @@ function redactSecrets(value: unknown): unknown {
 }
 
 function findStringDeep(value: unknown, keys: string[]): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findStringDeep(item, keys);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
   if (!isRecord(value)) return undefined;
 
   for (const key of keys) {

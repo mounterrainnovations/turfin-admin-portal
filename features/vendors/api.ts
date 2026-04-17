@@ -13,15 +13,35 @@ function getAccessToken() {
   return session.accessToken;
 }
 
+function findStringDeep(value: unknown, keys: string[]): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findStringDeep(item, keys);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  if (typeof value !== 'object' || value === null) return undefined;
+  const record = value as Record<string, unknown>;
+  for (const key of keys) {
+    const v = record[key];
+    if (typeof v === 'string' && v.trim()) return v;
+  }
+  for (const v of Object.values(record)) {
+    const found = findStringDeep(v, keys);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 async function handleResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
   
   if (!response.ok) {
-    const message = (typeof payload === 'object' && payload !== null) 
-      ? (payload.message || payload.error || "An error occurred") 
-      : (payload || "An error occurred");
-    throw new Error(message);
+    const errorMsg = findStringDeep(payload, ["message", "error"]) 
+      || (typeof payload === 'string' ? payload : "An unexpected error occurred");
+    throw new Error(errorMsg);
   }
   return payload;
 }
