@@ -34,6 +34,23 @@ function getRoleColor(id: string, name: string) {
   return COLOR_OPTIONS[Math.abs(hash) % COLOR_OPTIONS.length];
 }
 
+// ── RBAC Policy Dependencies ────────────────────────────────────────────────
+
+/**
+ * Cross-resource dependency map.
+ * Format: { [resource]: [required_resource:action] }
+ * 
+ * If any permission in [resource] is selected, the list of required permissions
+ * will be automatically checked and enforced.
+ */
+const CROSS_RESOURCE_DEPENDENCIES: Record<string, string[]> = {
+  turf: ["vendor:read"],
+  kyc: ["vendor:read"],
+  audit: ["user:read", "vendor:read"],
+  turf_docs: ["turf:read"],
+  reviews: ["turf:read"],
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RolesPage() {
@@ -109,9 +126,83 @@ export default function RolesPage() {
   };
 
   const togglePermission = (id: string) => {
-    setEditedPermIds(prev => 
-      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
-    );
+    const targetPerm = permissions.find((p) => p.id === id);
+    if (!targetPerm) return;
+
+    const isCurrentlyEnabled = editedPermIds.includes(id);
+    let newIds = new Set(editedPermIds);
+    let addedTags = new Set<string>();
+
+    if (!isCurrentlyEnabled) {
+      // --- ENABLING ---
+      const toAdd = [id];
+
+      while (toAdd.length > 0) {
+        const currentId = toAdd.shift()!;
+        if (newIds.has(currentId)) continue;
+
+        newIds.add(currentId);
+        const perm = permissions.find(p => p.id === currentId);
+        if (!perm) continue;
+
+        // 1. Horizontal Hierarchy (Predecessors within same resource)
+        const resourcePerms = permissions
+          .filter((p) => p.resource === perm.resource)
+          .sort((a, b) => a.action.localeCompare(b.action));
+        const targetIndex = resourcePerms.findIndex((p) => p.id === currentId);
+        resourcePerms.slice(0, targetIndex).forEach(p => toAdd.push(p.id));
+
+        // 2. Cross-Resource Dependencies
+        const deps = CROSS_RESOURCE_DEPENDENCIES[perm.resource] || [];
+        deps.forEach(depTag => {
+          const [res, act] = depTag.split(":");
+          const depPerm = permissions.find(p => p.resource === res && p.action.toLowerCase() === act.toLowerCase());
+          if (depPerm && !newIds.has(depPerm.id)) {
+            toAdd.push(depPerm.id);
+            addedTags.add(`${res}:${act}`);
+          }
+        });
+      }
+
+    } else {
+      // --- DISABLING ---
+      const toRemove = [id];
+      while (toRemove.length > 0) {
+        const currentId = toRemove.shift()!;
+        if (!newIds.has(currentId)) continue;
+
+        newIds.delete(currentId);
+        const perm = permissions.find(p => p.id === currentId);
+        if (!perm) continue;
+
+        // 1. Horizontal Hierarchy (Successors within same resource)
+        const resourcePerms = permissions
+          .filter((p) => p.resource === perm.resource)
+          .sort((a, b) => a.action.localeCompare(b.action));
+        const targetIndex = resourcePerms.findIndex((p) => p.id === currentId);
+        resourcePerms.slice(targetIndex + 1).forEach(p => toRemove.push(p.id));
+
+        // 2. Cross-Resource Dependents (Anything that depends on this permission)
+        Object.entries(CROSS_RESOURCE_DEPENDENCIES).forEach(([res, deps]) => {
+          const tag = `${perm.resource}:${perm.action.toLowerCase()}`;
+          if (deps.includes(tag)) {
+            // If we removed a dependency, remove ALL permissions of dependent resource
+            permissions.filter(p => p.resource === res).forEach(p => toRemove.push(p.id));
+          }
+        });
+      }
+    }
+
+    setEditedPermIds(Array.from(newIds));
+
+    // Toast must be called outside the state updater to avoid setState-in-render
+    if (addedTags.size > 0) {
+      showToast({
+        title: "Policy Dependency Detected",
+        description: `Automatically included ${Array.from(addedTags).join(", ")} as required access nodes.`,
+        tone: "info"
+      });
+    }
   };
 
   const handleSavePermissions = async () => {

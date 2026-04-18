@@ -2,20 +2,21 @@ import { SportType, SurfaceType, KycStatus } from "../vendors/constants";
 import { FieldStatus, AmenityType } from "./constants";
 
 export interface TurfAddress {
-  type?: string;
+  type: "home" | "work" | "other";  // Required by TurfAddressDto
+  label?: string;
   pinCode: string;
   city: string;
   state: string;
-  country?: string;
+  country: string;
   houseNumber?: string;
   floor?: string;
   towerBlock?: string;
   landmark?: string;
+  contactName?: string;
+  contactPhone?: string;
   latitude?: number;
   longitude?: number;
   googleMapsLink?: string;
-  contactName?: string;
-  contactPhone?: string;
 }
 
 export interface Turf {
@@ -78,7 +79,6 @@ export interface Turf {
 
 export interface CreateTurfDto {
   name: string;
-  description?: string;
   sports: SportType[];
   surfaceType: SurfaceType;
   address: TurfAddress;
@@ -87,16 +87,10 @@ export interface CreateTurfDto {
   weekendOpen: string;
   weekendClose: string;
   standardPricePaise: number;
-  peakPricePaise?: number;
+  cancellationWindowHrs?: number;
   amenities?: AmenityType[];
   capacity?: number;
   sizeFormat?: string;
-  documents?: {
-    propertyDocument?: { url: string };
-    municipalNoc?: { url: string };
-    liabilityInsurance?: { url: string };
-    fieldPhotos?: { url: string }[];
-  };
 }
 
 export interface UpdateTurfDto extends Partial<CreateTurfDto> {

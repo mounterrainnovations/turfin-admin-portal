@@ -66,10 +66,16 @@ const BANK_FIELDS = [
 ] as const;
 
 const INIT_FORM = {
+  // User / Account fields (top-level AdminOnboardVendorDto)
+  email: "", password: "",
+  // Vendor profile fields
   businessName: "", businessType: "individual" as BusinessType, ownerFullName: "",
-  email: "", phone: "", whatsapp: "", gstNumber: "", businessRegistrationNumber: "",
+  phone: "", whatsapp: "", gstNumber: "", businessRegistrationNumber: "",
   address: {
-    pinCode: "", city: "", state: "", country: "India", address1: "", address2: "", googleMapsLink: ""
+    type: "work" as "home" | "work" | "other",
+    houseNumber: "", // Address Line 1 — building, street
+    landmark: "",    // Address Line 2 — landmark, area
+    pinCode: "", city: "", state: "", country: "India", googleMapsLink: ""
   },
   bankingDetails: {
     bankName: "", accountHolderName: "", accountNumber: "", ifsc: "", upiId: ""
@@ -200,18 +206,24 @@ export default function VendorsPage() {
     try {
       const dto: AdminOnboardVendorDto = {
         email: formData.email,
-        password: "TemporaryPassword123!", // In a real app, this might be optional or generated
+        password: formData.password,
         vendorProfile: {
           businessName: formData.businessName,
           businessType: formData.businessType,
           ownerFullName: formData.ownerFullName,
           phone: formData.phone,
-          whatsapp: formData.whatsapp,
-          gstNumber: formData.gstNumber,
-          businessRegistrationNumber: formData.businessRegistrationNumber,
+          whatsapp: formData.whatsapp || undefined,
+          gstNumber: formData.gstNumber || undefined,
+          businessRegistrationNumber: formData.businessRegistrationNumber || undefined,
           address: {
-            ...formData.address,
-            type: 'work', // default
+            type: formData.address.type,
+            houseNumber: formData.address.houseNumber || undefined,
+            landmark: formData.address.landmark || undefined,
+            pinCode: formData.address.pinCode,
+            city: formData.address.city,
+            state: formData.address.state,
+            country: formData.address.country || "India",
+            googleMapsLink: formData.address.googleMapsLink || undefined,
           },
           bankingDetails: formData.bankingDetails,
           commissionPct: formData.commissionPct,
@@ -601,7 +613,7 @@ export default function VendorsPage() {
                 <div className="flex items-start gap-3">
                   <div className="w-7 h-7 rounded bg-gray-50 flex items-center justify-center shrink-0 mt-0.5"><MapPin size={14} className="text-gray-400" /></div>
                   <div>
-                    <p className="text-xs font-medium text-gray-700">{selectedVendor.address?.address1} {selectedVendor.address?.address2}</p>
+                    <p className="text-xs font-medium text-gray-700">{selectedVendor.address?.houseNumber} {selectedVendor.address?.landmark}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{selectedVendor.address?.city}, {selectedVendor.address?.state} – {selectedVendor.address?.pinCode}</p>
                   </div>
                 </div>
@@ -727,20 +739,44 @@ export default function VendorsPage() {
                       </div>
                     ))}
                   </div>
+                  <div className="border-t border-gray-100 pt-4">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Account Credentials</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Login Password *</label>
+                        <input type="password" value={formData.password} onChange={e => setField("password", e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder="Min. 8 characters" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {onboardStep === 2 && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Address Line 1 *</label>
-                    <input value={formData.address.address1} onChange={e => setAddressField("address1", e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder="Building, Street" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Address Line 2</label>
-                    <input value={formData.address.address2} onChange={e => setAddressField("address2", e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder="Landmark, Area (optional)" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Address Type *</label>
+                      <div className="flex gap-3">
+                        {["home", "work", "other"].map(t => (
+                          <button key={t} onClick={() => setAddressField("type", t as any)}
+                            className="flex-1 py-2 rounded-lg border text-xs font-medium capitalize transition-colors"
+                            style={formData.address.type === t ? { backgroundColor: "#8a9e60", color: "white", borderColor: "transparent" } : { borderColor: "#e5e7eb", color: "#6b7280" }}>
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">House / Shop Number</label>
+                      <input value={formData.address.houseNumber} onChange={e => setAddressField("houseNumber", e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder="e.g. 402, Building A" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Landmark</label>
+                      <input value={formData.address.landmark} onChange={e => setAddressField("landmark", e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder="e.g. Near City Mall" />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -912,10 +948,29 @@ export default function VendorsPage() {
                   </div>
                   <div className="border-t border-gray-100 pt-4">
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Location</h4>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Address</label>
-                      <input value={editForm.address.address1} onChange={e => setEditAddressField("address1", e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] mb-3" placeholder="Street, Building" />
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Address Type *</label>
+                        <div className="flex gap-3">
+                          {["home", "work", "other"].map(t => (
+                            <button key={t} onClick={() => setEditAddressField("type", t as any)}
+                              className="flex-1 py-1.5 rounded-lg border text-xs font-medium capitalize transition-colors"
+                              style={editForm.address.type === t ? { backgroundColor: "#8a9e60", color: "white", borderColor: "transparent" } : { borderColor: "#e5e7eb", color: "#6b7280" }}>
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">House / Shop Number</label>
+                        <input value={editForm.address.houseNumber ?? ""} onChange={e => setEditAddressField("houseNumber", e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder="402, Building A" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Landmark</label>
+                        <input value={editForm.address.landmark ?? ""} onChange={e => setEditAddressField("landmark", e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]" placeholder="Near City Mall" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>

@@ -7,14 +7,16 @@ import {
   VendorStatus,
 } from "./constants";
 
+export type AddressType = "home" | "work" | "other";
+
 export interface VendorAddress {
-  type?: string;
+  type: AddressType; // Required by DTO
   label?: string;
   pinCode: string;
-  houseNumber?: string;
+  houseNumber?: string; // Maps to "Address Line 1" in UI
   floor?: string;
   towerBlock?: string;
-  landmark?: string;
+  landmark?: string; // Maps to "Address Line 2" in UI
   city: string;
   state: string;
   country: string;
@@ -23,8 +25,6 @@ export interface VendorAddress {
   latitude?: number;
   longitude?: number;
   googleMapsLink?: string;
-  address1?: string;
-  address2?: string;
 }
 
 export interface BankingDetails {
@@ -82,10 +82,7 @@ export interface Vendor {
 
 export interface AdminOnboardVendorDto {
   email: string;
-  password?: string; // Optional if backend generates it or if admin provides it
-  firstName?: string;
-  lastName?: string;
-  displayName?: string;
+  password: string; // Required by DTO (MinLength 8)
   vendorProfile: {
     businessName: string;
     businessType: BusinessType;

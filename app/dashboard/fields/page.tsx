@@ -140,14 +140,18 @@ const INIT_FORM = {
   capacity: "14",
   size: "5-a-side",
   surface: "Artificial Turf",
-  address: "",
-  city: "",
-  state: "",
-  zone: "North Zone",
-  pincode: "",
-  mapsLink: "",
+  address: {
+    type: "work" as "home" | "work" | "other",
+    houseNumber: "",  // Address Line 1
+    landmark: "",     // Address Line 2
+    city: "",
+    state: "",
+    pinCode: "",
+    country: "India",
+    googleMapsLink: "",
+  },
   pricePerHour: "800",
-  peakPricePerHour: "1200",
+  cancellationWindowHrs: "",
   weekdayFrom: "06:00",
   weekdayTo: "22:00",
   weekendFrom: "06:00",
@@ -1196,34 +1200,35 @@ export default function FieldsPage() {
   const onOnboard = async () => {
     setIsSubmitting(true);
     try {
+      // Convert display values to DTO snake_case enums
+      const toSnake = (s: string) => s.toLowerCase().replace(/ /g, "_");
+
       const payload: CreateTurfDto = {
         name: formData.name,
-        description: "",
         standardPricePaise: parseInt(formData.pricePerHour || "0") * 100,
-        peakPricePaise: parseInt(formData.peakPricePerHour || "0") * 100,
+        cancellationWindowHrs: formData.cancellationWindowHrs
+          ? parseInt(formData.cancellationWindowHrs)
+          : undefined,
         address: {
-          landmark: formData.address,
-          city: formData.city,
-          state: formData.state,
-          pinCode: formData.pincode,
-          latitude: 0,
-          longitude: 0,
+          type: formData.address.type,
+          houseNumber: formData.address.houseNumber || undefined,
+          landmark: formData.address.landmark || undefined,
+          city: formData.address.city,
+          state: formData.address.state,
+          pinCode: formData.address.pinCode,
+          country: formData.address.country || "India",
+          googleMapsLink: formData.address.googleMapsLink || undefined,
         },
-        sports: formData.sports as any[],
-        amenities: formData.facilities as any[],
-        surfaceType: formData.surface.toLowerCase().replace(/ /g, "_") as any,
-        sizeFormat: formData.size,
-        capacity: parseInt(formData.capacity || "0"),
-        weekdayOpen: formData.weekdayFrom + ":00",
-        weekdayClose: formData.weekdayTo + ":00",
-        weekendOpen: formData.weekendFrom + ":00",
-        weekendClose: formData.weekendTo + ":00",
-        documents: {
-          propertyDocument: { url: formData.propertyDocument || "pending" },
-          municipalNoc: { url: formData.municipalNoc || "pending" },
-          liabilityInsurance: { url: formData.liabilityInsurance || "pending" },
-          fieldPhotos: [{ url: formData.fieldPhotos || "pending" }],
-        },
+        sports: formData.sports.map(toSnake) as any[],
+        amenities: formData.facilities.map(toSnake) as any[],
+        surfaceType: toSnake(formData.surface) as any,
+        sizeFormat: formData.size || undefined,
+        capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
+        weekdayOpen: formData.weekdayFrom,
+        weekdayClose: formData.weekdayTo,
+        weekendOpen: formData.weekendFrom,
+        weekendClose: formData.weekendTo,
+        // NOTE: documents are submitted separately via PATCH /turfs/:id/documents
       };
 
       await createTurfForVendor(formData.vendorId, payload);
@@ -2044,13 +2049,24 @@ export default function FieldsPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                      Full Address *
+                      Address Line 1
                     </label>
                     <input
-                      value={formData.address}
-                      onChange={(e) => setField("address", e.target.value)}
+                      value={formData.address.houseNumber}
+                      onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, houseNumber: e.target.value } }))}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                      placeholder="Street, Building, Landmark"
+                      placeholder="Building, Street"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                      Address Line 2
+                    </label>
+                    <input
+                      value={formData.address.landmark}
+                      onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, landmark: e.target.value } }))}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                      placeholder="Landmark, Area (optional)"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -2059,8 +2075,8 @@ export default function FieldsPage() {
                         City *
                       </label>
                       <input
-                        value={formData.city}
-                        onChange={(e) => setField("city", e.target.value)}
+                        value={formData.address.city}
+                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, city: e.target.value } }))}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="Mumbai"
                       />
@@ -2070,8 +2086,8 @@ export default function FieldsPage() {
                         State *
                       </label>
                       <select
-                        value={formData.state}
-                        onChange={(e) => setField("state", e.target.value)}
+                        value={formData.address.state}
+                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, state: e.target.value } }))}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
                       >
                         <option value="">Select state</option>
@@ -2085,8 +2101,8 @@ export default function FieldsPage() {
                         Pincode
                       </label>
                       <input
-                        value={formData.pincode}
-                        onChange={(e) => setField("pincode", e.target.value)}
+                        value={formData.address.pinCode}
+                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, pinCode: e.target.value } }))}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
                         placeholder="400001"
                         maxLength={6}
@@ -2094,27 +2110,11 @@ export default function FieldsPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        Location Zone
-                      </label>
-                      <select
-                        value={formData.zone}
-                        onChange={(e) => setField("zone", e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white"
-                      >
-                        <option>North Zone</option>
-                        <option>South Zone</option>
-                        <option>East Zone</option>
-                        <option>West Zone</option>
-                        <option>Central</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Google Maps Link
                       </label>
                       <input
-                        value={formData.mapsLink}
-                        onChange={(e) => setField("mapsLink", e.target.value)}
+                        value={formData.address.googleMapsLink}
+                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, googleMapsLink: e.target.value } }))}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
                         placeholder="Paste maps URL"
                       />
@@ -2146,21 +2146,17 @@ export default function FieldsPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        Peak Price / Hr *
+                        Cancellation Window (hrs)
                       </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
-                          ₹
-                        </span>
-                        <input
-                          type="number"
-                          value={formData.peakPricePerHour}
-                          onChange={(e) =>
-                            setField("peakPricePerHour", e.target.value)
-                          }
-                          className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        />
-                      </div>
+                      <input
+                        type="number"
+                        value={formData.cancellationWindowHrs}
+                        onChange={(e) =>
+                          setField("cancellationWindowHrs", e.target.value)
+                        }
+                        placeholder="e.g. 2"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
