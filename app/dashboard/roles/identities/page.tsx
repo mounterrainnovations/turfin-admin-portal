@@ -75,7 +75,10 @@ export default function IdentityManagementPage() {
 
   const openRoleAssignment = (adminId: string, currentRoleIds: string[]) => {
     setModifyingAdmin(adminId);
-    setSelectedRoleIds(currentRoleIds);
+    // Filter out any system roles from the initial selection.
+    // System roles should not be sent back to the custom role assignment endpoint.
+    const assignableRoleIds = currentRoleIds.filter(id => roles.some(r => r.id === id));
+    setSelectedRoleIds(assignableRoleIds);
     setActiveMenu(null);
   };
 
@@ -83,7 +86,10 @@ export default function IdentityManagementPage() {
     if (!modifyingAdmin) return;
     setIsSubmitting(true);
     try {
-      await rbacApi.assignRolesToSubAdmin(modifyingAdmin, { roleIds: selectedRoleIds });
+      // Ensure we only send custom role IDs to the backend.
+      // Backend forbids passing system roles like 'sub_admin' via this endpoint.
+      const payloadRoleIds = selectedRoleIds.filter(id => roles.some(r => r.id === id));
+      await rbacApi.assignRolesToSubAdmin(modifyingAdmin, { roleIds: payloadRoleIds });
       showToast({ title: "Identity Updated", description: "Roles successfully reassigned", tone: "success" });
       setModifyingAdmin(null);
       refreshAdmins();
