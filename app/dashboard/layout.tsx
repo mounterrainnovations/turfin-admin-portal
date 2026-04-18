@@ -3,7 +3,7 @@
 import {
   House, CalendarBlank, Users, ChartLineUp, Gear,
   MapPin, Handshake, SignOut, List, X, Bell, MagnifyingGlass, Key, BellRinging,
-  DeviceMobile, Scroll,
+  DeviceMobile, Scroll, ShieldCheck,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -12,8 +12,8 @@ import { AuditLogProvider } from "./audit-log-context";
 import { AuthGuard } from "@/features/auth/components/auth-guard";
 import { useAuth } from "@/features/auth/hooks";
 
-const navItems = [
-  { label: "Audit Log", icon: Scroll,        href: "/dashboard/audit"     },
+const navItems: any[] = [
+  { label: "Audit Log", icon: Scroll,        href: "/dashboard/audit", disabled: false },
   { label: "Dashboard", icon: House,         href: "/dashboard"           },
   { label: "Bookings",  icon: CalendarBlank, href: "/dashboard/bookings" },
   { label: "Vendors",   icon: Handshake,     href: "/dashboard/vendors"   },
@@ -23,6 +23,7 @@ const navItems = [
   { label: "Notifications",  icon: BellRinging,   href: "/dashboard/notifications"  },
   { label: "App Management", icon: DeviceMobile,  href: "/dashboard/app-management" },
   { label: "Roles",          icon: Key,           href: "/dashboard/roles",  restricted: true },
+  { label: "Admins",         icon: ShieldCheck,   href: "/dashboard/roles/identities", restricted: true },
   { label: "Settings",  icon: Gear,          href: "/dashboard/settings"  },
 ];
 

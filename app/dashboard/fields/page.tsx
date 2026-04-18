@@ -39,7 +39,11 @@ import {
   STATUS_CONFIG as TURF_STATUS_CONFIG,
   TurfReviewDto,
   Turf,
+  FieldStatus,
+  createTurfForVendor,
+  CreateTurfDto,
 } from "@/features/turfs";
+import { DashboardPagination } from "@/components/DashboardPagination";
 import { listVendors, Vendor, KYC_CFG } from "@/features/vendors";
 import { useToast } from "@/features/toast/toast-context";
 
@@ -171,7 +175,7 @@ function getMockBookedSlots(field: Turf, date: Date): Set<number> {
   if (field.status !== "active") return new Set();
   const day = date.getDay();
   const isWeekend = day === 0 || day === 6;
-  const popularity = Math.min(Math.floor(field.totalBookings / 80), 8);
+  const popularity = Math.min(Math.floor((field.totalBookings || 0) / 80), 8);
   const base = isWeekend ? popularity + 5 : popularity + 2;
   const count = Math.min(base, 13);
   const seed =
@@ -203,10 +207,12 @@ function FieldDetailPanel({
   field,
   onClose,
   onRefresh,
+  onReviewKyc,
 }: {
   field: Turf;
   onClose: () => void;
   onRefresh: () => void;
+  onReviewKyc: (field: Turf) => void;
 }) {
   const { showToast } = useToast();
   const [tab, setTab] = useState<"overview" | "schedule" | "analytics">(
@@ -904,14 +910,16 @@ function FieldDetailPanel({
                         Standard (6AM – 5PM)
                       </span>
                       <span className="font-semibold">
-                        ₹{field.pricePerHour}/hr
+                        ₹{(field as any).pricePerHour}/hr
                       </span>
+
                     </div>
                     <div className="flex justify-between">
                       <span className="text-amber-600">Peak (5PM – close)</span>
                       <span className="font-semibold">
-                        ₹{field.peakPricePerHour}/hr
+                        ₹{(field as any).peakPricePerHour}/hr
                       </span>
+
                     </div>
                   </div>
                 </div>
@@ -928,27 +936,29 @@ function FieldDetailPanel({
               {[
                 {
                   label: "Total Bookings",
-                  value: field.totalBookings.toLocaleString(),
+                  value: (field.totalBookings || 0).toLocaleString(),
                   sub: "all time",
                 },
                 {
                   label: "Total Revenue",
                   value:
-                    field.totalRevenue > 0
-                      ? `₹${(field.totalRevenue / 1000).toFixed(0)}K`
+                    ((field as any).totalRevenue || 0) > 0
+                      ? `₹${(((field as any).totalRevenue || 0) / 1000).toFixed(0)}K`
                       : "—",
                   sub: "all time",
+
                 },
                 {
                   label: "Avg. Rating",
-                  value: field.rating > 0 ? `${field.rating} ★` : "—",
-                  sub: `${field.totalReviews} reviews`,
+                  value: (field.rating || 0) > 0 ? `${field.rating} ★` : "—",
+                  sub: `${field.totalReviews || 0} reviews`,
+
                 },
                 {
                   label: "Avg / Booking",
                   value:
-                    field.totalBookings > 0
-                      ? `₹${Math.round(field.totalRevenue / field.totalBookings).toLocaleString()}`
+                    (field.totalBookings || 0) > 0
+                      ? `₹${Math.round((field.totalRevenue || 0) / (field.totalBookings || 1)).toLocaleString()}`
                       : "—",
                   sub: "revenue per booking",
                 },
@@ -1014,20 +1024,20 @@ function FieldDetailPanel({
                 {[
                   [
                     "Est. This Month",
-                    field.totalBookings > 0
-                      ? `₹${((field.pricePerHour * field.todayBookings * 21) / 1000).toFixed(1)}K`
+                    (field.totalBookings || 0) > 0
+                      ? `₹${(((field.pricePerHour || 0) * (field.todayBookings || 0) * 21) / 1000).toFixed(1)}K`
                       : "—",
                   ],
                   [
                     "Platform Fee (10%)",
-                    field.totalRevenue > 0
-                      ? `₹${((field.totalRevenue * 0.1) / 1000).toFixed(1)}K`
+                    (field.totalRevenue || 0) > 0
+                      ? `₹${(((field.totalRevenue || 0) * 0.1) / 1000).toFixed(1)}K`
                       : "—",
                   ],
                   [
                     "Vendor Payout (90%)",
-                    field.totalRevenue > 0
-                      ? `₹${((field.totalRevenue * 0.9) / 1000).toFixed(0)}K`
+                    (field.totalRevenue || 0) > 0
+                      ? `₹${(((field.totalRevenue || 0) * 0.9) / 1000).toFixed(0)}K`
                       : "—",
                   ],
                 ].map(([label, value]) => (
@@ -1043,7 +1053,7 @@ function FieldDetailPanel({
             </div>
 
             {/* Performance badge */}
-            {field.totalBookings > 500 && (
+            {(field.totalBookings || 0) > 500 && (
               <div
                 className="rounded-xl p-3.5 flex items-center gap-3"
                 style={{
@@ -1102,7 +1112,7 @@ function FieldDetailPanel({
               <ArrowsClockwise size={16} /> SET STATUS
             </button>
             <button
-              onClick={() => openKycReview(field)}
+              onClick={() => onReviewKyc(field)}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-opacity"
               style={{ backgroundColor: "#8a9e60" }}
             >
@@ -1148,6 +1158,11 @@ export default function FieldsPage() {
   const [vendorsList, setVendors] = useState<Vendor[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
 
   // Onboard modal state
   const [showOnboard, setShowOnboard] = useState(false);
@@ -1376,15 +1391,17 @@ export default function FieldsPage() {
     try {
       const [res, vRes] = await Promise.all([
         listTurfs({
-          page: 1,
-          limit: 100,
+          page,
+          limit,
           status: statusTab === "all" ? undefined : statusTab,
           sportType:
             sportFilter === "All" ? undefined : sportFilter.toLowerCase(),
           city: cityFilter === "All" ? undefined : cityFilter,
+          search: search.trim() || undefined,
         }),
         listVendors({ limit: 100 }),
       ]);
+
 
       setFields(res.items);
       setVendors(vRes.items);
@@ -1416,7 +1433,12 @@ export default function FieldsPage() {
 
   useEffect(() => {
     refreshData();
-  }, [statusTab, sportFilter, cityFilter]);
+  }, [page, limit, statusTab, sportFilter, cityFilter, search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusTab, sportFilter, cityFilter, search]);
+
 
   const allSports = ["All", ...SPORTS_LIST];
   const allCities = [
@@ -1821,29 +1843,14 @@ export default function FieldsPage() {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-t border-gray-100 px-4 py-3 flex items-center justify-between">
-            <p className="text-xs text-gray-400">
-              Showing{" "}
-              <span className="font-semibold text-gray-600">
-                {filtered.length}
-              </span>{" "}
-              of {total} fields
-            </p>
-            <div className="flex items-center gap-4 text-xs text-gray-400">
-              {pendingCount > 0 && (
-                <span className="flex items-center gap-1.5 text-amber-600 font-medium">
-                  <ClockCountdown size={12} weight="fill" />
-                  {pendingCount} pending approval
-                </span>
-              )}
-              {suspendedCount > 0 && (
-                <span className="flex items-center gap-1.5 text-red-500 font-medium">
-                  <Prohibit size={12} />
-                  {suspendedCount} suspended
-                </span>
-              )}
-            </div>
-          </div>
+          <DashboardPagination 
+            page={page} 
+            total={total} 
+            limit={limit} 
+            onPageChange={setPage} 
+            label="fields"
+          />
+
         </div>
       </div>
 
@@ -2483,6 +2490,7 @@ export default function FieldsPage() {
             field={selected}
             onClose={() => setSelected(null)}
             onRefresh={refreshData}
+            onReviewKyc={openKycReview}
           />
         </>
       )}

@@ -9,20 +9,22 @@ import {
   Trash, CaretDown, ArrowUpRight, ArrowDownRight,
   ChartLineUp, ArrowLeft,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { 
+  listUsers, 
+  banUser, 
+  unbanUser, 
+  User, 
+  UserStatus,
+  UserAddress
+} from "@/features/users";
+import { DashboardPagination } from "@/components/DashboardPagination";
+import { useToast } from "@/features/toast/toast-context";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-type UserStatus = "active" | "inactive" | "banned";
 
-interface AppUser {
-  id: string; name: string; email: string; phone: string;
-  city: string; state: string; status: UserStatus;
-  emailVerified: boolean; phoneVerified: boolean;
-  joined: string; lastActive: string;
-  bookings: number; completed: number; cancelled: number; noShows: number;
-  totalSpent: number; favSport: string; favVendor: string; source: string;
-  banReason?: string;
-}
+// ── Mock Data ──────────────────────────────────────────────────────────────────
+// Removed hardcoded SEED data
+
 
 interface RecentBooking {
   id: string; field: string; vendor: string; date: string; sport: string;
@@ -30,18 +32,8 @@ interface RecentBooking {
 }
 
 // ── Mock Data ──────────────────────────────────────────────────────────────────
-const SEED: AppUser[] = [
-  { id: "USR-001", name: "Marco Rossi",    email: "marco@example.com",  phone: "+91 98001 11001", city: "Mumbai",    state: "Maharashtra", status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Dec 2024", lastActive: "2h ago",  bookings: 23, completed: 20, cancelled: 2, noShows: 1, totalSpent: 34500, favSport: "Football",  favVendor: "Riaz Sports Complex", source: "Google"   },
-  { id: "USR-002", name: "Sara Bianchi",   email: "sara@example.com",   phone: "+91 98002 22002", city: "Pune",      state: "Maharashtra", status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Jan 2025", lastActive: "1d ago",  bookings: 15, completed: 14, cancelled: 1, noShows: 0, totalSpent: 18200, favSport: "Badminton", favVendor: "GreenZone FC",         source: "Organic"  },
-  { id: "USR-003", name: "Luca Ferretti",  email: "luca@example.com",   phone: "+91 98003 33003", city: "Bangalore", state: "Karnataka",   status: "inactive", emailVerified: true,  phoneVerified: false, joined: "Nov 2024", lastActive: "45d ago", bookings: 8,  completed: 5,  cancelled: 3, noShows: 0, totalSpent: 9600,  favSport: "Cricket",   favVendor: "Arena Sports Hub",    source: "Referral" },
-  { id: "USR-004", name: "Anna Conti",     email: "anna@example.com",   phone: "+91 98004 44004", city: "Delhi",     state: "Delhi",       status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Oct 2024", lastActive: "3h ago",  bookings: 31, completed: 27, cancelled: 3, noShows: 1, totalSpent: 47800, favSport: "Tennis",    favVendor: "Arena Sports Hub",    source: "Google"   },
-  { id: "USR-005", name: "Davide Greco",   email: "davide@example.com", phone: "+91 98005 55005", city: "Chennai",   state: "Tamil Nadu",  status: "banned",   emailVerified: true,  phoneVerified: true,  joined: "Feb 2025", lastActive: "15d ago", bookings: 2,  completed: 0,  cancelled: 2, noShows: 2, totalSpent: 2400,  favSport: "Football",  favVendor: "ProFields Co.",        source: "Organic",  banReason: "Repeated no-shows and fraudulent refund claims." },
-  { id: "USR-006", name: "Priya Kapoor",   email: "priya@example.com",  phone: "+91 98006 66006", city: "Mumbai",    state: "Maharashtra", status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Jan 2025", lastActive: "5h ago",  bookings: 19, completed: 18, cancelled: 1, noShows: 0, totalSpent: 28700, favSport: "Badminton", favVendor: "ProFields Co.",        source: "Referral" },
-  { id: "USR-007", name: "Rahul Sharma",   email: "rahul@example.com",  phone: "+91 98007 77007", city: "Hyderabad", state: "Telangana",   status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Sep 2024", lastActive: "1h ago",  bookings: 45, completed: 42, cancelled: 2, noShows: 1, totalSpent: 68500, favSport: "Cricket",   favVendor: "Sunrise Turfs",       source: "Google"   },
-  { id: "USR-008", name: "Meera Nair",     email: "meera@example.com",  phone: "+91 98008 88008", city: "Kolkata",   state: "West Bengal", status: "inactive", emailVerified: false, phoneVerified: true,  joined: "Mar 2025", lastActive: "20d ago", bookings: 3,  completed: 2,  cancelled: 1, noShows: 0, totalSpent: 3200,  favSport: "Volleyball",favVendor: "Elite Sports Arena",  source: "Organic"  },
-  { id: "USR-009", name: "Arjun Patel",    email: "arjun@example.com",  phone: "+91 98009 99009", city: "Ahmedabad", state: "Gujarat",     status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Dec 2024", lastActive: "12h ago", bookings: 12, completed: 11, cancelled: 1, noShows: 0, totalSpent: 15600, favSport: "Football",  favVendor: "Premier Grounds",     source: "Referral" },
-  { id: "USR-010", name: "Zara Khan",      email: "zara@example.com",   phone: "+91 98010 00010", city: "Delhi",     state: "Delhi",       status: "active",   emailVerified: true,  phoneVerified: true,  joined: "Nov 2024", lastActive: "30m ago", bookings: 27, completed: 25, cancelled: 2, noShows: 0, totalSpent: 41200, favSport: "Tennis",    favVendor: "Arena Sports Hub",    source: "Google"   },
-];
+const SEED: any[] = [];
+
 
 const RECENT_BOOKINGS: Record<string, RecentBooking[]> = {
   "USR-001": [
@@ -80,21 +72,22 @@ const sportColor: Record<string, string> = {
 };
 
 function avatar(name: string) {
-  return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  if (!name) return "??";
+  return name.split(" ").filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
 function avatarColor(id: string): string {
   const colors = ["#8a9e60", "#6e8245", "#c4953a", "#6b7a96", "#7a6e9e", "#9e6e6e", "#6e9e8a"];
-  const i = parseInt(id.replace("USR-", "")) % colors.length;
-  return colors[i];
+  const i = id ? id.split("-").pop()?.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) || 0 : 0;
+  return colors[i % colors.length];
 }
 
-function cancellationRate(u: AppUser): number {
-  return u.bookings > 0 ? Math.round((u.cancelled + u.noShows) / u.bookings * 100) : 0;
+function cancellationRate(u: User): string {
+  return "—";
 }
 
-function isVip(u: AppUser): boolean {
-  return u.bookings >= 25 || u.totalSpent >= 40000;
+function isVip(u: User): boolean {
+  return false;
 }
 
 // ── Email Templates ────────────────────────────────────────────────────────────
@@ -131,15 +124,16 @@ const USER_CATEGORY_COLORS: Record<string, string> = {
   General:      "bg-gray-100 text-gray-600",
 };
 
-function interpolateUser(text: string, user: AppUser): string {
+function interpolateUser(text: string, user: User): string {
   return text
-    .replace(/{userName}/g, user.name)
+    .replace(/{userName}/g, user.displayName || `${user.firstName} ${user.lastName}`)
     .replace(/{userEmail}/g, user.email)
     .replace(/{userId}/g, user.id);
 }
 
 // ── Email Modal ────────────────────────────────────────────────────────────────
-function EmailModal({ user, onClose }: { user: AppUser; onClose: () => void }) {
+function EmailModal({ user, onClose }: { user: User; onClose: () => void }) {
+
   const [selected, setSelected] = useState<Template | null>(null);
   const [preview, setPreview]   = useState(false);
   const [sent, setSent]         = useState(false);
@@ -184,7 +178,7 @@ function EmailModal({ user, onClose }: { user: AppUser; onClose: () => void }) {
             <Envelope size={18} className="text-white" weight="fill" />
             <div>
               <p className="text-white font-bold text-sm">{preview ? "Preview & Send" : "Select Email Template"}</p>
-              <p className="text-white/60 text-xs">To: {user.name} · {user.email}</p>
+              <p className="text-white/60 text-xs">To: {user.displayName || `${user.firstName} ${user.lastName}`} · {user.email}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white"><X size={20} /></button>
@@ -247,12 +241,14 @@ function EmailModal({ user, onClose }: { user: AppUser; onClose: () => void }) {
               {/* Meta */}
               <div className="bg-[#8a9e60]/5 border border-[#8a9e60]/20 rounded-xl p-3 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: avatarColor(user.id) }}>
-                  {avatar(user.name)}
+                  {avatar(user.displayName || `${user.firstName} ${user.lastName}`)}
                 </div>
+
                 <div>
-                  <p className="text-xs font-semibold text-gray-800">{user.name}</p>
+                  <p className="text-xs font-semibold text-gray-800">{user.displayName || `${user.firstName} ${user.lastName}`}</p>
                   <p className="text-[10px] text-gray-400">{user.email} · {user.id}</p>
                 </div>
+
                 <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${USER_CATEGORY_COLORS[selected.category]}`}>
                   {selected.category}
                 </span>
@@ -286,62 +282,90 @@ function EmailModal({ user, onClose }: { user: AppUser; onClose: () => void }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function UsersPage() {
-  const [users, setUsers]             = useState<AppUser[]>([...SEED]);
+  const [users, setUsers]             = useState<User[]>([]);
+  const [total, setTotal]             = useState(0);
+  const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState("");
   const [activeTab, setActiveTab]     = useState<"all" | UserStatus>("all");
-  const [selectedUser, setSelected]   = useState<AppUser | null>(null);
+  const [page, setPage]               = useState(1);
+  const [limit, setLimit]             = useState(10);
+
+  const [selectedUser, setSelected]   = useState<User | null>(null);
   const [detailTab, setDetailTab]     = useState<"profile" | "bookings">("profile");
   const [actionMenu, setActionMenu]   = useState<string | null>(null);
 
   // Ban modal
-  const [banModal, setBanModal]       = useState<AppUser | null>(null);
+  const [banModal, setBanModal]       = useState<User | null>(null);
   const [banReason, setBanReason]     = useState("");
 
   // Send message modal
-  const [msgModal, setMsgModal]       = useState<AppUser | null>(null);
+  const [msgModal, setMsgModal]       = useState<User | null>(null);
 
-  // Toast
-  const [toast, setToast]             = useState<{ msg: string; ok: boolean } | null>(null);
+  const { showToast } = useToast();
 
-  // ── Derived ────────────────────────────────────────────────────────────────
-  const filtered = users.filter(u => {
-    const matchTab = activeTab === "all" || u.status === activeTab;
-    const q = search.toLowerCase();
-    const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-      || u.phone.includes(q) || u.city.toLowerCase().includes(q) || u.id.toLowerCase().includes(q);
-    return matchTab && matchSearch;
-  });
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, search]);
 
-  const totalRevenue  = users.reduce((s, u) => s + u.totalSpent, 0);
-  const activeCount   = users.filter(u => u.status === "active").length;
-  const newThisMonth  = users.filter(u => u.joined.includes("Mar 2025")).length;
-  const avgSpend      = users.length ? Math.round(totalRevenue / users.length) : 0;
+  useEffect(() => {
+    fetchUsers();
+  }, [page, activeTab, search]);
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  function showToast(msg: string, ok = true) {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), 3000);
-  }
 
-  function handleBan() {
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await listUsers({
+        page,
+        limit,
+        status: activeTab,
+        search: search || undefined,
+      });
+
+      setUsers(res.items);
+      setTotal(res.total);
+    } catch (error: any) {
+      showToast({ title: error.message || "Failed to fetch users", tone: "error" });
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeCount = 0;
+  const newThisMonth = 0;
+
+  async function handleBan() {
     if (!banModal) return;
     const isBanned = banModal.status === "banned";
-    setUsers(us => us.map(u => u.id === banModal.id
-      ? { ...u, status: (isBanned ? "active" : "banned") as UserStatus, banReason: isBanned ? undefined : banReason }
-      : u));
-    if (selectedUser?.id === banModal.id)
-      setSelected(p => p ? { ...p, status: isBanned ? "active" : "banned", banReason: isBanned ? undefined : banReason } : p);
-    showToast(isBanned ? `${banModal.name} has been unbanned.` : `${banModal.name} has been banned.`, isBanned);
-    setBanModal(null);
-    setBanReason("");
+    try {
+      if (isBanned) {
+        await unbanUser(banModal.id);
+        showToast({ title: `${banModal.displayName || banModal.firstName} has been unbanned.`, tone: "success" });
+      } else {
+        await banUser(banModal.id, banReason);
+        showToast({ title: `${banModal.displayName || banModal.firstName} has been banned.`, tone: "error" });
+      }
+
+      fetchUsers();
+      if (selectedUser?.id === banModal.id) {
+        setSelected({ ...selectedUser, status: isBanned ? "active" : "banned" });
+      }
+      setBanModal(null);
+      setBanReason("");
+    } catch (error: any) {
+      showToast({ title: error.message || "Action failed", tone: "error" });
+    }
+
   }
 
-  function handleDelete(u: AppUser) {
-    setUsers(us => us.filter(x => x.id !== u.id));
-    if (selectedUser?.id === u.id) setSelected(null);
-    showToast(`${u.name} has been removed.`, false);
+  function handleDelete(u: User) {
+    // Disabled as requested
+    showToast({ title: `Deletion is not available yet.`, tone: "error" });
     setActionMenu(null);
   }
+
+
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -350,10 +374,10 @@ export default function UsersPage() {
       {/* ── Stats ── */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: "Total Users",      value: String(users.length),                        sub: "All registered",    icon: Users,         color: "#8a9e60" },
-          { label: "Active Users",     value: String(activeCount),                          sub: "Booked recently",   icon: CheckCircle,   color: "#6e8245" },
-          { label: "New This Month",   value: String(newThisMonth),                         sub: "Mar 2025",          icon: ArrowUpRight,  color: "#8a9e60" },
-          { label: "Avg. User Spend",  value: `₹${avgSpend.toLocaleString("en-IN")}`,       sub: "Per user lifetime", icon: CurrencyDollar,color: "#c4953a" },
+          { label: "Total Users",      value: total > 0 ? String(total) : "—",              sub: "All registered",    icon: Users,         color: "#8a9e60" },
+          { label: "Active Users",     value: "—",                                         sub: "Available soon",    icon: CheckCircle,   color: "#6e8245" },
+          { label: "New This Month",   value: "—",                                         sub: "Available soon",    icon: ArrowUpRight,  color: "#8a9e60" },
+          { label: "Avg. User Spend",  value: "—",                                         sub: "Available soon",    icon: CurrencyDollar,color: "#c4953a" },
         ].map(({ label, value, sub, icon: Icon, color }) => (
           <div key={label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between mb-3">
@@ -367,6 +391,7 @@ export default function UsersPage() {
           </div>
         ))}
       </div>
+
 
       {/* ── Toolbar ── */}
       <div className="flex items-center justify-between gap-4">
@@ -385,20 +410,22 @@ export default function UsersPage() {
       {/* ── Tabs ── */}
       <div className="flex border-b border-gray-200 gap-1">
         {(["all", "active", "inactive", "banned"] as const).map(tab => {
-          const count = tab === "all" ? users.length : users.filter(u => u.status === tab).length;
           return (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+            <button key={tab} onClick={() => { setActiveTab(tab); setPage(1); }}
               className={`px-4 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 ${activeTab === tab ? "border-b-2 text-[#8a9e60]" : "text-gray-400 hover:text-gray-600"}`}
               style={activeTab === tab ? { borderColor: "#8a9e60" } : {}}>
               {tab === "all" ? "All Users" : tab.charAt(0).toUpperCase() + tab.slice(1)}
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                style={activeTab === tab ? { backgroundColor: "#8a9e60", color: "white" } : { backgroundColor: "#f3f4f6", color: "#9ca3af" }}>
-                {count}
-              </span>
+              {activeTab === tab && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: "#8a9e60", color: "white" }}>
+                  {total}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+
 
       {/* ── Table ── */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -411,21 +438,26 @@ export default function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={10} className="px-4 py-12 text-center text-sm text-gray-400 italic">Loading users…</td></tr>
+            ) : users.length === 0 ? (
               <tr><td colSpan={10} className="px-4 py-12 text-center text-sm text-gray-400">No users found.</td></tr>
-            ) : filtered.map((u, i) => {
-              const sc = statusCfg[u.status];
-              const cr = cancellationRate(u);
-              const vip = isVip(u);
-              const risky = cr >= 20;
+            ) : users.map((u, i) => {
+              const sc = statusCfg[u.status] || statusCfg.active;
+              const cr = "—";
+              const vip = false;
+              const risky = false;
+              const name = u.displayName || `${u.firstName} ${u.lastName}`;
               return (
-                <tr key={u.id} className={`hover:bg-gray-50/50 transition-colors ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}>
+                <tr key={u.id} 
+                  onClick={() => { setSelected(u); setDetailTab("profile"); }}
+                  className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${i < users.length - 1 ? "border-b border-gray-50" : ""}`}>
                   {/* User */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="relative shrink-0">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: avatarColor(u.id) }}>
-                          {avatar(u.name)}
+                          {avatar(name)}
                         </div>
                         {vip && (
                           <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-yellow-400 flex items-center justify-center">
@@ -434,7 +466,7 @@ export default function UsersPage() {
                         )}
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-gray-800">{u.name}</p>
+                        <p className="text-xs font-semibold text-gray-800">{name}</p>
                         <p className="text-[10px] text-gray-400 font-mono">{u.id}</p>
                       </div>
                     </div>
@@ -442,25 +474,20 @@ export default function UsersPage() {
                   {/* Contact */}
                   <td className="px-4 py-3">
                     <p className="text-xs text-gray-700">{u.email}</p>
-                    <p className="text-[10px] text-gray-400">{u.phone}</p>
+                    <p className="text-[10px] text-gray-400">{u.addresses?.[0]?.contactPhone || "—"}</p>
                   </td>
                   {/* City */}
                   <td className="px-4 py-3">
-                    <p className="text-xs text-gray-700">{u.city}</p>
-                    <p className="text-[10px] text-gray-400">{u.state}</p>
+                    <p className="text-xs text-gray-700">{u.city || "—"}</p>
+                    <p className="text-[10px] text-gray-400">{u.state || "—"}</p>
                   </td>
                   {/* Bookings */}
-                  <td className="px-4 py-3 text-xs font-semibold text-gray-700">{u.bookings}</td>
+                  <td className="px-4 py-3 text-xs font-semibold text-gray-700">—</td>
                   {/* Spent */}
-                  <td className="px-4 py-3 text-xs font-semibold text-gray-700">
-                    {u.totalSpent > 0 ? `₹${u.totalSpent.toLocaleString("en-IN")}` : <span className="text-gray-300">—</span>}
-                  </td>
+                  <td className="px-4 py-3 text-xs font-semibold text-gray-700">—</td>
                   {/* Cancel Rate */}
                   <td className="px-4 py-3">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${risky ? "bg-orange-50 text-orange-600" : cr > 0 ? "bg-gray-100 text-gray-500" : "bg-green-50 text-green-600"}`}>
-                      {cr}%
-                    </span>
-                    {u.noShows > 0 && <span className="ml-1 text-[9px] text-orange-500 font-medium">{u.noShows} no-show{u.noShows > 1 ? "s" : ""}</span>}
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">—</span>
                   </td>
                   {/* Status */}
                   <td className="px-4 py-3">
@@ -471,17 +498,17 @@ export default function UsersPage() {
                   {/* Verified */}
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
-                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${u.emailVerified ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"}`}>Email</span>
-                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${u.phoneVerified ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"}`}>Phone</span>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-400`}>Email</span>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-400`}>Phone</span>
                     </div>
                   </td>
                   {/* Last Active */}
-                  <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{u.lastActive}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">—</td>
                   {/* Actions */}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       <button onClick={() => { setSelected(u); setDetailTab("profile"); }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="View"><Eye size={14} /></button>
-                      <button onClick={() => { setMsgModal(u); }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Send Message"><PaperPlaneTilt size={14} /></button>
+                      <button disabled className="p-1.5 rounded text-gray-300 cursor-not-allowed line-through" title="Send Message"><PaperPlaneTilt size={14} /></button>
                       <div className="relative">
                         <button onClick={() => setActionMenu(actionMenu === u.id ? null : u.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"><DotsThreeVertical size={14} /></button>
                         {actionMenu === u.id && (
@@ -495,12 +522,8 @@ export default function UsersPage() {
                                 <Prohibit size={13} className="text-red-500" />Ban User
                               </button>
                             )}
-                            <button onClick={() => { setActionMenu(null); showToast(`Password reset link sent to ${u.email}.`); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                              <ArrowCounterClockwise size={13} className="text-blue-500" />Reset Password
-                            </button>
-                            <div className="border-t border-gray-100 my-1" />
-                            <button onClick={() => handleDelete(u)} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2">
-                              <Trash size={13} />Delete Account
+                            <button disabled className="w-full text-left px-3 py-2 text-xs text-gray-300 cursor-not-allowed line-through flex items-center gap-2">
+                              <ArrowCounterClockwise size={13} className="text-gray-300" />Reset Password
                             </button>
                           </div>
                         )}
@@ -511,16 +534,17 @@ export default function UsersPage() {
               );
             })}
           </tbody>
+
         </table>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <p className="text-[11px] text-gray-400">Showing {filtered.length} of {users.length} users</p>
-          <div className="flex gap-1">
-            {[1, 2, 3].map(p => (
-              <button key={p} className="w-7 h-7 text-xs rounded font-medium transition-colors"
-                style={p === 1 ? { backgroundColor: "#8a9e60", color: "white" } : { color: "#9ca3af" }}>{p}</button>
-            ))}
-          </div>
-        </div>
+        <DashboardPagination 
+          page={page} 
+          total={total} 
+          limit={limit} 
+          onPageChange={setPage} 
+          label="users"
+        />
+
+
       </div>
 
       {/* Click-away */}
@@ -540,7 +564,7 @@ export default function UsersPage() {
                 <div className="flex items-center gap-4">
                   <div className="relative shrink-0">
                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-base" style={{ backgroundColor: avatarColor(selectedUser.id) }}>
-                      {avatar(selectedUser.name)}
+                      {avatar(selectedUser.displayName || `${selectedUser.firstName} ${selectedUser.lastName}`)}
                     </div>
                     {isVip(selectedUser) && (
                       <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center">
@@ -550,17 +574,16 @@ export default function UsersPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="font-bold text-gray-900 text-base">{selectedUser.name}</h2>
+                      <h2 className="font-bold text-gray-900 text-base">{selectedUser.displayName || `${selectedUser.firstName} ${selectedUser.lastName}`}</h2>
                       {isVip(selectedUser) && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-50 text-yellow-600">VIP</span>}
                     </div>
                     <p className="text-xs text-gray-400 font-mono">{selectedUser.id}</p>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusCfg[selectedUser.status].cls}`}>{statusCfg[selectedUser.status].label}</span>
-                      {selectedUser.emailVerified && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-600">Email ✓</span>}
-                      {selectedUser.phoneVerified && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-600">Phone ✓</span>}
-                      {!selectedUser.emailVerified && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Email ✗</span>}
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusCfg[selectedUser.status]?.cls || statusCfg.active.cls}`}>{statusCfg[selectedUser.status]?.label || "Active"}</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Email Verification —</span>
                     </div>
                   </div>
+
                 </div>
                 <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 p-1 shrink-0"><X size={20} /></button>
               </div>
@@ -568,11 +591,12 @@ export default function UsersPage() {
               {/* Booking stat cards */}
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: "Bookings",   value: String(selectedUser.bookings),   cls: "text-gray-800"  },
-                  { label: "Completed",  value: String(selectedUser.completed),  cls: "text-green-600" },
-                  { label: "Cancelled",  value: String(selectedUser.cancelled),  cls: "text-red-500"   },
-                  { label: "No-shows",   value: String(selectedUser.noShows),    cls: `${selectedUser.noShows > 0 ? "text-orange-500" : "text-gray-400"}` },
+                  { label: "Bookings",   value: "—",   cls: "text-gray-800"  },
+                  { label: "Completed",  value: "—",  cls: "text-green-600" },
+                  { label: "Cancelled",  value: "—",  cls: "text-red-500"   },
+                  { label: "No-shows",   value: "—",    cls: "text-gray-400" },
                 ].map(({ label, value, cls }) => (
+
                   <div key={label} className="bg-gray-50 rounded-xl p-2.5 text-center">
                     <p className={`text-lg font-bold ${cls}`}>{value}</p>
                     <p className="text-[9px] text-gray-400 font-medium">{label}</p>
@@ -587,7 +611,8 @@ export default function UsersPage() {
                 <button key={t} onClick={() => setDetailTab(t)}
                   className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors ${detailTab === t ? "border-b-2 text-[#8a9e60]" : "text-gray-400 hover:text-gray-600"}`}
                   style={detailTab === t ? { borderColor: "#8a9e60" } : {}}>
-                  {t === "profile" ? "Profile & Stats" : "Booking History"}
+                  {t === "profile" ? "Profile & Stats" : <span className="line-through opacity-50">Booking History</span>}
+
                 </button>
               ))}
             </div>
@@ -600,7 +625,8 @@ export default function UsersPage() {
                   <section>
                     <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Contact</h3>
                     <div className="space-y-2.5">
-                      {[{ icon: Envelope, label: "Email", val: selectedUser.email }, { icon: Phone, label: "Phone", val: selectedUser.phone }, { icon: MapPin, label: "Location", val: `${selectedUser.city}, ${selectedUser.state}` }, { icon: CalendarBlank, label: "Joined", val: selectedUser.joined }].map(({ icon: Icon, label, val }) => (
+                      {[{ icon: Envelope, label: "Email", val: selectedUser.email }, { icon: Phone, label: "Phone", val: selectedUser.addresses?.[0]?.contactPhone || "—" }, { icon: MapPin, label: "Location", val: selectedUser.city ? `${selectedUser.city}, ${selectedUser.state || selectedUser.country}` : "—" }, { icon: CalendarBlank, label: "Joined", val: new Date(selectedUser.createdAt).toLocaleDateString() }].map(({ icon: Icon, label, val }) => (
+
                         <div key={label} className="flex items-center gap-3">
                           <div className="w-7 h-7 rounded bg-gray-50 flex items-center justify-center shrink-0"><Icon size={14} className="text-gray-400" /></div>
                           <div><p className="text-[10px] text-gray-400">{label}</p><p className="text-xs text-gray-700 font-medium">{val}</p></div>
@@ -614,13 +640,14 @@ export default function UsersPage() {
                     <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Activity & Spend</h3>
                     <div className="grid grid-cols-2 gap-3">
                       {[
-                        { label: "Total Spent",     val: `₹${selectedUser.totalSpent.toLocaleString("en-IN")}`, highlight: true },
-                        { label: "Avg per Booking", val: selectedUser.bookings > 0 ? `₹${Math.round(selectedUser.totalSpent / selectedUser.bookings).toLocaleString("en-IN")}` : "—", highlight: false },
-                        { label: "Cancellation Rate", val: `${cancellationRate(selectedUser)}%`, highlight: cancellationRate(selectedUser) >= 20 },
-                        { label: "Completion Rate",   val: `${selectedUser.bookings > 0 ? Math.round(selectedUser.completed / selectedUser.bookings * 100) : 0}%`, highlight: false },
-                        { label: "Last Active",       val: selectedUser.lastActive, highlight: false },
-                        { label: "Source",            val: selectedUser.source, highlight: false },
+                        { label: "Total Spent",     val: "—", highlight: false },
+                        { label: "Avg per Booking", val: "—", highlight: false },
+                        { label: "Cancellation Rate", val: "—", highlight: false },
+                        { label: "Completion Rate",   val: "—", highlight: false },
+                        { label: "Last Active",       val: "—", highlight: false },
+                        { label: "Source",            val: "—", highlight: false },
                       ].map(({ label, val, highlight }) => (
+
                         <div key={label} className="bg-gray-50 rounded-lg p-3">
                           <p className="text-[10px] text-gray-400 mb-1">{label}</p>
                           <p className={`text-sm font-bold ${highlight ? (label === "Cancellation Rate" ? "text-orange-500" : "text-[#8a9e60]") : "text-gray-800"}`}>{val}</p>
@@ -635,12 +662,20 @@ export default function UsersPage() {
                     <div className="space-y-2.5">
                       <div className="flex items-center gap-3">
                         <div className="w-7 h-7 rounded bg-gray-50 flex items-center justify-center shrink-0"><SoccerBall size={14} className="text-gray-400" /></div>
-                        <div><p className="text-[10px] text-gray-400">Favourite Sport</p><span className={`text-xs font-semibold px-2 py-0.5 rounded mt-0.5 inline-block ${sportColor[selectedUser.favSport] ?? "bg-gray-100 text-gray-600"}`}>{selectedUser.favSport}</span></div>
+                        <div><p className="text-[10px] text-gray-400">Favourite Sports</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {selectedUser.preferredSports?.map(s => (
+                              <span key={s} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-600 capitalize">{s}</span>
+                            ))}
+                            {(!selectedUser.preferredSports || selectedUser.preferredSports.length === 0) && <span className="text-xs text-gray-400">—</span>}
+                          </div>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-7 h-7 rounded bg-gray-50 flex items-center justify-center shrink-0"><Star size={14} className="text-gray-400" /></div>
-                        <div><p className="text-[10px] text-gray-400">Favourite Venue</p><p className="text-xs text-gray-700 font-medium mt-0.5">{selectedUser.favVendor}</p></div>
+                        <div><p className="text-[10px] text-gray-400">Favourite Venue</p><p className="text-xs text-gray-700 font-medium mt-0.5">—</p></div>
                       </div>
+
                     </div>
                   </section>
 
@@ -691,25 +726,26 @@ export default function UsersPage() {
                   )}
                   <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
                     {[
-                      { label: "Total Bookings", val: selectedUser.bookings, cls: "text-gray-800" },
-                      { label: "Total Spent",    val: `₹${selectedUser.totalSpent.toLocaleString("en-IN")}`, cls: "text-[#8a9e60]" },
-                      { label: "Cancel Rate",    val: `${cancellationRate(selectedUser)}%`, cls: cancellationRate(selectedUser) >= 20 ? "text-orange-500" : "text-gray-800" },
+                      { label: "Total Bookings", val: "—", cls: "text-gray-800" },
+                      { label: "Total Spent",    val: "—", cls: "text-[#8a9e60]" },
+                      { label: "Cancel Rate",    val: "—", cls: "text-gray-800" },
                     ].map(({ label, val, cls }) => (
                       <div key={label}><p className={`text-sm font-bold ${cls}`}>{val}</p><p className="text-[10px] text-gray-400">{label}</p></div>
                     ))}
                   </div>
+
                 </section>
               )}
             </div>
 
             {/* Footer */}
             <div className="p-4 border-t border-gray-100 flex gap-2 shrink-0">
-              <button onClick={() => setMsgModal(selectedUser)}
-                className="flex-1 py-2 text-xs font-semibold border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5">
+              <button disabled
+                className="flex-1 py-2 text-xs font-semibold border border-gray-200 rounded-lg text-gray-300 cursor-not-allowed line-through flex items-center justify-center gap-1.5">
                 <PaperPlaneTilt size={13} />Message
               </button>
-              <button onClick={() => { showToast(`Password reset link sent to ${selectedUser.email}.`); }}
-                className="flex-1 py-2 text-xs font-semibold border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5">
+              <button disabled
+                className="flex-1 py-2 text-xs font-semibold border border-gray-100 rounded-lg text-gray-300 cursor-not-allowed line-through flex items-center justify-center gap-1.5">
                 <ArrowCounterClockwise size={13} />Reset Password
               </button>
               {selectedUser.status === "banned" ? (
@@ -724,6 +760,7 @@ export default function UsersPage() {
                 </button>
               )}
             </div>
+
           </div>
         </div>
       )}
@@ -750,9 +787,10 @@ export default function UsersPage() {
               </h3>
               <p className="text-sm text-gray-500 mb-4">
                 {banModal.status === "banned"
-                  ? `${banModal.name} will be restored and can log in and make bookings again.`
-                  : `${banModal.name} will be banned from the platform and lose access immediately.`}
+                  ? `${banModal.displayName || banModal.firstName} will be restored and can log in and make bookings again.`
+                  : `${banModal.displayName || banModal.firstName} will be banned from the platform and lose access immediately.`}
               </p>
+
               {banModal.status !== "banned" && (
                 <div className="mb-4">
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Reason *</label>
@@ -774,16 +812,7 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          TOAST
-      ═══════════════════════════════════════════════════════════════════════ */}
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-[60] flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-medium text-white"
-          style={{ backgroundColor: toast.ok ? "#8a9e60" : "#b05252" }}>
-          {toast.ok ? <CheckCircle size={16} weight="fill" /> : <XCircle size={16} weight="fill" />}
-          {toast.msg}
-        </div>
-      )}
+
     </div>
   );
 }

@@ -17,7 +17,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"string\",\n  \"role\": \"[string = UserRole.END_USER]\",\n  \"firstName\": \"string\",\n  \"middleName\": \"string\",\n  \"lastName\": \"string\",\n  \"displayName\": \"string\",\n  \"avatarUrl\": \"string\",\n  \"dateOfBirth\": \"string\",\n  \"gender\": \"male\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"preferredSports\": [\n    \"football\"\n  ],\n  \"vendorProfile\": \"[CreateVendorDto]\"\n}",
+              "raw": "{\n  \"email\": \"user@example.com\", // [MANDATORY]\n  \"password\": \"string\", // [MANDATORY]\n  \"role\": \"[string = UserRole.END_USER]\", // [OPTIONAL]\n  \"firstName\": \"string\", // [OPTIONAL]\n  \"middleName\": \"string\", // [OPTIONAL]\n  \"lastName\": \"string\", // [OPTIONAL]\n  \"displayName\": \"string\", // [OPTIONAL]\n  \"avatarUrl\": \"string\", // [OPTIONAL]\n  \"dateOfBirth\": \"string\", // [OPTIONAL]\n  \"gender\": \"male\", // [OPTIONAL] Allowed: male, female, other, prefer_not_to_say\n  \"city\": \"string\", // [OPTIONAL]\n  \"state\": \"string\", // [OPTIONAL]\n  \"preferredSports\": [\"football\"], // [OPTIONAL] Allowed: football, cricket, tennis, badminton, basketball, hockey, volleyball, kabaddi, box_cricket, futsal, pickleball, throwball, netball, handball, dodgeball\n  \"vendorProfile\": \"[CreateVendorDto]\" // [OPTIONAL]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -26,15 +26,10 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signup",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "signup"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
             },
-            "description": "Register a new end_user account. Creates auth identity + user profile in a single step."
+            "description": "### Expected Response: AuthResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| accessToken | string | - |\n| refreshToken | string | - |\n| id | string | - |\n| email | string | - |\n| roles | string[] | - |\n| permissions | string[] | - |\n| profileCompleted | boolean | - |\n"
           },
           "response": []
         },
@@ -45,7 +40,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"string\",\n  \"role\": \"[string = UserRole.END_USER]\",\n  \"firstName\": \"string\",\n  \"middleName\": \"string\",\n  \"lastName\": \"string\",\n  \"displayName\": \"string\",\n  \"avatarUrl\": \"string\",\n  \"dateOfBirth\": \"string\",\n  \"gender\": \"male\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"preferredSports\": [\n    \"football\"\n  ],\n  \"vendorProfile\": \"[CreateVendorDto]\"\n}",
+              "raw": "{\n  \"email\": \"user@example.com\", // [MANDATORY]\n  \"password\": \"string\", // [MANDATORY]\n  \"role\": \"[string = UserRole.END_USER]\", // [OPTIONAL]\n  \"firstName\": \"string\", // [OPTIONAL]\n  \"middleName\": \"string\", // [OPTIONAL]\n  \"lastName\": \"string\", // [OPTIONAL]\n  \"displayName\": \"string\", // [OPTIONAL]\n  \"avatarUrl\": \"string\", // [OPTIONAL]\n  \"dateOfBirth\": \"string\", // [OPTIONAL]\n  \"gender\": \"male\", // [OPTIONAL] Allowed: male, female, other, prefer_not_to_say\n  \"city\": \"string\", // [OPTIONAL]\n  \"state\": \"string\", // [OPTIONAL]\n  \"preferredSports\": [\"football\"], // [OPTIONAL] Allowed: football, cricket, tennis, badminton, basketball, hockey, volleyball, kabaddi, box_cricket, futsal, pickleball, throwball, netball, handball, dodgeball\n  \"vendorProfile\": \"[CreateVendorDto]\" // [OPTIONAL]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -54,15 +49,10 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signup",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "signup"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
             },
-            "description": "Register a new vendor_owner account. Creates auth identity + vendor profile + empty KYC record in a single atomic transaction. Includes optional financial terms (payoutCycle, commissionPct)."
+            "description": "### Expected Response: AuthResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| accessToken | string | - |\n| refreshToken | string | - |\n| id | string | - |\n| email | string | - |\n| roles | string[] | - |\n| permissions | string[] | - |\n| profileCompleted | boolean | - |\n"
           },
           "response": []
         },
@@ -73,7 +63,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"string\"\n}",
+              "raw": "{\n  \"email\": \"user@example.com\", // [MANDATORY]\n  \"password\": \"string\" // [MANDATORY]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -82,15 +72,10 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signin",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "signin"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signin"]
             },
-            "description": "Login with email + password."
+            "description": "### Expected Response: AuthResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| accessToken | string | - |\n| refreshToken | string | - |\n| id | string | - |\n| email | string | - |\n| roles | string[] | - |\n| permissions | string[] | - |\n| profileCompleted | boolean | - |\n"
           },
           "response": []
         },
@@ -101,7 +86,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"string\"\n}",
+              "raw": "{\n  \"refreshToken\": \"string\" // [MANDATORY]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -110,15 +95,10 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/refresh",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "refresh"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
             },
-            "description": "Rotate access + refresh tokens."
+            "description": "### Expected Response: AuthResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| accessToken | string | - |\n| refreshToken | string | - |\n| id | string | - |\n| email | string | - |\n| roles | string[] | - |\n| permissions | string[] | - |\n| profileCompleted | boolean | - |\n"
           },
           "response": []
         },
@@ -139,13 +119,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/signout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "signout"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signout"]
             },
             "description": "Revoke refresh token (logout)."
           },
@@ -174,12 +149,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/audit?page=1&limit=10&category=auth",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["audit"],
               "query": [
                 {
                   "key": "page",
@@ -229,14 +200,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/audit/export/csv?category=auth",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "audit",
-                "export",
-                "csv"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["audit", "export", "csv"],
               "query": [
                 {
                   "key": "category",
@@ -281,13 +246,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/users?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users"],
                   "query": [
                     {
                       "key": "page",
@@ -326,14 +286,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/users/:userId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users",
-                    ":userId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users", ":userId"],
                   "variable": [
                     {
                       "key": "userId",
@@ -362,15 +316,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/users/:userId/ban",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users",
-                    ":userId",
-                    "ban"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users", ":userId", "ban"],
                   "variable": [
                     {
                       "key": "userId",
@@ -399,15 +346,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/users/:userId/unban",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users",
-                    ":userId",
-                    "unban"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users", ":userId", "unban"],
                   "variable": [
                     {
                       "key": "userId",
@@ -442,13 +382,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "vendors"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "vendors"],
                   "query": [
                     {
                       "key": "page",
@@ -487,14 +422,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "vendors",
-                    ":vendorId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "vendors", ":vendorId"],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -532,14 +461,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "vendors",
-                    ":vendorId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "vendors", ":vendorId"],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -568,15 +491,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId/ban",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "vendors",
-                    ":vendorId",
-                    "ban"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "vendors", ":vendorId", "ban"],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -605,15 +521,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId/unban",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "vendors",
-                    ":vendorId",
-                    "unban"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "vendors", ":vendorId", "unban"],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -642,14 +551,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "vendors",
-                    ":vendorId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "vendors", ":vendorId"],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -678,7 +581,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"email\": \"new_vendor@example.com\",\n    \"password\": \"secure_pass_123\",\n    \"firstName\": \"Jane\", // optional identity field\n    \"lastName\": \"Vendor\", // optional identity field\n    \"displayName\": \"JaneV\", // optional identity field\n    \"vendorProfile\": {\n        \"businessName\": \"Premier Sports Hub\",\n        \"businessType\": \"company\",\n        \"ownerFullName\": \"Jane Admin-Vendor\",\n        \"phone\": \"+919876543211\",\n        \"whatsapp\": \"+919876543211\", // optional\n        \"gstNumber\": \"22BBBBB0000B1Z6\", // optional\n        \"businessRegistrationNumber\": \"DEF789012\", // optional\n        \"address\": {\n            \"type\": \"work\",\n            \"pinCode\": \"682002\",\n            \"houseNumber\": \"Plot 456\",\n            \"floor\": \"Level 2\",\n            \"towerBlock\": \"Sports Plaza\",\n            \"landmark\": \"Opposite Stadium\",\n            \"city\": \"Kochi\",\n            \"state\": \"Kerala\",\n            \"country\": \"India\",\n            \"contactName\": \"Jane Vendor\",\n            \"contactPhone\": \"+919876543211\",\n            \"latitude\": 9.9312,\n            \"longitude\": 76.2673,\n            \"googleMapsLink\": \"https://maps.google.com/?q=9.9312,76.2673\"\n        },\n        \"bankingDetails\": {\n            \"bankName\": \"SBI\",\n            \"accountHolderName\": \"Premier Sports\",\n            \"accountNumber\": \"0987654321\",\n            \"ifsc\": \"SBIN0004567\"\n        },\n        \"commissionPct\": \"12.5\", // optional: stored as string\n        \"payoutCycle\": \"monthly\" // optional: daily | weekly | monthly\n    }\n}",
+                  "raw": "{\n  \"email\": \"user@example.com\", // [MANDATORY]\n  \"password\": \"string\", // [MANDATORY]\n  \"firstName\": \"string\", // [OPTIONAL]\n  \"lastName\": \"string\", // [OPTIONAL]\n  \"displayName\": \"string\", // [OPTIONAL]\n  \"avatarUrl\": \"string\", // [OPTIONAL]\n  \"dateOfBirth\": \"string\", // [OPTIONAL]\n  \"gender\": \"male\", // [OPTIONAL] Allowed: male, female, other, prefer_not_to_say\n  \"city\": \"string\", // [OPTIONAL]\n  \"state\": \"string\", // [OPTIONAL]\n  \"vendorProfile\": \"[CreateVendorDto]\" // [MANDATORY]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -687,15 +590,10 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/onboard-vendor",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "onboard-vendor"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "onboard-vendor"]
                 },
-                "description": "Create a vendor_owner identity, vendor profile, and empty KYC record in one transaction. Use this when ops/admin creates the vendor directly."
+                "description": "### Expected Response: VendorResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| identityId | string | - |\n| businessName | string | - |\n| businessType | BusinessType | - |\n| ownerFullName | string | - |\n| address | VendorAddressDto | - |\n| bankingDetails | VendorBankingDetailsDto | - |\n| commissionPct | string | - |\n| payoutCycle | PayoutCycle | - |\n| email | string | - |\n| phone | string | - |\n| whatsapp | string | - |\n| gstNumber | string | - |\n| businessRegistrationNumber | string | - |\n| status | VendorStatus | - |\n| kyc | KycResponseDto | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
               },
               "response": []
             },
@@ -716,7 +614,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"sports\": [\n    \"football\"\n  ],\n  \"amenities\": [\n    \"parking\"\n  ],\n  \"capacity\": 100,\n  \"sizeFormat\": \"string\",\n  \"surfaceType\": \"artificial_turf\",\n  \"address\": \"[TurfAddressDto]\",\n  \"weekdayOpen\": \"string\",\n  \"weekdayClose\": \"string\",\n  \"weekendOpen\": \"string\",\n  \"weekendClose\": \"string\",\n  \"standardPricePaise\": 100,\n  \"cancellationWindowHrs\": 100\n}",
+                  "raw": "{\n  \"name\": \"string\", // [MANDATORY]\n  \"sports\": [\"football\"], // [MANDATORY] Allowed: football, cricket, tennis, badminton, basketball, hockey, volleyball, kabaddi, box_cricket, futsal, pickleball, throwball, netball, handball, dodgeball\n  \"amenities\": [\"parking\"], // [OPTIONAL] Allowed: parking, flood_lights, changing_room, cafeteria, equipment_rental, first_aid, wifi, cctv, drinking_water\n  \"capacity\": 100, // [OPTIONAL]\n  \"sizeFormat\": \"string\", // [OPTIONAL]\n  \"surfaceType\": \"artificial_turf\", // [MANDATORY] Allowed: artificial_turf, natural_grass, concrete, wooden, synthetic\n  \"address\": \"[TurfAddressDto]\", // [MANDATORY]\n  \"weekdayOpen\": \"string\", // [MANDATORY]\n  \"weekdayClose\": \"string\", // [MANDATORY]\n  \"weekendOpen\": \"string\", // [MANDATORY]\n  \"weekendClose\": \"string\", // [MANDATORY]\n  \"standardPricePaise\": 100, // [MANDATORY]\n  \"cancellationWindowHrs\": 100 // [OPTIONAL]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -725,15 +623,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId/turfs",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "vendors",
-                    ":vendorId",
-                    "turfs"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "vendors", ":vendorId", "turfs"],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -741,7 +632,7 @@
                     }
                   ]
                 },
-                "description": "Create a turf on behalf of a vendor using an explicit vendorId. This also initializes the turf document record with not_started status."
+                "description": "### Expected Response: TurfResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| vendorId | string | - |\n| name | string | - |\n| sports | SportType[] | - |\n| amenities | AmenityType[] | - |\n| capacity | number | null | - |\n| sizeFormat | string | null | - |\n| surfaceType | SurfaceType | - |\n| address | TurfAddressDto | - |\n| weekdayOpen | string | - |\n| weekdayClose | string | - |\n| weekendOpen | string | - |\n| weekendClose | string | - |\n| standardPricePaise | number | - |\n| cancellationWindowHrs | number | - |\n| status | FieldStatus | - |\n| vendorBusinessName | string | - |\n| vendorPhone | string | - |\n| vendorWhatsapp | string | - |\n| fieldPhotos | string[] | - |\n| kyc | TurfDocumentsResponseDto | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
               },
               "response": []
             }
@@ -768,13 +659,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs?page=1&limit=10&status=verified&sportType=football&city=Mumbai",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "turfs"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs"],
                   "query": [
                     {
                       "key": "page",
@@ -823,14 +709,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs/:turfId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "turfs",
-                    ":turfId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId"],
                   "variable": [
                     {
                       "key": "turfId",
@@ -858,15 +738,8 @@
                 "method": "POST",
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs/:turfId/ban",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "turfs",
-                    ":turfId",
-                    "ban"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId", "ban"],
                   "variable": [
                     {
                       "key": "turfId",
@@ -893,15 +766,8 @@
                 "method": "POST",
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs/:turfId/unban",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "turfs",
-                    ":turfId",
-                    "unban"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId", "unban"],
                   "variable": [
                     {
                       "key": "turfId",
@@ -928,7 +794,7 @@
                 "method": "PATCH",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"active\"\n}",
+                  "raw": "{\n  \"status\": \"active\" // [MANDATORY] Allowed: active, inactive, pending, maintenance, suspended, banned\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -937,14 +803,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs/:turfId/status",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "turfs",
-                    ":turfId/status"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId/status"],
                   "variable": [
                     {
                       "key": "turfId",
@@ -952,7 +812,7 @@
                     }
                   ]
                 },
-                "description": "Update turf status to inactive, maintenance, or suspended."
+                "description": "### Expected Response: TurfResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| vendorId | string | - |\n| name | string | - |\n| sports | SportType[] | - |\n| amenities | AmenityType[] | - |\n| capacity | number | null | - |\n| sizeFormat | string | null | - |\n| surfaceType | SurfaceType | - |\n| address | TurfAddressDto | - |\n| weekdayOpen | string | - |\n| weekdayClose | string | - |\n| weekendOpen | string | - |\n| weekendClose | string | - |\n| standardPricePaise | number | - |\n| cancellationWindowHrs | number | - |\n| status | FieldStatus | - |\n| vendorBusinessName | string | - |\n| vendorPhone | string | - |\n| vendorWhatsapp | string | - |\n| fieldPhotos | string[] | - |\n| kyc | TurfDocumentsResponseDto | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
               }
             }
           ]
@@ -981,7 +841,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\"\n    }\n}",
+                      "raw": "{}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -990,15 +850,8 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/admin/vendors/:vendorId/kyc",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "admin",
-                        "vendors",
-                        ":vendorId",
-                        "kyc"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["admin", "vendors", ":vendorId", "kyc"],
                       "variable": [
                         {
                           "key": "vendorId",
@@ -1006,7 +859,7 @@
                         }
                       ]
                     },
-                    "description": "Submit or partially update vendor KYC documents through the admin delegated route."
+                    "description": "### Expected Response: KycResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| vendorId | string | - |\n| status | KycStatus | - |\n| documents | KycDocumentsDto | - |\n| verification | Record<string, boolean> | - |\n| reviewerNotes | string | null | - |\n| reviewedBy | string | null | - |\n| reviewedAt | Date | null | - |\n| submittedAt | Date | null | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
                   },
                   "response": []
                 },
@@ -1027,7 +880,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"status\": \"not_started\",\n  \"reviewerNotes\": \"string\",\n  \"verification\": \"[Record<string, boolean>]\"\n}",
+                      "raw": "{\n  \"status\": \"not_started\", // [MANDATORY] Allowed: not_started, pending, in_review, verified, rejected\n  \"reviewerNotes\": \"string\", // [OPTIONAL]\n  \"verification\": \"[Record<string, boolean>]\" // [OPTIONAL]\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -1036,9 +889,7 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/admin/vendors/:vendorId/kyc/review",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
+                      "host": ["{{baseUrl}}"],
                       "path": [
                         "admin",
                         "vendors",
@@ -1053,7 +904,7 @@
                         }
                       ]
                     },
-                    "description": "Review a vendor's KYC submission. Setting status to verified activates the vendor; rejected or in_review keeps the vendor pending."
+                    "description": "### Expected Response: KycResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| vendorId | string | - |\n| status | KycStatus | - |\n| documents | KycDocumentsDto | - |\n| verification | Record<string, boolean> | - |\n| reviewerNotes | string | null | - |\n| reviewedBy | string | null | - |\n| reviewedAt | Date | null | - |\n| submittedAt | Date | null | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
                   },
                   "response": []
                 }
@@ -1079,7 +930,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"documents\": \"[TurfDocumentsDto]\"\n}",
+                      "raw": "{\n  \"documents\": \"[TurfDocumentsDto]\" // [MANDATORY]\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -1088,15 +939,8 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/admin/turfs/:turfId/documents",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "admin",
-                        "turfs",
-                        ":turfId",
-                        "documents"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["admin", "turfs", ":turfId", "documents"],
                       "variable": [
                         {
                           "key": "turfId",
@@ -1104,7 +948,7 @@
                         }
                       ]
                     },
-                    "description": "Submit or merge turf verification documents through the admin delegated route. Completeness can automatically move the document status to pending."
+                    "description": "### Expected Response: TurfDocumentsResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| fieldId | string | - |\n| status | KycStatus | - |\n| documents | TurfDocumentsDto | - |\n| verification | Record<string, boolean> | - |\n| reviewerNotes | string | null | - |\n| reviewedBy | string | null | - |\n| reviewedAt | Date | null | - |\n| submittedAt | Date | null | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
                   },
                   "response": []
                 },
@@ -1125,15 +969,8 @@
                     "header": [],
                     "url": {
                       "raw": "{{baseUrl}}/admin/turfs/:turfId/documents",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "admin",
-                        "turfs",
-                        ":turfId",
-                        "documents"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["admin", "turfs", ":turfId", "documents"],
                       "variable": [
                         {
                           "key": "turfId",
@@ -1162,7 +999,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"status\": \"not_started\",\n  \"reviewerNotes\": \"string\",\n  \"verification\": \"[Record<string, boolean>]\"\n}",
+                      "raw": "{\n  \"status\": \"not_started\", // [MANDATORY] Allowed: not_started, pending, in_review, verified, rejected\n  \"reviewerNotes\": \"string\", // [OPTIONAL]\n  \"verification\": \"[Record<string, boolean>]\" // [OPTIONAL]\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -1171,9 +1008,7 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/admin/turfs/:turfId/documents/review",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
+                      "host": ["{{baseUrl}}"],
                       "path": [
                         "admin",
                         "turfs",
@@ -1188,7 +1023,7 @@
                         }
                       ]
                     },
-                    "description": "Review turf verification documents. Setting status to verified activates the turf; rejected or in_review keeps the turf pending."
+                    "description": "### Expected Response: TurfDocumentsResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| fieldId | string | - |\n| status | KycStatus | - |\n| documents | TurfDocumentsDto | - |\n| verification | Record<string, boolean> | - |\n| reviewerNotes | string | null | - |\n| reviewedBy | string | null | - |\n| reviewedAt | Date | null | - |\n| submittedAt | Date | null | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
                   },
                   "response": []
                 }
@@ -1217,7 +1052,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"newPassword\": \"new_secure_password_123\"\n}",
+                  "raw": "{\n  \"newPassword\": \"string\" // [MANDATORY]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1226,15 +1061,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/:identityId/password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    ":identityId",
-                    "password"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", ":identityId", "password"],
                   "variable": [
                     {
                       "key": "identityId",
@@ -1274,15 +1102,10 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "me"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me"]
                 },
-                "description": "Retrieve current logged-in user profile."
+                "description": "### Expected Response: UserResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| identityId | string | - |\n| email | string | - |\n| firstName | string | - |\n| middleName | string | null | - |\n| lastName | string | - |\n| displayName | string | - |\n| avatarUrl | string | null | - |\n| dateOfBirth | string | null | - |\n| gender | GenderType | null | - |\n| city | string | null | - |\n| state | string | null | - |\n| country | string | - |\n| preferredSports | SportType[] | - |\n| addresses | UserAddressDto[] | - |\n| favouriteTurfs | Record<string, boolean> | - |\n| ownReferralCode | string | null | - |\n| pushNotificationsEnabled | boolean | - |\n| status | UserStatus | - |\n| lastActiveAt | string | null | - |\n| createdAt | string | - |\n"
               },
               "response": []
             },
@@ -1303,7 +1126,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"firstName\": \"string\",\n  \"middleName\": \"string\",\n  \"lastName\": \"string\",\n  \"displayName\": \"string\",\n  \"avatarUrl\": \"string\",\n  \"dateOfBirth\": \"string\",\n  \"gender\": \"male\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"country\": \"string\",\n  \"preferredSports\": [\n    \"football\"\n  ],\n  \"deviceOs\": \"ios\",\n  \"appVersion\": \"string\",\n  \"pushNotificationsEnabled\": true,\n  \"onesignalPlayerId\": \"string\",\n  \"whatsapp\": \"string\",\n  \"addresses\": []\n}",
+                  "raw": "{\n  \"firstName\": \"string\", // [OPTIONAL]\n  \"middleName\": \"string\", // [OPTIONAL]\n  \"lastName\": \"string\", // [OPTIONAL]\n  \"displayName\": \"string\", // [OPTIONAL]\n  \"avatarUrl\": \"string\", // [OPTIONAL]\n  \"dateOfBirth\": \"string\", // [OPTIONAL]\n  \"gender\": \"male\", // [OPTIONAL] Allowed: male, female, other, prefer_not_to_say\n  \"city\": \"string\", // [OPTIONAL]\n  \"state\": \"string\", // [OPTIONAL]\n  \"country\": \"string\", // [OPTIONAL]\n  \"preferredSports\": [\"football\"], // [OPTIONAL] Allowed: football, cricket, tennis, badminton, basketball, hockey, volleyball, kabaddi, box_cricket, futsal, pickleball, throwball, netball, handball, dodgeball\n  \"deviceOs\": \"ios\", // [OPTIONAL] Allowed: ios, android, web\n  \"appVersion\": \"string\", // [OPTIONAL]\n  \"pushNotificationsEnabled\": true, // [OPTIONAL]\n  \"onesignalPlayerId\": \"string\", // [OPTIONAL]\n  \"whatsapp\": \"string\", // [OPTIONAL]\n  \"addresses\": [] // [OPTIONAL]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1312,15 +1135,10 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "me"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me"]
                 },
-                "description": "Update specific fields of the user profile."
+                "description": "### Expected Response: UserResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| identityId | string | - |\n| email | string | - |\n| firstName | string | - |\n| middleName | string | null | - |\n| lastName | string | - |\n| displayName | string | - |\n| avatarUrl | string | null | - |\n| dateOfBirth | string | null | - |\n| gender | GenderType | null | - |\n| city | string | null | - |\n| state | string | null | - |\n| country | string | - |\n| preferredSports | SportType[] | - |\n| addresses | UserAddressDto[] | - |\n| favouriteTurfs | Record<string, boolean> | - |\n| ownReferralCode | string | null | - |\n| pushNotificationsEnabled | boolean | - |\n| status | UserStatus | - |\n| lastActiveAt | string | null | - |\n| createdAt | string | - |\n"
               },
               "response": []
             },
@@ -1341,13 +1159,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "me"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me"]
                 },
                 "description": "Soft-delete current user's account."
               },
@@ -1375,7 +1188,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"id\": \"string\",\n  \"type\": \"home\",\n  \"label\": \"string\",\n  \"pinCode\": \"string\",\n  \"houseNumber\": \"string\",\n  \"floor\": \"string\",\n  \"towerBlock\": \"string\",\n  \"landmark\": \"string\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"country\": \"[string = 'India']\",\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\",\n  \"latitude\": 100,\n  \"longitude\": 100,\n  \"googleMapsLink\": \"string\"\n}",
+                  "raw": "{\n  \"id\": \"string\", // [OPTIONAL]\n  \"type\": \"home\", // [MANDATORY] Allowed: home, work, other\n  \"label\": \"string\", // [OPTIONAL]\n  \"pinCode\": \"string\", // [MANDATORY]\n  \"houseNumber\": \"string\", // [OPTIONAL]\n  \"floor\": \"string\", // [OPTIONAL]\n  \"towerBlock\": \"string\", // [OPTIONAL]\n  \"landmark\": \"string\", // [OPTIONAL]\n  \"city\": \"string\", // [MANDATORY]\n  \"state\": \"string\", // [MANDATORY]\n  \"country\": \"[string = 'India']\", // [MANDATORY]\n  \"contactName\": \"string\", // [OPTIONAL]\n  \"contactPhone\": \"string\", // [OPTIONAL]\n  \"latitude\": 100, // [OPTIONAL]\n  \"longitude\": 100, // [OPTIONAL]\n  \"googleMapsLink\": \"string\" // [OPTIONAL]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1384,14 +1197,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users/me/addresses",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "me",
-                    "addresses"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me", "addresses"]
                 },
                 "description": "Add a new address to the user's profile."
               },
@@ -1414,7 +1221,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"id\": \"string\",\n  \"type\": \"home\",\n  \"label\": \"string\",\n  \"pinCode\": \"string\",\n  \"houseNumber\": \"string\",\n  \"floor\": \"string\",\n  \"towerBlock\": \"string\",\n  \"landmark\": \"string\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"country\": \"[string = 'India']\",\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\",\n  \"latitude\": 100,\n  \"longitude\": 100,\n  \"googleMapsLink\": \"string\"\n}",
+                  "raw": "{\n  \"id\": \"string\", // [OPTIONAL]\n  \"type\": \"home\", // [MANDATORY] Allowed: home, work, other\n  \"label\": \"string\", // [OPTIONAL]\n  \"pinCode\": \"string\", // [MANDATORY]\n  \"houseNumber\": \"string\", // [OPTIONAL]\n  \"floor\": \"string\", // [OPTIONAL]\n  \"towerBlock\": \"string\", // [OPTIONAL]\n  \"landmark\": \"string\", // [OPTIONAL]\n  \"city\": \"string\", // [MANDATORY]\n  \"state\": \"string\", // [MANDATORY]\n  \"country\": \"[string = 'India']\", // [MANDATORY]\n  \"contactName\": \"string\", // [OPTIONAL]\n  \"contactPhone\": \"string\", // [OPTIONAL]\n  \"latitude\": 100, // [OPTIONAL]\n  \"longitude\": 100, // [OPTIONAL]\n  \"googleMapsLink\": \"string\" // [OPTIONAL]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1423,15 +1230,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users/me/addresses/:addressId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "me",
-                    "addresses",
-                    ":addressId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me", "addresses", ":addressId"],
                   "variable": [
                     {
                       "key": "addressId",
@@ -1460,16 +1260,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/me/addresses/:addressId/primary",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "me",
-                    "addresses",
-                    ":addressId",
-                    "primary"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me", "addresses", ":addressId", "primary"],
                   "variable": [
                     {
                       "key": "addressId",
@@ -1498,15 +1290,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/me/addresses/:addressId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "me",
-                    "addresses",
-                    ":addressId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me", "addresses", ":addressId"],
                   "variable": [
                     {
                       "key": "addressId",
@@ -1541,13 +1326,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/turfs?page=1&limit=10&sportType=football&city=Mumbai",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "turfs"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "turfs"],
                   "query": [
                     {
                       "key": "page",
@@ -1592,14 +1372,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/turfs/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "turfs",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "turfs", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -1608,6 +1382,75 @@
                   ]
                 },
                 "description": "Fetch expanded details of a specific turf field. Includes vendor business name, phone, WhatsApp and field photos."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Favourites",
+          "description": "Save and remove turfs from the user's favourites list.",
+          "item": [
+            {
+              "name": "Add to Favourites",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"turfId\": \"{{turfId}}\" // [MANDATORY]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/me/favourites",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me", "favourites"]
+                },
+                "description": "Add a turf to the user's favourites list. This is an idempotent operation."
+              },
+              "response": []
+            },
+            {
+              "name": "Remove from Favourites",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/users/me/favourites/:turfId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me", "favourites", ":turfId"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                },
+                "description": "Remove a turf from the user's favourites list."
               },
               "response": []
             }
@@ -1639,15 +1482,10 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "me"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "me"]
                 },
-                "description": "Retrieve the profile of the vendor associated with the current identity."
+                "description": "### Expected Response: VendorResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| identityId | string | - |\n| businessName | string | - |\n| businessType | BusinessType | - |\n| ownerFullName | string | - |\n| address | VendorAddressDto | - |\n| bankingDetails | VendorBankingDetailsDto | - |\n| commissionPct | string | - |\n| payoutCycle | PayoutCycle | - |\n| email | string | - |\n| phone | string | - |\n| whatsapp | string | - |\n| gstNumber | string | - |\n| businessRegistrationNumber | string | - |\n| status | VendorStatus | - |\n| kyc | KycResponseDto | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
               },
               "response": []
             },
@@ -1668,7 +1506,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"businessName\": \"Acme Sports Refined\",\n    \"ownerFullName\": \"John Updated\", // optional\n    \"email\": \"updated-vendor@example.com\", // optional\n    \"phone\": \"+919876543212\", // optional\n    \"whatsapp\": \"+919876543212\", // optional\n    \"gstNumber\": \"22CCCCC0000C1Z7\", // optional\n    \"businessRegistrationNumber\": \"GHI135790\", // optional\n    \"payoutCycle\": \"weekly\" // optional: daily | weekly | monthly\n}",
+                  "raw": "{\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1677,13 +1515,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/vendors/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "me"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "me"]
                 },
                 "description": "Partially update vendor fields like businessName, address, or bankingDetails."
               },
@@ -1714,7 +1547,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"documents\": {\n        \"identityProof\": \"https://storage.example.com/docs/id.pdf\",\n        \"addressProof\": \"https://storage.example.com/docs/addr.pdf\",\n        \"businessRegistration\": \"https://storage.example.com/docs/reg.pdf\", // optional\n        \"gstCertificate\": \"https://storage.example.com/docs/gst.pdf\", // optional\n        \"cancelledCheque\": \"https://storage.example.com/docs/cheque.pdf\" // optional\n    }\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1723,16 +1556,10 @@
             },
             "url": {
               "raw": "{{baseUrl}}/kyc/me/submit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "kyc",
-                "me",
-                "submit"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["kyc", "me", "submit"]
             },
-            "description": "Submit or merge KYC document URLs. Status moves to pending if essential docs are present."
+            "description": "### Expected Response: KycResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| vendorId | string | - |\n| status | KycStatus | - |\n| documents | KycDocumentsDto | - |\n| verification | Record<string, boolean> | - |\n| reviewerNotes | string | null | - |\n| reviewedBy | string | null | - |\n| reviewedAt | Date | null | - |\n| submittedAt | Date | null | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
           },
           "response": []
         },
@@ -1753,15 +1580,10 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/kyc/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "kyc",
-                "me"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["kyc", "me"]
             },
-            "description": "Retrieve the current KYC verification status and stored document metadata."
+            "description": "### Expected Response: KycResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| vendorId | string | - |\n| status | KycStatus | - |\n| documents | KycDocumentsDto | - |\n| verification | Record<string, boolean> | - |\n| reviewerNotes | string | null | - |\n| reviewedBy | string | null | - |\n| reviewedAt | Date | null | - |\n| submittedAt | Date | null | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
           },
           "response": []
         }
@@ -1791,7 +1613,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"sports\": [\n    \"football\"\n  ],\n  \"amenities\": [\n    \"parking\"\n  ],\n  \"capacity\": 100,\n  \"sizeFormat\": \"string\",\n  \"surfaceType\": \"artificial_turf\",\n  \"address\": \"[TurfAddressDto]\",\n  \"weekdayOpen\": \"string\",\n  \"weekdayClose\": \"string\",\n  \"weekendOpen\": \"string\",\n  \"weekendClose\": \"string\",\n  \"standardPricePaise\": 100,\n  \"cancellationWindowHrs\": 100\n}",
+                  "raw": "{\n  \"name\": \"string\", // [MANDATORY]\n  \"sports\": [\"football\"], // [MANDATORY] Allowed: football, cricket, tennis, badminton, basketball, hockey, volleyball, kabaddi, box_cricket, futsal, pickleball, throwball, netball, handball, dodgeball\n  \"amenities\": [\"parking\"], // [OPTIONAL] Allowed: parking, flood_lights, changing_room, cafeteria, equipment_rental, first_aid, wifi, cctv, drinking_water\n  \"capacity\": 100, // [OPTIONAL]\n  \"sizeFormat\": \"string\", // [OPTIONAL]\n  \"surfaceType\": \"artificial_turf\", // [MANDATORY] Allowed: artificial_turf, natural_grass, concrete, wooden, synthetic\n  \"address\": \"[TurfAddressDto]\", // [MANDATORY]\n  \"weekdayOpen\": \"string\", // [MANDATORY]\n  \"weekdayClose\": \"string\", // [MANDATORY]\n  \"weekendOpen\": \"string\", // [MANDATORY]\n  \"weekendClose\": \"string\", // [MANDATORY]\n  \"standardPricePaise\": 100, // [MANDATORY]\n  \"cancellationWindowHrs\": 100 // [OPTIONAL]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1800,15 +1622,10 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "turfs"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs"]
                 },
-                "description": "Create a new turf field. Automatically initializes a corresponding turf document record with not_started status."
+                "description": "### Expected Response: TurfResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| vendorId | string | - |\n| name | string | - |\n| sports | SportType[] | - |\n| amenities | AmenityType[] | - |\n| capacity | number | null | - |\n| sizeFormat | string | null | - |\n| surfaceType | SurfaceType | - |\n| address | TurfAddressDto | - |\n| weekdayOpen | string | - |\n| weekdayClose | string | - |\n| weekendOpen | string | - |\n| weekendClose | string | - |\n| standardPricePaise | number | - |\n| cancellationWindowHrs | number | - |\n| status | FieldStatus | - |\n| vendorBusinessName | string | - |\n| vendorPhone | string | - |\n| vendorWhatsapp | string | - |\n| fieldPhotos | string[] | - |\n| kyc | TurfDocumentsResponseDto | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
               },
               "response": []
             },
@@ -1829,15 +1646,10 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "turfs"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs"]
                 },
-                "description": "List all turfs owned by the authenticated vendor. Includes contact details and field photos."
+                "description": "### Expected Response: TurfResponseDto\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | - |\n| vendorId | string | - |\n| name | string | - |\n| sports | SportType[] | - |\n| amenities | AmenityType[] | - |\n| capacity | number | null | - |\n| sizeFormat | string | null | - |\n| surfaceType | SurfaceType | - |\n| address | TurfAddressDto | - |\n| weekdayOpen | string | - |\n| weekdayClose | string | - |\n| weekendOpen | string | - |\n| weekendClose | string | - |\n| standardPricePaise | number | - |\n| cancellationWindowHrs | number | - |\n| status | FieldStatus | - |\n| vendorBusinessName | string | - |\n| vendorPhone | string | - |\n| vendorWhatsapp | string | - |\n| fieldPhotos | string[] | - |\n| kyc | TurfDocumentsResponseDto | - |\n| createdAt | Date | - |\n| updatedAt | Date | - |\n"
               },
               "response": []
             },
@@ -1858,14 +1670,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "turfs",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -1894,7 +1700,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"name\": \"Updated Turf Name\",\n    \"standardPricePaise\": 160000\n}",
+                  "raw": "{\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1903,14 +1709,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "turfs",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -1939,14 +1739,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "turfs",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -1989,15 +1783,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:turfId/documents",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "turfs",
-                    ":turfId",
-                    "documents"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":turfId", "documents"],
                   "variable": [
                     {
                       "key": "turfId",
@@ -2026,15 +1813,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:turfId/documents",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "vendors",
-                    "turfs",
-                    ":turfId",
-                    "documents"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":turfId", "documents"],
                   "variable": [
                     {
                       "key": "turfId",
@@ -2070,13 +1850,8 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/storage/upload-url?path=kyc/aadhaar.pdf&fileType=application/pdf",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "storage",
-                "upload-url"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["storage", "upload-url"],
               "query": [
                 {
                   "key": "path",
@@ -2107,13 +1882,8 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/storage/view-url?path=kyc/aadhaar.pdf",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "storage",
-                "view-url"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["storage", "view-url"],
               "query": [
                 {
                   "key": "path",
@@ -2149,13 +1919,8 @@
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins"]
                 },
                 "description": "List all identities with the 'sub_admin' role and their assigned custom roles."
               }
@@ -2185,13 +1950,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins"]
                 }
               }
             },
@@ -2211,14 +1971,8 @@
                 "method": "DELETE",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    ":id"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", ":id"]
                 },
                 "description": "Permanently decommission a sub-admin. Revokes roles and deletes from Auth."
               }
@@ -2244,14 +1998,8 @@
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    "roles"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "roles"]
                 },
                 "description": "List all custom (non-system) roles and their granular permissions."
               }
@@ -2281,14 +2029,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    "roles"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "roles"]
                 }
               }
             },
@@ -2317,15 +2059,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    ":id",
-                    "roles"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", ":id", "roles"]
                 }
               }
             },
@@ -2354,9 +2089,7 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
+                  "host": ["{{baseUrl}}"],
                   "path": [
                     "admin",
                     "sub-admins",
@@ -2383,14 +2116,8 @@
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/permissions",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    "permissions"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "permissions"]
                 },
                 "description": "Fetch the catalogue of all granular resource:action permissions defined in the system."
               }
@@ -2411,15 +2138,8 @@
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    ":id",
-                    "roles"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", ":id", "roles"],
                   "variable": [
                     {
                       "key": "id",
@@ -2446,15 +2166,8 @@
                 "method": "DELETE",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "sub-admins",
-                    "roles",
-                    ":roleId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "sub-admins", "roles", ":roleId"],
                   "variable": [
                     {
                       "key": "roleId",
@@ -2480,13 +2193,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/server",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "health",
-                "server"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "server"]
             },
             "description": "Basic server health check."
           },
@@ -2499,13 +2207,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/database",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "health",
-                "database"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "database"]
             },
             "description": "Check database connectivity health."
           },

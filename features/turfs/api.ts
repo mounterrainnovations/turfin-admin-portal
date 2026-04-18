@@ -35,19 +35,49 @@ async function handleResponse(response: Response) {
   return payload;
 }
 
+function isRecord(v: any): v is Record<string, any> {
+  return typeof v === 'object' && v !== null;
+}
+
+function extractItems(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (!isRecord(payload)) return [];
+  const candidates = ["items", "data", "results", "turfs"];
+  for (const key of candidates) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
+function extractTotal(payload: any, itemsLength: number): number {
+  if (!isRecord(payload)) return itemsLength;
+  if (typeof payload.total === "number") return payload.total;
+  if (typeof payload.totalItems === "number") return payload.totalItems;
+  
+  const meta = payload.meta || payload.pagination;
+  if (isRecord(meta)) {
+    if (typeof meta.total === "number") return meta.total;
+    if (typeof meta.totalItems === "number") return meta.totalItems;
+    if (typeof meta.count === "number") return meta.count;
+  }
+  return itemsLength;
+}
+
 export async function listTurfs(params: { 
   page?: number; 
   limit?: number; 
   status?: string;
   sportType?: string;
   city?: string;
+  search?: string;
 } = {}): Promise<TurfListResult> {
   const url = new URL(`${getApiUrl()}/admin/turfs`);
   if (params.page) url.searchParams.set("page", String(params.page));
   if (params.limit) url.searchParams.set("limit", String(params.limit));
-  if (params.status && params.status !== 'all') url.searchParams.set("status", params.status);
+  if (params.status && params.status !== "all") url.searchParams.set("status", params.status);
   if (params.sportType) url.searchParams.set("sportType", params.sportType);
   if (params.city) url.searchParams.set("city", params.city);
+  if (params.search) url.searchParams.set("search", params.search);
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${getAccessToken()}` },
@@ -55,7 +85,8 @@ export async function listTurfs(params: {
   });
 
   const data = await handleResponse(response);
-  const items = (data.items || data.data || []).map((t: any) => ({
+  const rawItems = extractItems(data);
+  const items = rawItems.map((t: any) => ({
     ...t,
     status: (t.status || "pending").toLowerCase(),
     kycStatus: (t.kycStatus || "not_started").toLowerCase(),
@@ -66,9 +97,10 @@ export async function listTurfs(params: {
 
   return {
     items,
-    total: data.meta?.totalItems || data.total || items.length,
+    total: extractTotal(data, items.length),
   };
 }
+
 
 export async function getTurfById(turfId: string): Promise<Turf> {
   const response = await fetch(`${getApiUrl()}/admin/turfs/${turfId}`, {

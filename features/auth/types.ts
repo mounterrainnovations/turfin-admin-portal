@@ -1,4 +1,5 @@
 export type AdminRole = "super_admin" | "sub_admin";
+export type IdentityStatus = "active" | "suspended" | "pending";
 
 export interface AdminSession {
   accessToken: string;

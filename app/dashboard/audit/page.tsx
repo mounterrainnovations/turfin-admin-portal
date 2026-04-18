@@ -9,6 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/features/toast/toast-context";
 import { exportAuditCsv, listAuditLogs } from "@/features/audit/api";
 import type { AuditEntry, AuditSeverity, BackendAuditCategory } from "@/features/audit/types";
+import { DashboardPagination } from "@/components/DashboardPagination";
+
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const CATEGORY_CONFIG: Record<BackendAuditCategory, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
@@ -145,6 +147,14 @@ export default function AuditPage() {
   const [sevFilter, setSevFilter] = useState<AuditSeverity | "all">("all");
   const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null);
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+
+  useEffect(() => {
+    setPage(1);
+  }, [catFilter]);
+
   useEffect(() => {
     let active = true;
 
@@ -154,9 +164,12 @@ export default function AuditPage() {
       try {
         const result = await listAuditLogs({
           category: catFilter,
-          page: 1,
-          limit: 100,
+          page,
+          limit,
+          search: search || undefined,
         });
+
+
 
         if (!active) return;
         setEntries(result.entries);
@@ -186,7 +199,9 @@ export default function AuditPage() {
     return () => {
       active = false;
     };
-  }, [catFilter, showToast]);
+  }, [catFilter, showToast, page, limit, search]);
+
+
 
   const filtered = useMemo(() => {
     return entries.filter(e => {
@@ -454,6 +469,16 @@ export default function AuditPage() {
           ))
         )}
       </div>
+      <div className="bg-white border-t border-gray-100 shrink-0">
+        <DashboardPagination 
+          page={page} 
+          total={totalCount} 
+          limit={limit} 
+          onPageChange={setPage} 
+          label="events"
+        />
+      </div>
+
 
       {selectedEntry && (
         <>

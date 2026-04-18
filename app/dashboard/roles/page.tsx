@@ -2,222 +2,178 @@
 
 import {
   ShieldCheck, Users, Plus, PencilSimple, Trash, Lock,
-  Crown, Check, X, Warning, UserPlus, Key,
+  Crown, Check, X, Warning, UserPlus, Key, MagnifyingGlass
 } from "@phosphor-icons/react";
-import { useState } from "react";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-type PermGroup   = Record<string, boolean>;
-type Permissions = Record<string, PermGroup>;
-
-interface Role {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  abbr: string;
-  isSystem: boolean;
-  permissions: Permissions;
-}
-
-interface PortalUser {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  roleId: string;
-  lastActive: string;
-  status: "active" | "inactive";
-  joinedAt: string;
-}
-
-// ─── Permission Schema ────────────────────────────────────────────────────────
-const PERM_SCHEMA: Record<string, { label: string; superOnly?: boolean; actions: string[] }> = {
-  dashboard: { label: "Dashboard",     actions: ["View Overview", "View Alerts"] },
-  bookings:  { label: "Bookings",      actions: ["View", "Edit", "Cancel Booking", "Issue Refund", "Export"] },
-  fields:    { label: "Fields",        actions: ["View", "Approve New", "Edit Details", "Block Slots", "Suspend"] },
-  users:     { label: "Users",         actions: ["View", "Edit Profile", "Suspend User", "Delete User"] },
-  vendors:   { label: "Vendors",       actions: ["View", "Approve KYC", "Edit Details", "Suspend Vendor"] },
-  analytics: { label: "Analytics",     actions: ["View Reports", "Export Data"] },
-  settings:  { label: "Settings",      actions: ["View", "Edit"] },
-  roles:     { label: "Roles & RBAC",  superOnly: true, actions: ["View", "Create", "Edit", "Delete", "Assign Users"] },
-};
-
-// ─── Roles Data ───────────────────────────────────────────────────────────────
-const INITIAL_ROLES: Role[] = [
-  {
-    id: "super_admin", name: "Super Admin", abbr: "SA", color: "#dc2626", isSystem: true,
-    description: "Full unrestricted access to all modules including RBAC management. Cannot be modified.",
-    permissions: {
-      dashboard: { "View Overview": true,  "View Alerts": true  },
-      bookings:  { View: true, Edit: true, "Cancel Booking": true, "Issue Refund": true,  Export: true  },
-      fields:    { View: true, "Approve New": true, "Edit Details": true, "Block Slots": true, Suspend: true  },
-      users:     { View: true, "Edit Profile": true,  "Suspend User": true,  "Delete User": true  },
-      vendors:   { View: true, "Approve KYC": true,  "Edit Details": true,  "Suspend Vendor": true  },
-      analytics: { "View Reports": true,  "Export Data": true  },
-      settings:  { View: true, Edit: true  },
-      roles:     { View: true, Create: true, Edit: true, Delete: true, "Assign Users": true },
-    },
-  },
-  {
-    id: "admin", name: "Admin", abbr: "AD", color: "#2563eb", isSystem: true,
-    description: "Full operational access across all modules. Cannot manage roles or edit platform settings.",
-    permissions: {
-      dashboard: { "View Overview": true,  "View Alerts": true  },
-      bookings:  { View: true, Edit: true, "Cancel Booking": true, "Issue Refund": true,  Export: true  },
-      fields:    { View: true, "Approve New": true, "Edit Details": true, "Block Slots": true, Suspend: true  },
-      users:     { View: true, "Edit Profile": true,  "Suspend User": true,  "Delete User": false },
-      vendors:   { View: true, "Approve KYC": true,  "Edit Details": true,  "Suspend Vendor": true  },
-      analytics: { "View Reports": true,  "Export Data": true  },
-      settings:  { View: true, Edit: false },
-      roles:     { View: false, Create: false, Edit: false, Delete: false, "Assign Users": false },
-    },
-  },
-  {
-    id: "ops_manager", name: "Operations Manager", abbr: "OM", color: "#8a9e60", isSystem: false,
-    description: "Manages day-to-day bookings, turf field operations, and vendor relationships.",
-    permissions: {
-      dashboard: { "View Overview": true,  "View Alerts": true  },
-      bookings:  { View: true, Edit: true, "Cancel Booking": true, "Issue Refund": false, Export: true  },
-      fields:    { View: true, "Approve New": false, "Edit Details": true, "Block Slots": true, Suspend: false },
-      users:     { View: true, "Edit Profile": false, "Suspend User": false, "Delete User": false },
-      vendors:   { View: true, "Approve KYC": false, "Edit Details": true,  "Suspend Vendor": false },
-      analytics: { "View Reports": true,  "Export Data": false },
-      settings:  { View: false, Edit: false },
-      roles:     { View: false, Create: false, Edit: false, Delete: false, "Assign Users": false },
-    },
-  },
-  {
-    id: "support_agent", name: "Support Agent", abbr: "SP", color: "#7c3aed", isSystem: false,
-    description: "Handles client and vendor queries. Read-mostly with limited action capabilities.",
-    permissions: {
-      dashboard: { "View Overview": true,  "View Alerts": true  },
-      bookings:  { View: true, Edit: false, "Cancel Booking": false, "Issue Refund": false, Export: false },
-      fields:    { View: true, "Approve New": false, "Edit Details": false, "Block Slots": false, Suspend: false },
-      users:     { View: true, "Edit Profile": false, "Suspend User": false, "Delete User": false },
-      vendors:   { View: true, "Approve KYC": false, "Edit Details": false, "Suspend Vendor": false },
-      analytics: { "View Reports": false, "Export Data": false },
-      settings:  { View: false, Edit: false },
-      roles:     { View: false, Create: false, Edit: false, Delete: false, "Assign Users": false },
-    },
-  },
-  {
-    id: "analyst", name: "Analyst", abbr: "AN", color: "#0891b2", isSystem: false,
-    description: "Read-only access to analytics and reports. No operational actions permitted.",
-    permissions: {
-      dashboard: { "View Overview": true,  "View Alerts": false },
-      bookings:  { View: true, Edit: false, "Cancel Booking": false, "Issue Refund": false, Export: false },
-      fields:    { View: true, "Approve New": false, "Edit Details": false, "Block Slots": false, Suspend: false },
-      users:     { View: false, "Edit Profile": false, "Suspend User": false, "Delete User": false },
-      vendors:   { View: false, "Approve KYC": false, "Edit Details": false, "Suspend Vendor": false },
-      analytics: { "View Reports": true,  "Export Data": true  },
-      settings:  { View: false, Edit: false },
-      roles:     { View: false, Create: false, Edit: false, Delete: false, "Assign Users": false },
-    },
-  },
-];
-
-// ─── Portal Users ─────────────────────────────────────────────────────────────
-const INITIAL_USERS: PortalUser[] = [
-  { id: "u1", name: "Arjun Mehta",  email: "arjun@turfin.com",  avatar: "AM", roleId: "super_admin",  lastActive: "Just now",   status: "active",   joinedAt: "Oct 1, 2024"  },
-  { id: "u2", name: "Priya Sharma", email: "priya@turfin.com",  avatar: "PS", roleId: "admin",        lastActive: "2h ago",     status: "active",   joinedAt: "Nov 5, 2024"  },
-  { id: "u3", name: "Rahul Kumar",  email: "rahul@turfin.com",  avatar: "RK", roleId: "admin",        lastActive: "Yesterday",  status: "active",   joinedAt: "Jan 12, 2025" },
-  { id: "u4", name: "Sneha Patel",  email: "sneha@turfin.com",  avatar: "SP", roleId: "ops_manager",  lastActive: "2 days ago", status: "active",   joinedAt: "Feb 3, 2025"  },
-  { id: "u5", name: "Vikram Singh", email: "vikram@turfin.com", avatar: "VS", roleId: "ops_manager",  lastActive: "Just now",   status: "active",   joinedAt: "Mar 1, 2025"  },
-  { id: "u6", name: "Ananya Das",   email: "ananya@turfin.com", avatar: "AD", roleId: "support_agent",lastActive: "1h ago",     status: "active",   joinedAt: "Apr 10, 2025" },
-  { id: "u7", name: "Mohammed Ali", email: "mali@turfin.com",   avatar: "MA", roleId: "support_agent",lastActive: "3 days ago", status: "inactive", joinedAt: "Jun 20, 2025" },
-  { id: "u8", name: "Deepa Nair",   email: "deepa@turfin.com",  avatar: "DN", roleId: "analyst",      lastActive: "Yesterday",  status: "active",   joinedAt: "Aug 15, 2025" },
-];
-
-const CURRENT_USER_ID = "u1"; // Arjun Mehta — Super Admin (logged in)
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useRoles, usePermissions, useSubAdmins } from "@/features/rbac/hooks";
+import * as rbacApi from "@/features/rbac/api";
+import { Permission, Role, SubAdmin } from "@/features/rbac/types";
+import { useToast } from "@/features/toast/toast-context";
+import { getAdminSession } from "@/features/auth/session";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function permSummary(perms: Permissions) {
-  const all     = Object.values(perms).flatMap(g => Object.values(g));
-  const enabled = all.filter(Boolean).length;
-  return { enabled, total: all.length };
+
+const COLOR_OPTIONS = ["#dc2626", "#2563eb", "#8a9e60", "#7c3aed", "#0891b2", "#d97706", "#059669", "#db2777", "#6b7280"];
+
+function getRoleAbbr(name: string) {
+  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function getRoleColor(id: string, name: string) {
+  if (id === "super_admin") return "#dc2626";
+  if (id === "sub_admin") return "#2563eb";
+  if (name.toLowerCase().includes("ops")) return "#8a9e60";
+  if (name.toLowerCase().includes("support")) return "#7c3aed";
+  
+  // Deterministic color based on name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return COLOR_OPTIONS[Math.abs(hash) % COLOR_OPTIONS.length];
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function RolesPage() {
-  const [roles, setRoles]           = useState<Role[]>(INITIAL_ROLES);
-  const [users]                     = useState<PortalUser[]>(INITIAL_USERS);
-  const [selectedId, setSelectedId] = useState<string>("super_admin");
-  const [detailTab, setDetailTab]   = useState<"permissions" | "users">("permissions");
-  const [editMode, setEditMode]     = useState(false);
-  const [editedPerms, setEditedPerms]       = useState<Permissions | null>(null);
+  const router = useRouter();
+  const { showToast } = useToast();
+  const session = getAdminSession();
+  
+  const { roles, isLoading: rolesLoading, refresh: refreshRoles } = useRoles();
+  const { permissions, isLoading: permsLoading } = usePermissions();
+  const { subAdmins, isLoading: adminsLoading, refresh: refreshAdmins } = useSubAdmins();
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState<"permissions" | "users">("permissions");
+  const [editMode, setEditMode] = useState(false);
+  const [editedPermIds, setEditedPermIds] = useState<string[]>([]);
+  const [permSearch, setPermSearch] = useState("");
+  
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showNewRole, setShowNewRole]             = useState(false);
-  const [newRoleName, setNewRoleName]             = useState("");
-  const [newRoleDesc, setNewRoleDesc]             = useState("");
+  const [showNewRole, setShowNewRole] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDesc, setNewRoleDesc] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const selected   = roles.find(r => r.id === selectedId)!;
-  const roleUsers  = users.filter(u => u.roleId === selectedId);
-  const activePerms = editMode && editedPerms ? editedPerms : selected.permissions;
-  const { enabled: permCount, total: totalPerms } = permSummary(selected.permissions);
+  // Set default selected role once loaded
+  useEffect(() => {
+    if (roles.length > 0 && !selectedId) {
+      setSelectedId(roles[0].id);
+    }
+  }, [roles, selectedId]);
 
-  function selectRole(id: string) {
+  const selected = roles.find(r => r.id === selectedId);
+  const roleAdmins = subAdmins.filter(admin => admin.roles.some(r => r.id === selectedId));
+
+  // Group permissions by resource
+  const groupedPermissions = useMemo(() => {
+    const groups: Record<string, Permission[]> = {};
+    permissions.forEach(p => {
+      if (!groups[p.resource]) groups[p.resource] = [];
+      groups[p.resource].push(p);
+    });
+    return groups;
+  }, [permissions]);
+
+  // Filtering grouped permissions based on search
+  const filteredGroups = useMemo(() => {
+    if (!permSearch.trim()) return groupedPermissions;
+    const search = permSearch.toLowerCase();
+    const filtered: Record<string, Permission[]> = {};
+    
+    Object.entries(groupedPermissions).forEach(([resource, perms]) => {
+      const matching = perms.filter(p => 
+        p.action.toLowerCase().includes(search) || 
+        resource.toLowerCase().includes(search) ||
+        (p.description?.toLowerCase().includes(search))
+      );
+      if (matching.length > 0) filtered[resource] = matching;
+    });
+    return filtered;
+  }, [groupedPermissions, permSearch]);
+
+  const activePermIds = editMode ? editedPermIds : (selected?.permissions?.map(p => p.id) || []);
+
+  const selectRole = (id: string) => {
     setSelectedId(id);
     setEditMode(false);
-    setEditedPerms(null);
     setDetailTab("permissions");
-  }
+  };
 
-  function startEdit() {
-    setEditedPerms(JSON.parse(JSON.stringify(selected.permissions)));
+  const startEdit = () => {
+    if (!selected) return;
+    setEditedPermIds(selected.permissions?.map(p => p.id) || []);
     setEditMode(true);
-  }
+  };
 
-  function cancelEdit() {
-    setEditMode(false);
-    setEditedPerms(null);
-  }
-
-  function saveEdit() {
-    if (!editedPerms) return;
-    setRoles(prev => prev.map(r => r.id === selectedId ? { ...r, permissions: editedPerms } : r));
-    setEditMode(false);
-    setEditedPerms(null);
-  }
-
-  function togglePerm(resource: string, action: string) {
-    if (!editedPerms) return;
-    setEditedPerms(prev => prev
-      ? { ...prev, [resource]: { ...prev[resource], [action]: !prev[resource][action] } }
-      : prev
+  const togglePermission = (id: string) => {
+    setEditedPermIds(prev => 
+      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
     );
-  }
+  };
 
-  function deleteRole() {
-    setRoles(prev => prev.filter(r => r.id !== selectedId));
-    setSelectedId("super_admin");
-    setShowDeleteConfirm(false);
-  }
+  const handleSavePermissions = async () => {
+    if (!selected) return;
+    setIsSubmitting(true);
+    try {
+      await rbacApi.updateRolePermissions(selected.id, { permissionIds: editedPermIds });
+      showToast({ title: "Permissions Updated", description: `Successfully updated permissions for ${selected.name}`, tone: "success" });
+      await refreshRoles();
+      setEditMode(false);
+    } catch (err: any) {
+      showToast({ title: "Failed to update permissions", description: err.message, tone: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  function addRole() {
+  const handleAddRole = async () => {
     if (!newRoleName.trim()) return;
-    const id = newRoleName.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
-    const blank: Permissions = Object.fromEntries(
-      Object.entries(PERM_SCHEMA).map(([k, { actions }]) => [k, Object.fromEntries(actions.map(a => [a, false]))])
-    );
-    setRoles(prev => [...prev, {
-      id, name: newRoleName.trim(), description: newRoleDesc.trim() || "Custom role.",
-      color: "#6b7280", abbr: newRoleName.trim().slice(0, 2).toUpperCase(),
-      isSystem: false, permissions: blank,
-    }]);
-    setSelectedId(id);
-    setNewRoleName("");
-    setNewRoleDesc("");
-    setShowNewRole(false);
-    setDetailTab("permissions");
-  }
+    setIsSubmitting(true);
+    try {
+      const created = await rbacApi.createRole({ name: newRoleName, description: newRoleDesc });
+      showToast({ title: "Role Created", description: `Role "${created.name}" has been created.`, tone: "success" });
+      await refreshRoles();
+      setSelectedId(created.id);
+      setShowNewRole(false);
+      setNewRoleName("");
+      setNewRoleDesc("");
+    } catch (err: any) {
+      showToast({ title: "Role Creation Failed", description: err.message, tone: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // Role color options
-  const COLOR_OPTIONS = ["#dc2626","#2563eb","#8a9e60","#7c3aed","#0891b2","#d97706","#059669","#db2777","#6b7280"];
+  const handleDeleteRole = async () => {
+    if (!selected) return;
+    setIsSubmitting(true);
+    try {
+      await rbacApi.deleteRole(selected.id);
+      showToast({ title: "Role Deleted", description: `Role "${selected.name}" has been removed.`, tone: "success" });
+      await refreshRoles();
+      setSelectedId(roles[0]?.id || null);
+      setShowDeleteConfirm(false);
+    } catch (err: any) {
+      showToast({ title: "Deletion Failed", description: err.message, tone: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (rolesLoading && roles.length === 0) {
+    return <div className="flex-1 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-4 border-[#8a9e60]/20 border-t-[#8a9e60] rounded-full animate-spin" />
+        <p className="text-sm font-medium text-gray-400">Syncing RBAC policies...</p>
+      </div>
+    </div>;
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-
       {/* ── Super Admin Guard Banner ── */}
       <div className="shrink-0 px-6 pt-5 pb-0">
         <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
@@ -227,12 +183,12 @@ export default function RolesPage() {
           <div>
             <p className="text-xs font-bold text-red-700">Restricted — Super Admin Only</p>
             <p className="text-[11px] text-red-500 mt-0.5">
-              This section controls who can see and do what across the entire portal. Misconfigured roles can expose sensitive operations.
+              Role-Based Access Control defines security boundaries. Any change here affects platform integrity.
             </p>
           </div>
           <div className="ml-auto shrink-0 text-right">
             <p className="text-[10px] text-red-400">Viewing as</p>
-            <p className="text-xs font-bold text-red-600">Arjun Mehta (Super Admin)</p>
+            <p className="text-xs font-bold text-red-600">{session?.email ?? "Administrator"}</p>
           </div>
         </div>
       </div>
@@ -241,24 +197,35 @@ export default function RolesPage() {
       <div className="flex-1 overflow-hidden flex gap-5 p-6 pt-4">
 
         {/* ── Left: Role list ── */}
-        <div className="w-64 shrink-0 flex flex-col gap-3 overflow-y-auto">
-
-          <div className="flex items-center justify-between">
+        <div className="w-72 shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
+          <div className="flex items-center justify-between sticky top-0 bg-[#f8f9fa] z-10 pb-2">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Portal Roles</p>
-            <button
-              onClick={() => setShowNewRole(true)}
-              className="flex items-center gap-1 text-[11px] font-bold py-1.5 px-2.5 rounded-lg text-white hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: "#8a9e60" }}
-            >
-              <Plus size={12} weight="bold" /> New Role
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => router.push('/dashboard/roles/identities')}
+                className="flex items-center gap-1 text-[11px] font-bold py-1.5 px-2.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-all"
+              >
+                <Users size={12} weight="bold" /> Identities
+              </button>
+              <button
+                onClick={() => setShowNewRole(true)}
+                className="flex items-center gap-1 text-[11px] font-bold py-1.5 px-2.5 rounded-lg text-white hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#8a9e60" }}
+              >
+                <Plus size={12} weight="bold" /> New Role
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1.5">
             {roles.map(role => {
-              const usersCount = users.filter(u => u.roleId === role.id).length;
-              const { enabled, total } = permSummary(role.permissions);
+              const usersCount = subAdmins.filter(admin => admin.roles.some(r => r.id === role.id)).length;
               const isSelected = role.id === selectedId;
+              const roleColor = getRoleColor(role.id, role.name);
+              const abbr = getRoleAbbr(role.name);
+              const totalPerms = permissions.length;
+              const enabledPerms = role.permissions?.length || 0;
+
               return (
                 <button
                   key={role.id}
@@ -272,9 +239,9 @@ export default function RolesPage() {
                   <div className="flex items-center gap-2.5">
                     <div
                       className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-[11px] font-bold shrink-0"
-                      style={{ backgroundColor: role.color }}
+                      style={{ backgroundColor: roleColor }}
                     >
-                      {role.abbr}
+                      {abbr}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -283,7 +250,7 @@ export default function RolesPage() {
                           <Crown size={11} weight="fill" className="text-amber-400 shrink-0" />
                         )}
                         {role.isSystem && (
-                          <span className="text-[8px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded font-bold uppercase leading-none shrink-0">SYS</span>
+                          <span className="text-[8px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded font-bold uppercase leading-none shrink-0 border border-gray-200/50">SYS</span>
                         )}
                       </div>
                       <p className="text-[10px] text-gray-400">{usersCount} user{usersCount !== 1 ? "s" : ""}</p>
@@ -292,14 +259,14 @@ export default function RolesPage() {
 
                   {isSelected && (
                     <div className="mt-2.5">
-                      <div className="flex justify-between text-[9px] text-gray-400 mb-1">
-                        <span>Permissions</span>
-                        <span>{enabled}/{total}</span>
+                      <div className="flex justify-between text-[9px] text-gray-400 mb-1 font-medium">
+                        <span>Capabilities</span>
+                        <span>{enabledPerms}/{totalPerms}</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-1">
                         <div
-                          className="h-1 rounded-full transition-all"
-                          style={{ width: `${(enabled / total) * 100}%`, backgroundColor: role.color }}
+                          className="h-1 rounded-full transition-all duration-500"
+                          style={{ width: `${(enabledPerms / totalPerms) * 100}%`, backgroundColor: roleColor }}
                         />
                       </div>
                     </div>
@@ -311,435 +278,416 @@ export default function RolesPage() {
 
           {/* Users summary card */}
           <div className="bg-white rounded-xl border border-gray-100 p-3.5 mt-1">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">All Portal Users</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Active Back-Office</p>
             <div className="flex -space-x-1.5 mb-2.5">
-              {users.slice(0, 7).map(u => (
+              {subAdmins.slice(0, 7).map(u => (
                 <div
                   key={u.id}
                   className="w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-white text-[8px] font-bold shrink-0"
-                  style={{ backgroundColor: roles.find(r => r.id === u.roleId)?.color ?? "#8a9e60" }}
-                  title={`${u.name} (${roles.find(r => r.id === u.roleId)?.name})`}
+                  style={{ backgroundColor: getRoleColor(u.roles[0]?.id || "", u.roles[0]?.name || "None") }}
+                  title={`${u.email}`}
                 >
-                  {u.avatar}
+                  {u.email[0].toUpperCase()}
                 </div>
               ))}
-              {users.length > 7 && (
+              {subAdmins.length > 7 && (
                 <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-400">
-                  +{users.length - 7}
+                  +{subAdmins.length - 7}
                 </div>
               )}
             </div>
-            <p className="text-[11px] text-gray-500">
-              {users.length} users across {roles.length} roles
+            <p className="text-[11px] text-gray-500 font-semibold">
+              {subAdmins.length} identities managed
             </p>
             <p className="text-[10px] text-gray-400 mt-0.5">
-              {users.filter(u => u.status === "active").length} active · {users.filter(u => u.status === "inactive").length} inactive
+              {subAdmins.filter(u => u.status === "active").length} active admin sessions
             </p>
           </div>
         </div>
 
         {/* ── Right: Role detail ── */}
         <div className="flex-1 overflow-hidden flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm min-w-0">
-
-          {/* Role header */}
-          <div className="shrink-0 px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-sm font-bold shrink-0"
-                style={{ backgroundColor: selected.color }}
-              >
-                {selected.abbr}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-base font-bold text-gray-800">{selected.name}</h2>
-                  {selected.id === "super_admin" && <Crown size={15} weight="fill" className="text-amber-400" />}
-                  {selected.isSystem && (
-                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-bold uppercase">System Role</span>
-                  )}
+          {selected ? (
+            <>
+              {/* Role header */}
+              <div className="shrink-0 px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-lg shadow-gray-100"
+                    style={{ backgroundColor: getRoleColor(selected.id, selected.name) }}
+                  >
+                    {getRoleAbbr(selected.name)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-base font-bold text-gray-800">{selected.name}</h2>
+                      {selected.id === "super_admin" && <Crown size={15} weight="fill" className="text-amber-400" />}
+                      {selected.isSystem && (
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-bold uppercase border border-gray-200/50">Core Identity</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-0.5 max-w-lg leading-relaxed italic">{selected.description || "No description provided for this role."}</p>
+                    <div className="flex items-center gap-4 mt-2 text-[11px] text-gray-500 font-medium">
+                      <span className="flex items-center gap-1">
+                        <Users size={11} className="text-gray-400" /> {roleAdmins.length} user{roleAdmins.length !== 1 ? "s" : ""}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Key size={11} className="text-gray-400" /> {selected.permissions?.length || 0}/{permissions.length} nodes enabled
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-0.5 max-w-lg leading-relaxed">{selected.description}</p>
-                <div className="flex items-center gap-4 mt-1.5 text-[11px] text-gray-400">
-                  <span className="flex items-center gap-1">
-                    <Users size={11} /> {roleUsers.length} user{roleUsers.length !== 1 ? "s" : ""}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Key size={11} /> {permCount}/{totalPerms} permissions enabled
-                  </span>
-                </div>
-              </div>
-            </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 shrink-0">
-              {!editMode ? (
-                <>
-                  {selected.isSystem ? (
-                    <span className="flex items-center gap-1.5 text-[11px] text-gray-400 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">
-                      <Lock size={11} /> Cannot modify system role
-                    </span>
+                {/* Action buttons */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {!editMode ? (
+                    <>
+                      {selected.isSystem ? (
+                        <span className="flex items-center gap-1.5 text-[11px] text-gray-400 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 font-medium">
+                          <Lock size={11} weight="fill" /> System Protected
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={startEdit}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-95"
+                          >
+                            <PencilSimple size={13} weight="bold" /> Configure Policy
+                          </button>
+                          <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-50 border border-red-100 text-xs font-bold text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95"
+                          >
+                            <Trash size={13} weight="bold" /> Purge
+                          </button>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <>
                       <button
-                        onClick={startEdit}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                        onClick={() => setEditMode(false)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all"
                       >
-                        <PencilSimple size={13} /> Edit Permissions
+                        <X size={13} weight="bold" /> Discard
                       </button>
                       <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-100 text-xs font-semibold text-red-500 hover:bg-red-100 transition-colors"
+                        onClick={handleSavePermissions}
+                        disabled={isSubmitting}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-all disabled:opacity-50 active:scale-95"
+                        style={{ backgroundColor: "#8a9e60" }}
                       >
-                        <Trash size={13} /> Delete
+                        {isSubmitting ? (
+                          <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Check size={13} weight="bold" />
+                        )}
+                        Commit Changes
                       </button>
                     </>
                   )}
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={cancelEdit}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-                  >
-                    <X size={13} /> Cancel
-                  </button>
-                  <button
-                    onClick={saveEdit}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white hover:opacity-90 transition-opacity"
-                    style={{ backgroundColor: "#8a9e60" }}
-                  >
-                    <Check size={13} weight="bold" /> Save Changes
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-gray-100 shrink-0 px-6">
-            {(["permissions", "users"] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setDetailTab(t)}
-                className={`py-3 mr-6 text-xs font-bold capitalize border-b-2 transition-colors ${
-                  detailTab === t
-                    ? "border-[#8a9e60] text-[#8a9e60]"
-                    : "border-transparent text-gray-400 hover:text-gray-600"
-                }`}
-              >
-                {t === "users" ? `Assigned Users (${roleUsers.length})` : "Permissions"}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div className="flex-1 overflow-y-auto">
-
-            {/* ── PERMISSIONS TAB ── */}
-            {detailTab === "permissions" && (
-              <div className="p-6 space-y-3">
-
-                {editMode && (
-                  <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-1">
-                    <Warning size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-700">
-                      Editing <span className="font-bold">{selected.name}</span>.
-                      Changes apply immediately to all {roleUsers.length} user{roleUsers.length !== 1 ? "s" : ""} with this role.
-                      Click permission tags to toggle them.
-                    </p>
-                  </div>
-                )}
-
-                {Object.entries(PERM_SCHEMA).map(([resource, { label, superOnly, actions }]) => {
-                  const resourcePerms = activePerms[resource] ?? {};
-                  const enabledCount  = actions.filter(a => resourcePerms[a]).length;
-
-                  return (
-                    <div
-                      key={resource}
-                      className={`rounded-xl border p-4 ${
-                        superOnly
-                          ? "border-red-100 bg-red-50/40"
-                          : "border-gray-100 bg-gray-50/30"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-gray-700">{label}</p>
-                          {superOnly && (
-                            <span className="text-[9px] bg-red-100 text-red-500 px-1.5 py-0.5 rounded font-bold uppercase leading-none">
-                              Super Admin Only
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-gray-400 font-medium">
-                          {enabledCount}/{actions.length} enabled
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5">
-                        {actions.map(action => {
-                          const enabled   = !!resourcePerms[action];
-                          const canToggle = editMode && !selected.isSystem;
-                          return (
-                            <button
-                              key={action}
-                              disabled={!canToggle}
-                              onClick={() => togglePerm(resource, action)}
-                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all select-none ${
-                                enabled
-                                  ? "text-white"
-                                  : canToggle
-                                  ? "bg-white border border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600"
-                                  : "bg-white border border-gray-100 text-gray-300"
-                              } ${canToggle ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                              style={enabled ? { backgroundColor: selected.color } : {}}
-                            >
-                              {enabled
-                                ? <Check size={10} weight="bold" />
-                                : <X size={10} className="opacity-50" />
-                              }
-                              {action}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* ── USERS TAB ── */}
-            {detailTab === "users" && (
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                    {roleUsers.length} user{roleUsers.length !== 1 ? "s" : ""} assigned
-                  </p>
-                  <button
-                    className="flex items-center gap-1.5 text-xs font-bold py-2 px-3 rounded-xl text-white hover:opacity-90 transition-opacity"
-                    style={{ backgroundColor: "#8a9e60" }}
-                  >
-                    <UserPlus size={13} weight="bold" /> Assign User
-                  </button>
                 </div>
+              </div>
 
-                {roleUsers.length === 0 ? (
-                  <div className="py-20 text-center">
-                    <Users size={36} className="text-gray-200 mx-auto mb-3" />
-                    <p className="text-sm font-semibold text-gray-400">No users assigned yet</p>
-                    <p className="text-xs text-gray-300 mt-1">Use &ldquo;Assign User&rdquo; to add someone to this role</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {roleUsers.map(user => {
-                      const isCurrentUser = user.id === CURRENT_USER_ID;
-                      const roleInfo = roles.find(r => r.id === user.roleId);
-                      return (
-                        <div
-                          key={user.id}
-                          className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
-                            isCurrentUser
-                              ? "border-[#8a9e60]/25 bg-[#8a9e60]/5"
-                              : "border-gray-100 bg-gray-50/30 hover:bg-white hover:border-gray-200"
-                          }`}
-                        >
-                          {/* Avatar */}
+              {/* Tabs */}
+              <div className="flex border-b border-gray-100 shrink-0 px-6 bg-gray-50/50">
+                {(["permissions", "users"] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setDetailTab(t)}
+                    className={`py-3 mr-6 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all ${
+                      detailTab === t
+                        ? "border-[#8a9e60] text-[#8a9e60]"
+                        : "border-transparent text-gray-400 hover:text-gray-600"
+                    }`}
+                  >
+                    {t === "users" ? `Identities (${roleAdmins.length})` : "Policy Nodes"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              <div className="flex-1 overflow-y-auto">
+
+                {/* ── PERMISSIONS TAB ── */}
+                {detailTab === "permissions" && (
+                  <div className="p-6">
+                    {/* Search bar inside tab */}
+                    <div className="relative mb-6">
+                      <MagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                      <input 
+                        type="text"
+                        placeholder="Search for specific permissions or resources..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8a9e60]/20 focus:border-[#8a9e60] transition-all"
+                        value={permSearch}
+                        onChange={(e) => setPermSearch(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      {editMode && (
+                        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 shadow-sm shadow-amber-900/5">
+                          <Warning size={14} className="text-amber-500 shrink-0 mt-0.5" weight="fill" />
+                          <p className="text-xs text-amber-700 font-medium">
+                            Configuring Access Matrix for <span className="font-bold underline">{selected.name}</span>.
+                            Sub-admins assigned to this role will inherit these changes immediately upon sync.
+                          </p>
+                        </div>
+                      )}
+
+                      {permsLoading ? (
+                         <div className="py-12 text-center">
+                            <div className="w-8 h-8 border-2 border-[#8a9e60]/20 border-t-[#8a9e60] rounded-full animate-spin mx-auto mb-3" />
+                            <p className="text-[11px] font-medium text-gray-400">Loading catalogue...</p>
+                         </div>
+                      ) : Object.entries(filteredGroups).length === 0 ? (
+                        <div className="py-20 text-center">
+                          <MagnifyingGlass size={32} className="text-gray-200 mx-auto mb-3" />
+                          <p className="text-sm font-semibold text-gray-400">No matching permissions found</p>
+                          <p className="text-xs text-gray-300 mt-1">Try searching for resources like &quot;turf&quot;, &quot;user&quot;, or &quot;kyc&quot;</p>
+                        </div>
+                      ) : Object.entries(filteredGroups).sort(([a], [b]) => a.localeCompare(b)).map(([resource, perms]) => {
+                        const enabledInResource = perms.filter(p => activePermIds.includes(p.id)).length;
+                        const resourceColor = getRoleColor(resource, resource);
+
+                        return (
                           <div
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0"
-                            style={{ backgroundColor: roleInfo?.color ?? "#8a9e60" }}
+                            key={resource}
+                            className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden"
                           >
-                            {user.avatar}
-                          </div>
-
-                          {/* Name + email */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                              {isCurrentUser && (
-                                <span
-                                  className="text-[9px] font-bold px-1.5 py-0.5 rounded text-white"
-                                  style={{ backgroundColor: "#8a9e60" }}
-                                >
-                                  YOU
-                                </span>
-                              )}
-                              <span className={`w-1.5 h-1.5 rounded-full ${user.status === "active" ? "bg-green-400" : "bg-gray-300"}`} />
-                              <span className={`text-[10px] font-medium ${user.status === "active" ? "text-green-500" : "text-gray-400"}`}>
-                                {user.status}
+                            <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50/70 border-b border-gray-100">
+                              <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: resourceColor }} />
+                                <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">{resource}</p>
+                              </div>
+                              <span className="text-[9px] text-gray-400 font-bold bg-white px-2 py-0.5 rounded-full border border-gray-200 shadow-sm">
+                                {enabledInResource} / {perms.length} ACTIVE
                               </span>
                             </div>
-                            <p className="text-[11px] text-gray-400">{user.email}</p>
-                          </div>
 
-                          {/* Last active + joined */}
-                          <div className="text-right shrink-0">
-                            <p className="text-[11px] font-medium text-gray-600">{user.lastActive}</p>
-                            <p className="text-[10px] text-gray-400">Joined {user.joinedAt}</p>
-                          </div>
-
-                          {/* Actions */}
-                          {isCurrentUser ? (
-                            <span title="Cannot change your own role" className="shrink-0">
-                              <Lock size={14} className="text-gray-300" />
-                            </span>
-                          ) : (
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                                title="Change role"
-                              >
-                                <PencilSimple size={13} />
-                              </button>
-                              {selected.id !== "super_admin" && (
-                                <button
-                                  className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-400 transition-colors"
-                                  title="Remove from role"
-                                >
-                                  <X size={13} />
-                                </button>
-                              )}
+                            <div className="p-4 flex flex-wrap gap-2">
+                              {perms.sort((a, b) => a.action.localeCompare(b.action)).map(p => {
+                                const isEnabled = activePermIds.includes(p.id);
+                                const canToggle = editMode && !selected.isSystem;
+                                
+                                return (
+                                  <button
+                                    key={p.id}
+                                    disabled={!canToggle}
+                                    onClick={() => togglePermission(p.id)}
+                                    title={p.description || ""}
+                                    className={`group flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all border ${
+                                      isEnabled
+                                        ? "text-white border-transparent"
+                                        : canToggle
+                                        ? "bg-white border-dashed border-gray-200 text-gray-400 hover:border-[#8a9e60] hover:text-[#8a9e60] hover:bg-[#8a9e60]/5"
+                                        : "bg-gray-50/50 border-gray-100 text-gray-300 italic"
+                                    } ${canToggle ? "cursor-pointer active:scale-95 shadow-sm" : "cursor-default"}`}
+                                    style={isEnabled ? { backgroundColor: getRoleColor(selected.id, selected.name) } : {}}
+                                  >
+                                    <div className={`p-0.5 rounded-md ${isEnabled ? "bg-white/20" : "bg-gray-100 text-gray-300"}`}>
+                                      {isEnabled ? <Check size={10} weight="bold" /> : <X size={10} weight="bold" />}
+                                    </div>
+                                    {p.action.toUpperCase()}
+                                  </button>
+                                );
+                              })}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* All users not in this role */}
-                {roleUsers.length < users.length && (
-                  <div className="mt-6">
-                    <p className="text-[11px] font-bold text-gray-300 uppercase tracking-wider mb-3">Other Portal Users</p>
-                    <div className="space-y-1.5">
-                      {users.filter(u => u.roleId !== selectedId).map(user => {
-                        const roleInfo = roles.find(r => r.id === user.roleId);
-                        return (
-                          <div key={user.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
-                            <div
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
-                              style={{ backgroundColor: roleInfo?.color ?? "#8a9e60" }}
-                            >
-                              {user.avatar}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-gray-600 truncate">{user.name}</p>
-                              <p className="text-[10px] text-gray-400">{roleInfo?.name}</p>
-                            </div>
-                            <button
-                              className="text-[10px] font-semibold px-2 py-1 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-[#8a9e60] hover:text-[#8a9e60] transition-colors"
-                            >
-                              + Assign
-                            </button>
                           </div>
                         );
                       })}
                     </div>
                   </div>
                 )}
+
+                {/* ── USERS TAB (SUB-ADMINS) ── */}
+                {detailTab === "users" && (
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                        {roleAdmins.length} identities inherit this role
+                      </p>
+                      {/* We could add an Assign User modal here later */}
+                    </div>
+
+                    {adminsLoading ? (
+                       <div className="py-12 text-center">
+                          <div className="w-8 h-8 border-2 border-[#8a9e60]/20 border-t-[#8a9e60] rounded-full animate-spin mx-auto mb-3" />
+                          <p className="text-[11px] font-medium text-gray-400">Fetching sub-admins...</p>
+                       </div>
+                    ) : roleAdmins.length === 0 ? (
+                      <div className="py-20 text-center bg-gray-50/30 rounded-2xl border border-dashed border-gray-100">
+                        <Users size={36} className="text-gray-200 mx-auto mb-3" />
+                        <p className="text-sm font-semibold text-gray-400">No users assigned yet</p>
+                        <p className="text-xs text-gray-300 mt-1">Visit identity management to link users to this role</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {roleAdmins.map(admin => {
+                          const isCurrentUser = admin.email === session?.email;
+                          return (
+                            <div
+                              key={admin.id}
+                              className={`flex flex-col p-4 rounded-2xl border transition-all ${
+                                isCurrentUser
+                                  ? "border-[#8a9e60]/25 bg-[#8a9e60]/5 ring-1 ring-[#8a9e60]/10"
+                                  : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-md hover:shadow-gray-100"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 mb-3">
+                                <div
+                                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-inner"
+                                  style={{ backgroundColor: getRoleColor(selected.id, selected.name) }}
+                                >
+                                  {admin.email[0].toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-bold text-gray-800 truncate">{admin.email.split('@')[0]}</p>
+                                    {isCurrentUser && (
+                                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-[#8a9e60] text-white">YOU</span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-gray-400 truncate">{admin.email}</p>
+                                </div>
+                                <div className={`w-2 h-2 rounded-full ${admin.status === 'active' ? 'bg-green-400' : 'bg-gray-300'}`} />
+                              </div>
+                              
+                              <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
+                                <span className="text-[9px] text-gray-400 font-medium uppercase tracking-tight">Joined {new Date(admin.createdAt).toLocaleDateString()}</span>
+                                <div className="flex gap-1.5">
+                                  <div className="text-[8px] bg-gray-100 text-gray-400 px-2 py-1 rounded font-bold uppercase">ID: {admin.id.slice(0, 8)}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+              <ShieldCheck size={64} className="text-gray-100 mb-4" weight="light" />
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Select a Role</h3>
+              <p className="text-sm text-gray-400 max-w-xs">
+                Pick a role from the sidebar to view assigned permissions and sub-admins.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Delete Confirm Modal ── */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <Trash size={22} className="text-red-500" />
-            </div>
-            <h3 className="text-base font-bold text-gray-800 text-center mb-2">Delete &ldquo;{selected.name}&rdquo;?</h3>
-            <p className="text-xs text-gray-500 text-center leading-relaxed mb-2">
-              This role will be permanently removed.
-            </p>
-            {roleUsers.length > 0 && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-4">
-                <Warning size={13} className="text-red-400 shrink-0" />
-                <p className="text-[11px] text-red-600 font-medium">
-                  {roleUsers.length} user{roleUsers.length > 1 ? "s" : ""} will lose their role and may lose portal access.
-                </p>
+      {/* ── New Role Modal ── */}
+      {showNewRole && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl p-7 max-w-md w-full border border-white/20 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#8a9e60]/10 flex items-center justify-center">
+                   <Plus size={20} className="text-[#8a9e60]" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800">Identify New Role</h3>
               </div>
-            )}
-            <div className="flex gap-3 mt-4">
+              <button onClick={() => setShowNewRole(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Role Identifier</label>
+                <input
+                  autoFocus
+                  value={newRoleName}
+                  onChange={e => setNewRoleName(e.target.value)}
+                  placeholder="e.g. Regional Field Manager"
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8a9e60]/20 focus:border-[#8a9e60] transition-all bg-gray-50/50"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Composition Description</label>
+                <textarea
+                  value={newRoleDesc}
+                  onChange={e => setNewRoleDesc(e.target.value)}
+                  placeholder="Define the scope and responsibilities of this role..."
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8a9e60]/20 focus:border-[#8a9e60] transition-all bg-gray-50/50 resize-none"
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+              <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                 <Key size={12} className="text-blue-500" />
+              </div>
+              <p className="text-[10px] text-blue-700 font-medium leading-normal">
+                New roles are initialized with <span className="font-bold">zero permissions</span>. You must configure its access matrix after creation.
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-8">
               <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowNewRole(false)}
+                className="flex-1 py-3 rounded-2xl border border-gray-100 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all font-sans"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
-                onClick={deleteRole}
-                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors"
+                onClick={handleAddRole}
+                disabled={!newRoleName.trim() || isSubmitting}
+                className="flex-1 py-3 rounded-2xl text-sm font-bold text-white hover:opacity-90 shadow-lg shadow-[#8a9e60]/20 transition-all disabled:opacity-40 disabled:shadow-none active:scale-95 flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#8a9e60" }}
               >
-                Delete Role
+                {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                Instantiate Role
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── New Role Modal ── */}
-      {showNewRole && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-gray-800">Create New Role</h3>
-              <button onClick={() => setShowNewRole(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
-              </button>
+      {/* ── Delete Confirm Modal ── */}
+      {showDeleteConfirm && selected && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl p-7 max-w-sm w-full border border-white/20 animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <Trash size={28} className="text-red-500" weight="bold" />
             </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Role Name</label>
-                <input
-                  value={newRoleName}
-                  onChange={e => setNewRoleName(e.target.value)}
-                  placeholder="e.g. Field Inspector"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description</label>
-                <textarea
-                  value={newRoleDesc}
-                  onChange={e => setNewRoleDesc(e.target.value)}
-                  placeholder="Briefly describe what this role can do..."
-                  rows={2}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] transition-colors resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Badge Color</label>
-                <div className="flex gap-2 flex-wrap">
-                  {COLOR_OPTIONS.map(c => (
-                    <button key={c} className="w-6 h-6 rounded-full border-2 border-white shadow-sm hover:scale-110 transition-transform" style={{ backgroundColor: c }} />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-gray-400 mt-4 bg-gray-50 rounded-lg p-2.5">
-              The new role will start with <span className="font-semibold">zero permissions</span>. You can configure them after creation.
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Decommission Policy?</h3>
+            <p className="text-xs text-gray-500 text-center leading-relaxed mb-6 px-4">
+              Are you sure you want to permanently delete the <span className="font-bold text-gray-900">&ldquo;{selected.name}&rdquo;</span> role profile?
             </p>
+            
+            {roleAdmins.length > 0 && (
+              <div className="flex items-center gap-3 bg-red-50/70 border border-red-100 rounded-2xl px-4 py-3 mb-6 ring-1 ring-red-200/50">
+                <Warning size={18} className="text-red-500 shrink-0" weight="fill" />
+                <p className="text-[11px] text-red-700 font-bold leading-tight">
+                  {roleAdmins.length} active identit{roleAdmins.length > 1 ? "ies" : "y"} will immediately lose all associated node capabilities.
+                </p>
+              </div>
+            )}
 
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-2">
               <button
-                onClick={() => setShowNewRole(false)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 rounded-2xl border border-gray-100 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
+                disabled={isSubmitting}
               >
-                Cancel
+                No, Keep it
               </button>
               <button
-                onClick={addRole}
-                disabled={!newRoleName.trim()}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40"
-                style={{ backgroundColor: "#8a9e60" }}
+                onClick={handleDeleteRole}
+                disabled={isSubmitting}
+                className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
-                Create Role
+                {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                Yes, Purge Policy
               </button>
             </div>
           </div>

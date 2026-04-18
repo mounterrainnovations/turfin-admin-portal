@@ -1,12 +1,12 @@
-import { SportType, SurfaceType } from "../vendors/constants";
+import { SportType, SurfaceType, KycStatus } from "../vendors/constants";
 import { FieldStatus, AmenityType } from "./constants";
 
 export interface TurfAddress {
-  type: string;
+  type?: string;
   pinCode: string;
   city: string;
   state: string;
-  country: string;
+  country?: string;
   houseNumber?: string;
   floor?: string;
   towerBlock?: string;
@@ -32,6 +32,7 @@ export interface Turf {
   weekendOpen: string;
   weekendClose: string;
   standardPricePaise: number;
+  pricePerHour?: number;
   status: FieldStatus;
   kycStatus?: KycStatus;
   verification?: Record<string, boolean>;
@@ -59,6 +60,7 @@ export interface Turf {
   totalReviews?: number;
   todayBookings?: number;
   totalBookings?: number;
+  totalRevenue?: number;
   totalRevenuePaise?: number;
   listedAt?: string;
   description?: string;
@@ -76,6 +78,7 @@ export interface Turf {
 
 export interface CreateTurfDto {
   name: string;
+  description?: string;
   sports: SportType[];
   surfaceType: SurfaceType;
   address: TurfAddress;
@@ -84,14 +87,15 @@ export interface CreateTurfDto {
   weekendOpen: string;
   weekendClose: string;
   standardPricePaise: number;
+  peakPricePaise?: number;
   amenities?: AmenityType[];
   capacity?: number;
   sizeFormat?: string;
   documents?: {
-    propertyDocument?: string;
-    municipalNoc?: string;
-    liabilityInsurance?: string;
-    fieldPhotos?: string[];
+    propertyDocument?: { url: string };
+    municipalNoc?: { url: string };
+    liabilityInsurance?: { url: string };
+    fieldPhotos?: { url: string }[];
   };
 }
 
@@ -100,7 +104,7 @@ export interface UpdateTurfDto extends Partial<CreateTurfDto> {
 }
 
 export interface TurfReviewDto {
-  status: "active" | "rejected" | "pending-resubmission";
+  status: "active" | "rejected" | "pending-resubmission" | "verified" | "in_review" | "pending";
   reviewerNotes?: string;
   verification?: Record<string, boolean>;
 }

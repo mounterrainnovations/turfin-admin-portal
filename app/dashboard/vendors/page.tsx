@@ -32,6 +32,8 @@ import {
   PayoutCycle,
   AdminOnboardVendorDto
 } from "@/features/vendors";
+import { DashboardPagination } from "@/components/DashboardPagination";
+
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type DocStatus = "pending" | "verified" | "rejected";
@@ -128,7 +130,8 @@ export default function VendorsPage() {
     async function load() {
       setIsLoading(true);
       try {
-        const res = await listVendors({ page, limit, status: activeTab });
+        const res = await listVendors({ page, limit, status: activeTab, search });
+
         if (!active) return;
         setVendors(res.items || []);
         setTotal(res.total || 0);
@@ -147,7 +150,12 @@ export default function VendorsPage() {
 
     load();
     return () => { active = false; };
-  }, [page, limit, activeTab, showToast, refreshTrigger]);
+  }, [page, limit, activeTab, search, showToast, refreshTrigger]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, search]);
+
 
   useEffect(() => {
     if (selectedVendor) {
@@ -537,16 +545,14 @@ export default function VendorsPage() {
             })}
           </tbody>
         </table>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <p className="text-[11px] text-gray-400">Showing {vendors.length} of {total} vendors</p>
-          <div className="flex gap-1">
-            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => i + 1).map(p => (
-              <button key={p} onClick={() => setPage(p)}
-                className="w-7 h-7 text-xs rounded font-medium transition-colors"
-                style={p === page ? { backgroundColor: "#8a9e60", color: "white" } : { color: "#9ca3af" }}>{p}</button>
-            ))}
-          </div>
-        </div>
+        <DashboardPagination 
+          page={page} 
+          total={total} 
+          limit={limit} 
+          onPageChange={setPage} 
+          label="vendors"
+        />
+
       </div>
 
       {/* Click-away */}

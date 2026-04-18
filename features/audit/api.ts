@@ -311,15 +311,19 @@ export async function listAuditLogs(params: {
   category?: BackendAuditCategory | "all";
   eventType?: string;
   actorId?: string;
+  search?: string;
 } = {}): Promise<AuditListResult> {
   const response = await fetch(
     buildAuditUrl("/audit", {
       page: String(params.page ?? 1),
+
       limit: String(params.limit ?? 100),
       category: params.category && params.category !== "all" ? params.category : undefined,
       eventType: params.eventType,
       actorId: params.actorId,
+      search: params.search,
     }),
+
     {
       headers: {
         Authorization: `Bearer ${getAccessToken()}`,

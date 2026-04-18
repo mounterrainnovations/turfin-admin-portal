@@ -50,11 +50,40 @@ async function handleResponse(response: Response) {
   return payload;
 }
 
-export async function listVendors(params: { page?: number; limit?: number; status?: string } = {}): Promise<VendorListResult> {
+function isRecord(v: any): v is Record<string, any> {
+  return typeof v === 'object' && v !== null;
+}
+
+function extractItems(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (!isRecord(payload)) return [];
+  const candidates = ["items", "data", "results", "vendors"];
+  for (const key of candidates) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
+function extractTotal(payload: any, itemsLength: number): number {
+  if (!isRecord(payload)) return itemsLength;
+  if (typeof payload.total === "number") return payload.total;
+  if (typeof payload.totalItems === "number") return payload.totalItems;
+  
+  const meta = payload.meta || payload.pagination;
+  if (isRecord(meta)) {
+    if (typeof meta.total === "number") return meta.total;
+    if (typeof meta.totalItems === "number") return meta.totalItems;
+    if (typeof meta.count === "number") return meta.count;
+  }
+  return itemsLength;
+}
+
+export async function listVendors(params: { page?: number; limit?: number; status?: string; search?: string } = {}): Promise<VendorListResult> {
   const url = new URL(`${getApiUrl()}/admin/vendors`);
   if (params.page) url.searchParams.set("page", String(params.page));
   if (params.limit) url.searchParams.set("limit", String(params.limit));
-  if (params.status && params.status !== 'all') url.searchParams.set("status", params.status);
+  if (params.status && params.status !== "all") url.searchParams.set("status", params.status);
+  if (params.search) url.searchParams.set("search", params.search);
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${getAccessToken()}` },
@@ -62,23 +91,26 @@ export async function listVendors(params: { page?: number; limit?: number; statu
   });
 
   const data = await handleResponse(response);
-  
-  // Adapt backend vendors to frontend Vendor type if needed
-  const items = (data.items || data.data || []).map((v: any) => ({
+  const rawItems = extractItems(data);
+  const items = rawItems.map((v: any) => ({
     ...v,
-    // Ensure nested fields are handled or defaulted
+    status: (v.status || "pending").toLowerCase(),
+    businessName: v.businessName || "-",
+    ownerFullName: v.ownerFullName || "-",
+    email: v.email || "-",
+    phone: v.phone || "-",
     address: v.address || {},
     bankingDetails: v.bankingDetails || {},
-    // Extract verification and kycStatus from nested kyc object
-    verification: v.kyc?.verification || {},
-    kycStatus: v.kyc?.status || v.kycStatus || "pending",
-    // Backend uses joinedAt or createdAt? DTO.md says JoinedAt
+    verification: v.kyc?.verification || v.verification || {},
+    kycStatus: (v.kyc?.status || v.kycStatus || "not_started").toLowerCase(),
     joinedAt: v.joinedAt || v.createdAt || new Date().toISOString(),
+    createdAt: v.createdAt || v.joinedAt || new Date().toISOString(),
+
   }));
 
   return {
     items,
-    total: data.meta?.totalItems || data.total || items.length,
+    total: extractTotal(data, items.length),
   };
 }
 
