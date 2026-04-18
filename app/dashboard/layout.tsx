@@ -15,11 +15,11 @@ import { useAuth } from "@/features/auth/hooks";
 const navItems = [
   { label: "Audit Log", icon: Scroll,        href: "/dashboard/audit"     },
   { label: "Dashboard", icon: House,         href: "/dashboard"           },
-  { label: "Bookings",  icon: CalendarBlank, href: "/dashboard/bookings"  },
+  { label: "Bookings",  icon: CalendarBlank, href: "/dashboard/bookings" },
   { label: "Vendors",   icon: Handshake,     href: "/dashboard/vendors"   },
   { label: "Fields",    icon: MapPin,        href: "/dashboard/fields"    },
   { label: "Users",     icon: Users,         href: "/dashboard/users"     },
-  { label: "Analytics",      icon: ChartLineUp,   href: "/dashboard/analytics"      },
+  { label: "Analytics", icon: ChartLineUp,   href: "/dashboard/analytics" },
   { label: "Notifications",  icon: BellRinging,   href: "/dashboard/notifications"  },
   { label: "App Management", icon: DeviceMobile,  href: "/dashboard/app-management" },
   { label: "Roles",          icon: Key,           href: "/dashboard/roles",  restricted: true },
@@ -50,17 +50,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <nav className="flex-1 py-4 flex flex-col gap-1 px-2">
-          {navItems.map(({ label, icon: Icon, href }) => {
+          {navItems.map(({ label, icon: Icon, href, disabled }) => {
             const active = pathname === href;
             return (
               <button
                 key={href}
-                onClick={() => router.push(href)}
+                disabled={disabled}
+                onClick={() => !disabled && router.push(href)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left
                   ${active ? "bg-white/20 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"}`}
               >
                 <Icon size={18} weight={active ? "fill" : "regular"} className="shrink-0" />
-                {open && <span>{label}</span>}
+                {open && <span className="truncate">{label}</span>}
               </button>
             );
           })}

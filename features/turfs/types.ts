@@ -33,6 +33,7 @@ export interface Turf {
   weekendClose: string;
   standardPricePaise: number;
   status: FieldStatus;
+  kycStatus?: KycStatus;
   verification?: Record<string, boolean>;
   reviewerNotes?: string;
   
@@ -62,7 +63,14 @@ export interface Turf {
   listedAt?: string;
   description?: string;
   documents?: {
+    status: KycStatus;
     verification: Record<string, boolean>;
+    documents: {
+      propertyDocument?: string;
+      municipalNoc?: string;
+      liabilityInsurance?: string;
+      fieldPhotos?: string[];
+    };
   };
 }
 
@@ -79,6 +87,12 @@ export interface CreateTurfDto {
   amenities?: AmenityType[];
   capacity?: number;
   sizeFormat?: string;
+  documents?: {
+    propertyDocument?: string;
+    municipalNoc?: string;
+    liabilityInsurance?: string;
+    fieldPhotos?: string[];
+  };
 }
 
 export interface UpdateTurfDto extends Partial<CreateTurfDto> {

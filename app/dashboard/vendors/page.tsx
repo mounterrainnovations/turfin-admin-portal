@@ -134,7 +134,12 @@ export default function VendorsPage() {
         setTotal(res.total || 0);
       } catch (err: any) {
         if (!active) return;
-        showToast({ title: "Vendor data unavailable", description: err.message || "Failed to load vendors", tone: "error" });
+        const isAuthError = err.message === "Unauthorized" || err.message?.toLowerCase().includes("unauthori");
+        showToast({ 
+          title: isAuthError ? "Vendor data unavailable" : "Error", 
+          description: isAuthError ? "Unauthorised" : (err.message || "Failed to load vendors"), 
+          tone: "error" 
+        });
       } finally {
         if (active) setIsLoading(false);
       }

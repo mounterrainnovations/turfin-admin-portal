@@ -331,8 +331,12 @@ export async function listAuditLogs(params: {
   const payload = await parseResponse(response);
 
   if (!response.ok) {
-    const message = findStringDeep(payload, ["message", "error"]) ?? "Unable to load audit logs.";
-    throw new Error(message);
+    const errorMsg = 
+      payload?.error?.message || 
+      payload?.message || 
+      findStringDeep(payload, ["message", "error"]) || 
+      (typeof payload === 'string' && payload.trim() ? payload : "Unable to load audit logs.");
+    throw new Error(errorMsg);
   }
 
   const items = extractItems(payload);
@@ -361,8 +365,12 @@ export async function exportAuditCsv(params: {
 
   if (!response.ok) {
     const payload = await parseResponse(response);
-    const message = findStringDeep(payload, ["message", "error"]) ?? "Unable to export audit logs.";
-    throw new Error(message);
+    const errorMsg = 
+      payload?.error?.message || 
+      payload?.message || 
+      findStringDeep(payload, ["message", "error"]) || 
+      (typeof payload === 'string' && payload.trim() ? payload : "Unable to export audit logs.");
+    throw new Error(errorMsg);
   }
 
   const blob = await response.blob();

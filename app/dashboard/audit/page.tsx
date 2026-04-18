@@ -165,12 +165,14 @@ export default function AuditPage() {
         if (!active) return;
 
         const message = error instanceof Error ? error.message : "Unable to load audit logs.";
+        const isAuthError = message === "Unauthorized" || message.toLowerCase().includes("unauthori");
+        
         setEntries([]);
         setTotalCount(0);
         showToast({
           tone: "error",
-          title: "Audit log unavailable",
-          description: message,
+          title: isAuthError ? "Audit log unavailable" : "Error",
+          description: isAuthError ? "Unauthorised" : message,
         });
       } finally {
         if (active) {

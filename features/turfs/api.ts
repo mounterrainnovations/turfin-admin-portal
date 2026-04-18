@@ -24,9 +24,12 @@ async function handleResponse(response: Response) {
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
   
   if (!response.ok) {
-    const errorMsg = (typeof payload === 'object' && payload !== null && 'message' in payload) 
-      ? (payload as any).message 
-      : (typeof payload === 'string' ? payload : "An unexpected error occurred");
+    let errorMsg = "An unexpected error occurred";
+    if (typeof payload === 'object' && payload !== null) {
+      errorMsg = payload.error?.message || payload.message || JSON.stringify(payload);
+    } else if (typeof payload === 'string' && payload.trim()) {
+      errorMsg = payload;
+    }
     throw new Error(errorMsg);
   }
   return payload;
@@ -54,6 +57,8 @@ export async function listTurfs(params: {
   const data = await handleResponse(response);
   const items = (data.items || data.data || []).map((t: any) => ({
     ...t,
+    status: (t.status || "pending").toLowerCase(),
+    kycStatus: (t.kycStatus || "not_started").toLowerCase(),
     address: t.address || {},
     vendor: t.vendor || {},
     listedAt: t.createdAt || t.listedAt || new Date().toISOString(),

@@ -17,7 +17,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\",\n    \"role\": \"end_user\", // optional: end_user | vendor_owner (default: end_user)\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"displayName\": \"JohnD\",\n    \"gender\": \"male\", // optional: male | female | other | prefer_not_to_say\n    \"dateOfBirth\": \"1995-05-15\", // optional (ISO 8601 date)\n    \"city\": \"Kochi\", // optional\n    \"state\": \"Kerala\", // optional\n    \"preferredSports\": [\"football\", \"cricket\"] // optional: see DTO.md for full SportType enum\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"string\",\n  \"role\": \"[string = UserRole.END_USER]\",\n  \"firstName\": \"string\",\n  \"middleName\": \"string\",\n  \"lastName\": \"string\",\n  \"displayName\": \"string\",\n  \"avatarUrl\": \"string\",\n  \"dateOfBirth\": \"string\",\n  \"gender\": \"male\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"preferredSports\": [\n    \"football\"\n  ],\n  \"vendorProfile\": \"[CreateVendorDto]\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -26,8 +26,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signup",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "signup"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signup"
+              ]
             },
             "description": "Register a new end_user account. Creates auth identity + user profile in a single step."
           },
@@ -40,7 +45,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"vendor@example.com\",\n    \"password\": \"password123\",\n    \"role\": \"vendor_owner\",\n    \"vendorProfile\": {\n        \"businessName\": \"Acme Turf Fields\",\n        \"businessType\": \"company\", // optional: individual | company | partnership\n        \"ownerFullName\": \"John Vendor\",\n        \"phone\": \"+919876543210\",\n        \"whatsapp\": \"+919876543210\", // optional\n        \"gstNumber\": \"22AAAAA0000A1Z5\", // optional\n        \"businessRegistrationNumber\": \"ABC123456\", // optional\n        \"address\": {\n            \"type\": \"work\", // optional: home | work | other\n            \"label\": \"Main Office\",\n            \"pinCode\": \"400001\",\n            \"houseNumber\": \"Plot 123\",\n            \"floor\": \"Ground Floor\",\n            \"towerBlock\": \"Tower A\",\n            \"landmark\": \"Main Office\",\n            \"city\": \"Mumbai\",\n            \"state\": \"Maharashtra\",\n            \"country\": \"India\",\n            \"contactName\": \"John Vendor\",\n            \"contactPhone\": \"+919876543210\",\n            \"latitude\": 19.0760,\n            \"longitude\": 72.8777,\n            \"googleMapsLink\": \"https://maps.google.com/?q=19.0760,72.8777\" // optional\n        },\n        \"bankingDetails\": {\n            \"bankName\": \"HDFC Bank\",\n            \"accountHolderName\": \"John Vendor\",\n            \"accountNumber\": \"123456789012\",\n            \"ifsc\": \"HDFC0001234\",\n            \"upiId\": \"john@upi\" // optional\n        },\n        \"payoutCycle\": \"monthly\" // optional: daily | weekly | monthly\n    }\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"string\",\n  \"role\": \"[string = UserRole.END_USER]\",\n  \"firstName\": \"string\",\n  \"middleName\": \"string\",\n  \"lastName\": \"string\",\n  \"displayName\": \"string\",\n  \"avatarUrl\": \"string\",\n  \"dateOfBirth\": \"string\",\n  \"gender\": \"male\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"preferredSports\": [\n    \"football\"\n  ],\n  \"vendorProfile\": \"[CreateVendorDto]\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -49,8 +54,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signup",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "signup"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signup"
+              ]
             },
             "description": "Register a new vendor_owner account. Creates auth identity + vendor profile + empty KYC record in a single atomic transaction. Includes optional financial terms (payoutCycle, commissionPct)."
           },
@@ -63,7 +73,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -72,8 +82,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signin",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "signin"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signin"
+              ]
             },
             "description": "Login with email + password."
           },
@@ -86,7 +101,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "raw": "{\n  \"refreshToken\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -95,8 +110,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/refresh",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "refresh"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
             },
             "description": "Rotate access + refresh tokens."
           },
@@ -119,8 +139,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/signout",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "signout"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "signout"
+              ]
             },
             "description": "Revoke refresh token (logout)."
           },
@@ -149,8 +174,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/audit?page=1&limit=10&category=auth",
-              "host": ["{{baseUrl}}"],
-              "path": ["audit"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -200,8 +229,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/audit/export/csv?category=auth",
-              "host": ["{{baseUrl}}"],
-              "path": ["audit", "export", "csv"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit",
+                "export",
+                "csv"
+              ],
               "query": [
                 {
                   "key": "category",
@@ -246,8 +281,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/users?page=1&limit=10",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "users"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users"
+                  ],
                   "query": [
                     {
                       "key": "page",
@@ -286,8 +326,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/users/:userId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "users", ":userId"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    ":userId"
+                  ],
                   "variable": [
                     {
                       "key": "userId",
@@ -316,8 +362,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/users/:userId/ban",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "users", ":userId", "ban"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    ":userId",
+                    "ban"
+                  ],
                   "variable": [
                     {
                       "key": "userId",
@@ -346,8 +399,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/users/:userId/unban",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "users", ":userId", "unban"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    ":userId",
+                    "unban"
+                  ],
                   "variable": [
                     {
                       "key": "userId",
@@ -382,8 +442,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors?page=1&limit=10",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "vendors"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "vendors"
+                  ],
                   "query": [
                     {
                       "key": "page",
@@ -422,8 +487,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "vendors", ":vendorId"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "vendors",
+                    ":vendorId"
+                  ],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -461,8 +532,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "vendors", ":vendorId"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "vendors",
+                    ":vendorId"
+                  ],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -491,8 +568,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId/ban",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "vendors", ":vendorId", "ban"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "vendors",
+                    ":vendorId",
+                    "ban"
+                  ],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -521,8 +605,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId/unban",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "vendors", ":vendorId", "unban"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "vendors",
+                    ":vendorId",
+                    "unban"
+                  ],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -551,8 +642,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "vendors", ":vendorId"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "vendors",
+                    ":vendorId"
+                  ],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -590,8 +687,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/onboard-vendor",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "onboard-vendor"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "onboard-vendor"
+                  ]
                 },
                 "description": "Create a vendor_owner identity, vendor profile, and empty KYC record in one transaction. Use this when ops/admin creates the vendor directly."
               },
@@ -614,7 +716,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"name\": \"Elite Admin Turf\",\n    \"sports\": [\"football\"], // required: see SportType enum in DTO.md\n    \"surfaceType\": \"artificial_turf\", // required: artificial_turf | natural_grass | concrete | wooden | synthetic\n    \"address\": {\n        \"type\": \"other\",\n        \"pinCode\": \"682001\",\n        \"houseNumber\": \"Building 10\",\n        \"floor\": \"4th Floor\",\n        \"towerBlock\": \"Block B\",\n        \"landmark\": \"Opposite Stadium\",\n        \"city\": \"Kochi\",\n        \"state\": \"Kerala\",\n        \"country\": \"India\",\n        \"contactName\": \"Field Manager\",\n        \"contactPhone\": \"+919988776655\",\n        \"latitude\": 9.9816,\n        \"longitude\": 76.2999,\n        \"googleMapsLink\": \"https://maps.google.com/?q=9.9816,76.2999\"\n    },\n    \"weekdayOpen\": \"06:00\",\n    \"weekdayClose\": \"23:00\",\n    \"weekendOpen\": \"05:00\",\n    \"weekendClose\": \"23:59\",\n    \"standardPricePaise\": 120000, // required: price in paise (1200.00 INR)\n    \"amenities\": [\"parking\", \"drinking_water\"], // optional\n    \"capacity\": 50, // optional\n    \"cancellationWindowHrs\": 24 // optional: default 24\n}",
+                  "raw": "{\n  \"name\": \"string\",\n  \"sports\": [\n    \"football\"\n  ],\n  \"amenities\": [\n    \"parking\"\n  ],\n  \"capacity\": 100,\n  \"sizeFormat\": \"string\",\n  \"surfaceType\": \"artificial_turf\",\n  \"address\": \"[TurfAddressDto]\",\n  \"weekdayOpen\": \"string\",\n  \"weekdayClose\": \"string\",\n  \"weekendOpen\": \"string\",\n  \"weekendClose\": \"string\",\n  \"standardPricePaise\": 100,\n  \"cancellationWindowHrs\": 100\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -623,8 +725,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/vendors/:vendorId/turfs",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "vendors", ":vendorId", "turfs"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "vendors",
+                    ":vendorId",
+                    "turfs"
+                  ],
                   "variable": [
                     {
                       "key": "vendorId",
@@ -659,8 +768,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs?page=1&limit=10&status=verified&sportType=football&city=Mumbai",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "turfs"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "turfs"
+                  ],
                   "query": [
                     {
                       "key": "page",
@@ -709,8 +823,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs/:turfId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "turfs", ":turfId"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "turfs",
+                    ":turfId"
+                  ],
                   "variable": [
                     {
                       "key": "turfId",
@@ -738,8 +858,15 @@
                 "method": "POST",
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs/:turfId/ban",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "turfs", ":turfId", "ban"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "turfs",
+                    ":turfId",
+                    "ban"
+                  ],
                   "variable": [
                     {
                       "key": "turfId",
@@ -766,8 +893,15 @@
                 "method": "POST",
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs/:turfId/unban",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "turfs", ":turfId", "unban"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "turfs",
+                    ":turfId",
+                    "unban"
+                  ],
                   "variable": [
                     {
                       "key": "turfId",
@@ -794,7 +928,7 @@
                 "method": "PATCH",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"status\": \"maintenance\"\n}",
+                  "raw": "{\n  \"status\": \"active\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -803,8 +937,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/turfs/:turfId/status",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "turfs", ":turfId/status"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "turfs",
+                    ":turfId/status"
+                  ],
                   "variable": [
                     {
                       "key": "turfId",
@@ -850,8 +990,15 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/admin/vendors/:vendorId/kyc",
-                      "host": ["{{baseUrl}}"],
-                      "path": ["admin", "vendors", ":vendorId", "kyc"],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "admin",
+                        "vendors",
+                        ":vendorId",
+                        "kyc"
+                      ],
                       "variable": [
                         {
                           "key": "vendorId",
@@ -880,7 +1027,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"status\": \"verified\",\n    \"reviewerNotes\": \"Approved by Admin.\",\n    \"verification\": {\n        \"identityProof\": true,\n        \"addressProof\": true,\n        \"businessRegistration\": true,\n        \"gstCertificate\": true,\n        \"cancelledCheque\": true\n    }\n}",
+                      "raw": "{\n  \"status\": \"not_started\",\n  \"reviewerNotes\": \"string\",\n  \"verification\": \"[Record<string, boolean>]\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -889,7 +1036,9 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/admin/vendors/:vendorId/kyc/review",
-                      "host": ["{{baseUrl}}"],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
                       "path": [
                         "admin",
                         "vendors",
@@ -930,7 +1079,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"documents\": {\n        \"propertyDocument\": \"https://storage.com/docs/prop.pdf\",\n        \"municipalNoc\": \"https://storage.com/docs/noc.pdf\",\n        \"liabilityInsurance\": \"https://storage.com/docs/insurance.pdf\",\n        \"fieldPhotos\": [\"https://storage.com/img1.jpg\", \"https://storage.com/img2.jpg\"]\n    }\n}",
+                      "raw": "{\n  \"documents\": \"[TurfDocumentsDto]\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -939,8 +1088,15 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/admin/turfs/:turfId/documents",
-                      "host": ["{{baseUrl}}"],
-                      "path": ["admin", "turfs", ":turfId", "documents"],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "admin",
+                        "turfs",
+                        ":turfId",
+                        "documents"
+                      ],
                       "variable": [
                         {
                           "key": "turfId",
@@ -969,8 +1125,15 @@
                     "header": [],
                     "url": {
                       "raw": "{{baseUrl}}/admin/turfs/:turfId/documents",
-                      "host": ["{{baseUrl}}"],
-                      "path": ["admin", "turfs", ":turfId", "documents"],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "admin",
+                        "turfs",
+                        ":turfId",
+                        "documents"
+                      ],
                       "variable": [
                         {
                           "key": "turfId",
@@ -999,7 +1162,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"status\": \"verified\",\n    \"reviewerNotes\": \"Turf docs look solid.\",\n    \"verification\": {\n        \"propertyDocument\": true,\n        \"municipalNoc\": true,\n        \"liabilityInsurance\": true,\n        \"fieldPhotos\": true\n    }\n}",
+                      "raw": "{\n  \"status\": \"not_started\",\n  \"reviewerNotes\": \"string\",\n  \"verification\": \"[Record<string, boolean>]\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -1008,7 +1171,9 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/admin/turfs/:turfId/documents/review",
-                      "host": ["{{baseUrl}}"],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
                       "path": [
                         "admin",
                         "turfs",
@@ -1061,8 +1226,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/:identityId/password",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", ":identityId", "password"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins",
+                    ":identityId",
+                    "password"
+                  ],
                   "variable": [
                     {
                       "key": "identityId",
@@ -1102,8 +1274,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/me",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "me"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me"
+                  ]
                 },
                 "description": "Retrieve current logged-in user profile."
               },
@@ -1126,7 +1303,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"displayName\": \"Johnny\",\n    \"whatsapp\": \"+919876543210\",\n    \"city\": \"Koramangala\",\n    \"country\": \"India\",\n    \"addresses\": [\n        {\n            \"type\": \"home\",\n            \"label\": \"Home\",\n            \"pinCode\": \"560102\",\n            \"houseNumber\": \"No. 42\",\n            \"floor\": \"Ground Floor\",\n            \"towerBlock\": \"Building A\",\n            \"landmark\": \"Near HSR Club\",\n            \"city\": \"Bangalore\",\n            \"state\": \"Karnataka\",\n            \"country\": \"India\",\n            \"contactName\": \"John Doe\",\n            \"contactPhone\": \"+919988776655\",\n            \"latitude\": 12.9141,\n            \"longitude\": 77.6411\n        }\n    ]\n}",
+                  "raw": "{\n  \"firstName\": \"string\",\n  \"middleName\": \"string\",\n  \"lastName\": \"string\",\n  \"displayName\": \"string\",\n  \"avatarUrl\": \"string\",\n  \"dateOfBirth\": \"string\",\n  \"gender\": \"male\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"country\": \"string\",\n  \"preferredSports\": [\n    \"football\"\n  ],\n  \"deviceOs\": \"ios\",\n  \"appVersion\": \"string\",\n  \"pushNotificationsEnabled\": true,\n  \"onesignalPlayerId\": \"string\",\n  \"whatsapp\": \"string\",\n  \"addresses\": []\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1135,8 +1312,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users/me",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "me"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me"
+                  ]
                 },
                 "description": "Update specific fields of the user profile."
               },
@@ -1159,8 +1341,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/me",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "me"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me"
+                  ]
                 },
                 "description": "Soft-delete current user's account."
               },
@@ -1188,7 +1375,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"type\": \"work\",\n    \"label\": \"Office\",\n    \"pinCode\": \"560038\",\n    \"houseNumber\": \"Level 4, Tower B\",\n    \"floor\": \"4th Floor\",\n    \"towerBlock\": \"Prestige Blue Chip\",\n    \"landmark\": \"Near Metro Station\",\n    \"city\": \"Bangalore\",\n    \"state\": \"Karnataka\",\n    \"country\": \"India\",\n    \"contactName\": \"John Work\",\n    \"contactPhone\": \"+919988776655\",\n    \"latitude\": 12.9716,\n    \"longitude\": 77.6412\n}",
+                  "raw": "{\n  \"id\": \"string\",\n  \"type\": \"home\",\n  \"label\": \"string\",\n  \"pinCode\": \"string\",\n  \"houseNumber\": \"string\",\n  \"floor\": \"string\",\n  \"towerBlock\": \"string\",\n  \"landmark\": \"string\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"country\": \"[string = 'India']\",\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\",\n  \"latitude\": 100,\n  \"longitude\": 100,\n  \"googleMapsLink\": \"string\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1197,8 +1384,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users/me/addresses",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "me", "addresses"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me",
+                    "addresses"
+                  ]
                 },
                 "description": "Add a new address to the user's profile."
               },
@@ -1221,7 +1414,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"label\": \"Old Office Update\",\n    \"pinCode\": \"560102\",\n    \"city\": \"Bangalore\",\n    \"state\": \"Karnataka\",\n    \"country\": \"India\"\n}",
+                  "raw": "{\n  \"id\": \"string\",\n  \"type\": \"home\",\n  \"label\": \"string\",\n  \"pinCode\": \"string\",\n  \"houseNumber\": \"string\",\n  \"floor\": \"string\",\n  \"towerBlock\": \"string\",\n  \"landmark\": \"string\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"country\": \"[string = 'India']\",\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\",\n  \"latitude\": 100,\n  \"longitude\": 100,\n  \"googleMapsLink\": \"string\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1230,8 +1423,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users/me/addresses/:addressId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "me", "addresses", ":addressId"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me",
+                    "addresses",
+                    ":addressId"
+                  ],
                   "variable": [
                     {
                       "key": "addressId",
@@ -1260,8 +1460,16 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/me/addresses/:addressId/primary",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "me", "addresses", ":addressId", "primary"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me",
+                    "addresses",
+                    ":addressId",
+                    "primary"
+                  ],
                   "variable": [
                     {
                       "key": "addressId",
@@ -1290,8 +1498,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/me/addresses/:addressId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "me", "addresses", ":addressId"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me",
+                    "addresses",
+                    ":addressId"
+                  ],
                   "variable": [
                     {
                       "key": "addressId",
@@ -1326,8 +1541,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/turfs?page=1&limit=10&sportType=football&city=Mumbai",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "turfs"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "turfs"
+                  ],
                   "query": [
                     {
                       "key": "page",
@@ -1372,8 +1592,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/turfs/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["users", "turfs", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "turfs",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -1413,8 +1639,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/me",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "me"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "me"
+                  ]
                 },
                 "description": "Retrieve the profile of the vendor associated with the current identity."
               },
@@ -1446,8 +1677,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/vendors/me",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "me"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "me"
+                  ]
                 },
                 "description": "Partially update vendor fields like businessName, address, or bankingDetails."
               },
@@ -1487,8 +1723,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/kyc/me/submit",
-              "host": ["{{baseUrl}}"],
-              "path": ["kyc", "me", "submit"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kyc",
+                "me",
+                "submit"
+              ]
             },
             "description": "Submit or merge KYC document URLs. Status moves to pending if essential docs are present."
           },
@@ -1511,8 +1753,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/kyc/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["kyc", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kyc",
+                "me"
+              ]
             },
             "description": "Retrieve the current KYC verification status and stored document metadata."
           },
@@ -1544,7 +1791,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"name\": \"Main Football Field\",\n    \"sports\": [\"football\"],\n    \"surfaceType\": \"natural_grass\",\n    \"address\": {\n        \"type\": \"other\",\n        \"pinCode\": \"400002\",\n        \"houseNumber\": \"Plot 44\",\n        \"floor\": \"Ground\",\n        \"towerBlock\": \"Main Complex\",\n        \"landmark\": \"Sports Complex\",\n        \"city\": \"Mumbai\",\n        \"state\": \"Maharashtra\",\n        \"country\": \"India\",\n        \"contactName\": \"Field Assistant\",\n        \"contactPhone\": \"+919988776644\",\n        \"latitude\": 19.1176,\n        \"longitude\": 72.8577,\n        \"googleMapsLink\": \"https://maps.google.com/?q=19.1176,72.8577\"\n    },\n    \"weekdayOpen\": \"06:00\",\n    \"weekdayClose\": \"22:00\",\n    \"weekendOpen\": \"05:00\",\n    \"weekendClose\": \"23:00\",\n    \"standardPricePaise\": 150000\n}",
+                  "raw": "{\n  \"name\": \"string\",\n  \"sports\": [\n    \"football\"\n  ],\n  \"amenities\": [\n    \"parking\"\n  ],\n  \"capacity\": 100,\n  \"sizeFormat\": \"string\",\n  \"surfaceType\": \"artificial_turf\",\n  \"address\": \"[TurfAddressDto]\",\n  \"weekdayOpen\": \"string\",\n  \"weekdayClose\": \"string\",\n  \"weekendOpen\": \"string\",\n  \"weekendClose\": \"string\",\n  \"standardPricePaise\": 100,\n  \"cancellationWindowHrs\": 100\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1553,8 +1800,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "turfs"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "turfs"
+                  ]
                 },
                 "description": "Create a new turf field. Automatically initializes a corresponding turf document record with not_started status."
               },
@@ -1577,8 +1829,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "turfs"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "turfs"
+                  ]
                 },
                 "description": "List all turfs owned by the authenticated vendor. Includes contact details and field photos."
               },
@@ -1601,8 +1858,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "turfs", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "turfs",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -1640,8 +1903,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "turfs", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "turfs",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -1670,8 +1939,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "turfs", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "turfs",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -1714,8 +1989,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:turfId/documents",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "turfs", ":turfId", "documents"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "turfs",
+                    ":turfId",
+                    "documents"
+                  ],
                   "variable": [
                     {
                       "key": "turfId",
@@ -1744,8 +2026,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/vendors/turfs/:turfId/documents",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["vendors", "turfs", ":turfId", "documents"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "turfs",
+                    ":turfId",
+                    "documents"
+                  ],
                   "variable": [
                     {
                       "key": "turfId",
@@ -1781,8 +2070,13 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/storage/upload-url?path=kyc/aadhaar.pdf&fileType=application/pdf",
-              "host": ["{{baseUrl}}"],
-              "path": ["storage", "upload-url"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "storage",
+                "upload-url"
+              ],
               "query": [
                 {
                   "key": "path",
@@ -1813,8 +2107,13 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/storage/view-url?path=kyc/aadhaar.pdf",
-              "host": ["{{baseUrl}}"],
-              "path": ["storage", "view-url"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "storage",
+                "view-url"
+              ],
               "query": [
                 {
                   "key": "path",
@@ -1850,8 +2149,13 @@
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins"
+                  ]
                 },
                 "description": "List all identities with the 'sub_admin' role and their assigned custom roles."
               }
@@ -1881,8 +2185,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins"
+                  ]
                 }
               }
             },
@@ -1902,8 +2211,14 @@
                 "method": "DELETE",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins",
+                    ":id"
+                  ]
                 },
                 "description": "Permanently decommission a sub-admin. Revokes roles and deletes from Auth."
               }
@@ -1929,8 +2244,14 @@
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "roles"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins",
+                    "roles"
+                  ]
                 },
                 "description": "List all custom (non-system) roles and their granular permissions."
               }
@@ -1960,8 +2281,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "roles"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins",
+                    "roles"
+                  ]
                 }
               }
             },
@@ -1990,8 +2317,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", ":id", "roles"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins",
+                    ":id",
+                    "roles"
+                  ]
                 }
               }
             },
@@ -2020,7 +2354,9 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId/permissions",
-                  "host": ["{{baseUrl}}"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
                   "path": [
                     "admin",
                     "sub-admins",
@@ -2047,8 +2383,14 @@
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/permissions",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "permissions"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins",
+                    "permissions"
+                  ]
                 },
                 "description": "Fetch the catalogue of all granular resource:action permissions defined in the system."
               }
@@ -2069,8 +2411,15 @@
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/:id/roles",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", ":id", "roles"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins",
+                    ":id",
+                    "roles"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -2097,8 +2446,15 @@
                 "method": "DELETE",
                 "url": {
                   "raw": "{{baseUrl}}/admin/sub-admins/roles/:roleId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["admin", "sub-admins", "roles", ":roleId"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "sub-admins",
+                    "roles",
+                    ":roleId"
+                  ],
                   "variable": [
                     {
                       "key": "roleId",
@@ -2124,8 +2480,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/server",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "server"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "server"
+              ]
             },
             "description": "Basic server health check."
           },
@@ -2138,8 +2499,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/database",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "database"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "database"
+              ]
             },
             "description": "Check database connectivity health."
           },

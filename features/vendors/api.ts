@@ -39,8 +39,12 @@ async function handleResponse(response: Response) {
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
   
   if (!response.ok) {
-    const errorMsg = findStringDeep(payload, ["message", "error"]) 
-      || (typeof payload === 'string' ? payload : "An unexpected error occurred");
+    let errorMsg = "An unexpected error occurred";
+    if (typeof payload === 'object' && payload !== null) {
+      errorMsg = payload.error?.message || payload.message || findStringDeep(payload, ["message", "error"]) || JSON.stringify(payload);
+    } else if (typeof payload === 'string' && payload.trim()) {
+      errorMsg = payload;
+    }
     throw new Error(errorMsg);
   }
   return payload;
