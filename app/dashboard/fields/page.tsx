@@ -142,8 +142,8 @@ const INIT_FORM = {
   surface: "Artificial Turf",
   address: {
     type: "work" as "home" | "work" | "other",
-    houseNumber: "",  // Address Line 1
-    landmark: "",     // Address Line 2
+    houseNumber: "",
+    landmark: "",
     city: "",
     state: "",
     pinCode: "",
@@ -1205,7 +1205,7 @@ export default function FieldsPage() {
 
       const payload: CreateTurfDto = {
         name: formData.name,
-        standardPricePaise: parseInt(formData.pricePerHour || "0") * 100,
+        standardPricePaise: Math.round(parseFloat(formData.pricePerHour || "0") * 100),
         cancellationWindowHrs: formData.cancellationWindowHrs
           ? parseInt(formData.cancellationWindowHrs)
           : undefined,
@@ -1224,11 +1224,10 @@ export default function FieldsPage() {
         surfaceType: toSnake(formData.surface) as any,
         sizeFormat: formData.size || undefined,
         capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
-        weekdayOpen: formData.weekdayFrom,
-        weekdayClose: formData.weekdayTo,
-        weekendOpen: formData.weekendFrom,
-        weekendClose: formData.weekendTo,
-        // NOTE: documents are submitted separately via PATCH /turfs/:id/documents
+        weekdayOpen: formData.weekdayFrom.slice(0, 5),
+        weekdayClose: formData.weekdayTo.slice(0, 5),
+        weekendOpen: formData.weekendFrom.slice(0, 5),
+        weekendClose: formData.weekendTo.slice(0, 5),
       };
 
       await createTurfForVendor(formData.vendorId, payload);
@@ -2047,27 +2046,41 @@ export default function FieldsPage() {
 
               {onboardStep === 3 && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                      Address Line 1
-                    </label>
-                    <input
-                      value={formData.address.houseNumber}
-                      onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, houseNumber: e.target.value } }))}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                      placeholder="Building, Street"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                      Address Line 2
-                    </label>
-                    <input
-                      value={formData.address.landmark}
-                      onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, landmark: e.target.value } }))}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                      placeholder="Landmark, Area (optional)"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Address Type *</label>
+                       <div className="flex gap-3">
+                         {["home", "work", "other"].map(t => (
+                           <button key={t} onClick={() => setFormData(p => ({ ...p, address: { ...p.address, type: t as any } }))}
+                             className="flex-1 py-2 rounded-lg border text-xs font-medium capitalize transition-colors"
+                             style={formData.address.type === t ? { backgroundColor: "#8a9e60", color: "white", borderColor: "transparent" } : { borderColor: "#e5e7eb", color: "#6b7280" }}>
+                             {t}
+                           </button>
+                         ))}
+                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        House / Shop Number
+                      </label>
+                      <input
+                        value={formData.address.houseNumber}
+                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, houseNumber: e.target.value } }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                        placeholder="e.g. 402, Building A"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        Landmark
+                      </label>
+                      <input
+                        value={formData.address.landmark}
+                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, landmark: e.target.value } }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                        placeholder="e.g. Near City Mall"
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -2098,24 +2111,35 @@ export default function FieldsPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        Pincode
+                        Pincode *
                       </label>
                       <input
                         value={formData.address.pinCode}
                         onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, pinCode: e.target.value } }))}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="400001"
                         maxLength={6}
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        Country *
+                      </label>
+                      <input
+                        value={formData.address.country}
+                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, country: e.target.value } }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                        placeholder="India"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Google Maps Link
                       </label>
                       <input
                         value={formData.address.googleMapsLink}
                         onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, googleMapsLink: e.target.value } }))}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="Paste maps URL"
                       />
                     </div>
