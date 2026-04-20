@@ -1,4 +1,4 @@
-import { getAdminSession } from "@/features/auth/session";
+import { authenticatedFetch } from "@/features/auth/request";
 import {
   Turf,
   TurfListResult,
@@ -13,12 +13,6 @@ function getApiUrl() {
   return apiUrl.replace(/\/$/, "");
 }
 
-function getAccessToken() {
-  const session = getAdminSession();
-  if (!session?.accessToken)
-    throw new Error("Your admin session is missing. Please sign in again.");
-  return session.accessToken;
-}
 
 async function handleResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
@@ -86,8 +80,7 @@ export async function listTurfs(
   if (params.city) url.searchParams.set("city", params.city);
   if (params.search) url.searchParams.set("search", params.search);
 
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(url.toString(), {
     cache: "no-store",
   });
 
@@ -109,8 +102,7 @@ export async function listTurfs(
 }
 
 export async function getTurfById(turfId: string): Promise<Turf> {
-  const response = await fetch(`${getApiUrl()}/admin/turfs/${turfId}`, {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/turfs/${turfId}`, {
     cache: "no-store",
   });
   return handleResponse(response);
@@ -120,13 +112,12 @@ export async function createTurfForVendor(
   vendorId: string,
   dto: CreateTurfDto,
 ): Promise<Turf> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${getApiUrl()}/admin/vendors/${vendorId}/turfs`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAccessToken()}`,
       },
       body: JSON.stringify(dto),
     },
@@ -138,11 +129,10 @@ export async function updateTurfStatus(
   turfId: string,
   status: string,
 ): Promise<Turf> {
-  const response = await fetch(`${getApiUrl()}/admin/turfs/${turfId}/status`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/turfs/${turfId}/status`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
     },
     body: JSON.stringify({ status }),
   });
@@ -153,13 +143,12 @@ export async function reviewTurfDocuments(
   turfId: string,
   dto: TurfReviewDto,
 ): Promise<void> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${getApiUrl()}/admin/turfs/${turfId}/documents/review`,
     {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAccessToken()}`,
       },
       body: JSON.stringify(dto),
     },
@@ -168,17 +157,15 @@ export async function reviewTurfDocuments(
 }
 
 export async function banTurf(turfId: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/turfs/${turfId}/ban`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/turfs/${turfId}/ban`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
   });
   await handleResponse(response);
 }
 
 export async function unbanTurf(turfId: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/turfs/${turfId}/unban`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/turfs/${turfId}/unban`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
   });
   await handleResponse(response);
 }
@@ -187,11 +174,10 @@ export async function updateTurf(
   turfId: string,
   dto: UpdateTurfDto,
 ): Promise<Turf> {
-  const response = await fetch(`${getApiUrl()}/admin/turfs/${turfId}`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/turfs/${turfId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
     },
     body: JSON.stringify(dto),
   });

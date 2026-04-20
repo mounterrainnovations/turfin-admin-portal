@@ -1,16 +1,17 @@
-import { getAdminSession } from "@/features/auth/session";
-import { Vendor, AdminOnboardVendorDto, UpdateVendorDto, VendorListResult, KycReviewDto, SubmitKycDto } from "./types";
+import { authenticatedFetch } from "@/features/auth/request";
+import {
+  Vendor,
+  AdminOnboardVendorDto,
+  UpdateVendorDto,
+  VendorListResult,
+  KycReviewDto,
+  SubmitKycDto,
+} from "./types";
 
 function getApiUrl() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   if (!apiUrl) throw new Error("Missing NEXT_PUBLIC_API_URL.");
   return apiUrl.replace(/\/$/, "");
-}
-
-function getAccessToken() {
-  const session = getAdminSession();
-  if (!session?.accessToken) throw new Error("Your admin session is missing. Please sign in again.");
-  return session.accessToken;
 }
 
 function findStringDeep(value: unknown, keys: string[]): string | undefined {
@@ -21,11 +22,11 @@ function findStringDeep(value: unknown, keys: string[]): string | undefined {
     }
     return undefined;
   }
-  if (typeof value !== 'object' || value === null) return undefined;
+  if (typeof value !== "object" || value === null) return undefined;
   const record = value as Record<string, unknown>;
   for (const key of keys) {
     const v = record[key];
-    if (typeof v === 'string' && v.trim()) return v;
+    if (typeof v === "string" && v.trim()) return v;
   }
   for (const v of Object.values(record)) {
     const found = findStringDeep(v, keys);
@@ -36,13 +37,19 @@ function findStringDeep(value: unknown, keys: string[]): string | undefined {
 
 async function handleResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
-  const payload = contentType.includes("application/json") ? await response.json() : await response.text();
-  
+  const payload = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
   if (!response.ok) {
     let errorMsg = "An unexpected error occurred";
-    if (typeof payload === 'object' && payload !== null) {
-      errorMsg = payload.error?.message || payload.message || findStringDeep(payload, ["message", "error"]) || JSON.stringify(payload);
-    } else if (typeof payload === 'string' && payload.trim()) {
+    if (typeof payload === "object" && payload !== null) {
+      errorMsg =
+        payload.error?.message ||
+        payload.message ||
+        findStringDeep(payload, ["message", "error"]) ||
+        JSON.stringify(payload);
+    } else if (typeof payload === "string" && payload.trim()) {
       errorMsg = payload;
     }
     throw new Error(errorMsg);
@@ -51,7 +58,7 @@ async function handleResponse(response: Response) {
 }
 
 function isRecord(v: any): v is Record<string, any> {
-  return typeof v === 'object' && v !== null;
+  return typeof v === "object" && v !== null;
 }
 
 function extractItems(payload: any): any[] {
@@ -68,7 +75,7 @@ function extractTotal(payload: any, itemsLength: number): number {
   if (!isRecord(payload)) return itemsLength;
   if (typeof payload.total === "number") return payload.total;
   if (typeof payload.totalItems === "number") return payload.totalItems;
-  
+
   const meta = payload.meta || payload.pagination;
   if (isRecord(meta)) {
     if (typeof meta.total === "number") return meta.total;
@@ -78,15 +85,22 @@ function extractTotal(payload: any, itemsLength: number): number {
   return itemsLength;
 }
 
-export async function listVendors(params: { page?: number; limit?: number; status?: string; search?: string } = {}): Promise<VendorListResult> {
+export async function listVendors(
+  params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  } = {},
+): Promise<VendorListResult> {
   const url = new URL(`${getApiUrl()}/admin/vendors`);
   if (params.page) url.searchParams.set("page", String(params.page));
   if (params.limit) url.searchParams.set("limit", String(params.limit));
-  if (params.status && params.status !== "all") url.searchParams.set("status", params.status);
+  if (params.status && params.status !== "all")
+    url.searchParams.set("status", params.status);
   if (params.search) url.searchParams.set("search", params.search);
 
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(url.toString(), {
     cache: "no-store",
   });
 
@@ -101,17 +115,18 @@ export async function listVendors(params: { page?: number; limit?: number; statu
     phone: v.phone || "-",
     address: v.address || {},
     bankingDetails: v.bankingDetails || {},
-    kyc: v.kyc ? {
-      ...v.kyc,
-      status: (v.kyc.status || "not_started").toLowerCase(),
-      verification: v.kyc.verification || {},
-      documents: v.kyc.documents || {},
-    } : undefined,
+    kyc: v.kyc
+      ? {
+          ...v.kyc,
+          status: (v.kyc.status || "not_started").toLowerCase(),
+          verification: v.kyc.verification || {},
+          documents: v.kyc.documents || {},
+        }
+      : undefined,
     verification: v.kyc?.verification || v.verification || {},
     kycStatus: (v.kyc?.status || v.kycStatus || "not_started").toLowerCase(),
     joinedAt: v.joinedAt || v.createdAt || new Date().toISOString(),
     createdAt: v.createdAt || v.joinedAt || new Date().toISOString(),
-
   }));
 
   return {
@@ -121,104 +136,132 @@ export async function listVendors(params: { page?: number; limit?: number; statu
 }
 
 export async function getVendorById(vendorId: string): Promise<Vendor> {
-  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}`, {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
-    cache: "no-store",
-  });
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}`,
+    {
+      cache: "no-store",
+    },
+  );
   return handleResponse(response);
 }
 
-export async function onboardVendor(dto: AdminOnboardVendorDto): Promise<Vendor> {
-  const response = await fetch(`${getApiUrl()}/admin/onboard-vendor`, {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}` 
+export async function onboardVendor(
+  dto: AdminOnboardVendorDto,
+): Promise<Vendor> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/onboard-vendor`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(dto),
     },
-    body: JSON.stringify(dto),
-  });
+  );
   return handleResponse(response);
 }
 
-export async function updateVendor(vendorId: string, dto: UpdateVendorDto): Promise<Vendor> {
-  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}`, {
-    method: "PATCH",
-    headers: { 
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}` 
+export async function updateVendor(
+  vendorId: string,
+  dto: UpdateVendorDto,
+): Promise<Vendor> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(dto),
     },
-    body: JSON.stringify(dto),
-  });
+  );
   return handleResponse(response);
 }
 
 export async function banVendor(vendorId: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}/ban`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
-  });
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}/ban`,
+    {
+      method: "POST",
+    },
+  );
   await handleResponse(response);
 }
 
 export async function unbanVendor(vendorId: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}/unban`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
-  });
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}/unban`,
+    {
+      method: "POST",
+    },
+  );
   await handleResponse(response);
 }
 
-export async function reviewVendorKyc(vendorId: string, dto: KycReviewDto): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}/kyc/review`, {
-    method: "PATCH",
-    headers: { 
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}` 
+export async function reviewVendorKyc(
+  vendorId: string,
+  dto: KycReviewDto,
+): Promise<void> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}/kyc/review`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(dto),
     },
-    body: JSON.stringify(dto),
-  });
+  );
   await handleResponse(response);
 }
 
-export async function uploadVendorKycByAdmin(vendorId: string, data: SubmitKycDto) {
-  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}/kyc`, {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}` 
+export async function uploadVendorKycByAdmin(
+  vendorId: string,
+  data: SubmitKycDto,
+) {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}/kyc`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
+  );
   return handleResponse(response);
 }
 
-export async function getUploadUrl(path: string, fileType: string): Promise<{ uploadUrl: string }> {
+export async function getUploadUrl(
+  path: string,
+  fileType: string,
+): Promise<{ uploadUrl: string }> {
   const url = new URL(`${getApiUrl()}/storage/upload-url`);
   url.searchParams.set("path", path);
   url.searchParams.set("fileType", fileType);
-  
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
-  });
+
+  const response = await authenticatedFetch(url.toString());
   const payload = await handleResponse(response);
   return payload.data;
 }
 
-export async function getSignedViewUrl(path: string): Promise<{ signedUrl: string }> {
+export async function getSignedViewUrl(
+  path: string,
+): Promise<{ signedUrl: string }> {
   const url = new URL(`${getApiUrl()}/storage/view-url`);
   url.searchParams.set("path", path);
-  
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
-  });
+
+  const response = await authenticatedFetch(url.toString());
   const payload = await handleResponse(response);
   return payload.data;
 }
 
 export async function deleteVendor(vendorId: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
-  });
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}`,
+    {
+      method: "DELETE",
+    },
+  );
   await handleResponse(response);
 }

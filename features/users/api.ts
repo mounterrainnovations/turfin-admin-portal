@@ -1,4 +1,4 @@
-import { getAdminSession } from "@/features/auth/session";
+import { authenticatedFetch } from "@/features/auth/request";
 import { User, UserListResult } from "./types";
 
 function getApiUrl() {
@@ -7,12 +7,6 @@ function getApiUrl() {
   return apiUrl.replace(/\/$/, "");
 }
 
-function getAccessToken() {
-  const session = getAdminSession();
-  if (!session?.accessToken)
-    throw new Error("Your admin session is missing. Please sign in again.");
-  return session.accessToken;
-}
 
 async function handleResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
@@ -76,8 +70,7 @@ export async function listUsers(
     url.searchParams.set("status", params.status);
   if (params.search) url.searchParams.set("search", params.search);
 
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(url.toString(), {
     cache: "no-store",
   });
 
@@ -95,8 +88,7 @@ export async function listUsers(
 }
 
 export async function getUserById(userId: string): Promise<User> {
-  const response = await fetch(`${getApiUrl()}/admin/users/${userId}`, {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/users/${userId}`, {
     cache: "no-store",
   });
   const data = await handleResponse(response);
@@ -104,11 +96,10 @@ export async function getUserById(userId: string): Promise<User> {
 }
 
 export async function banUser(userId: string, reason?: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/users/${userId}/ban`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/users/${userId}/ban`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
     },
     body: JSON.stringify({ reason }),
   });
@@ -116,9 +107,8 @@ export async function banUser(userId: string, reason?: string): Promise<void> {
 }
 
 export async function unbanUser(userId: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/users/${userId}/unban`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/users/${userId}/unban`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
   });
   await handleResponse(response);
 }
