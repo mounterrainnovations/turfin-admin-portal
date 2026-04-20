@@ -385,14 +385,20 @@ function FieldDetailPanel({
       {/* Tabs */}
       <div className="flex border-b border-gray-100 shrink-0 bg-white">
         {(["overview", "schedule", "analytics"] as const).map((t) => {
+          const disabled = t !== "overview";
           return (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => {
+                if (!disabled) setTab(t);
+              }}
+              disabled={disabled}
               className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors ${
                 tab === t
                   ? "border-b-2 border-[#8a9e60] text-[#8a9e60]"
-                  : "text-gray-400 hover:text-gray-600"
+                  : disabled
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-400 hover:text-gray-600"
               }`}
             >
               {t}

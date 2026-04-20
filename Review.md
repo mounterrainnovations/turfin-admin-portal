@@ -12,131 +12,43 @@ Summary:
 - `npm run lint` fails with `196` findings (`111` errors, `85` warnings).
 - The codebase is split between real API-backed admin surfaces and several demo/local-state-only surfaces. That is the single biggest product discrepancy in the current portal.
 
-## P0: Misleading Or Non-Operational Admin Surfaces
+## Scope Notes
 
-### 1. Several top-level admin pages are still demo-mode / local-state-only, but they present themselves as live admin tools
-Priority: P0
+The following are intentionally mock / work-in-progress and should not be treated as findings for now:
+- Dashboard home
+- Analytics page
+- Bookings page
+- App Management page
+- Settings persistence
+- Notifications compose/history
+- Field schedule / field analytics
 
-Why it matters:
-- Operators can make decisions from fabricated data.
-- The UI looks production-ready, but the behavior is not connected to backend state.
+The remaining findings below exclude those intentional mock surfaces where applicable.
 
-Affected areas:
-- `app/dashboard/page.tsx:10-79`
-  - Dashboard home is entirely seeded with static stats, alerts, KYC lists, chat messages, and turf status.
-- `app/dashboard/analytics/page.tsx:10-120`
-  - Analytics charts and metrics are hardcoded in the `DATA` object.
-- `app/dashboard/bookings/page.tsx:27-120`
-  - Bookings page is fully driven by a local `bookings` array and hardcoded email templates.
-- `app/dashboard/app-management/page.tsx:42-67`
-  - App configs and release history are seeded in `INIT_APPS` and `INIT_HISTORY`.
-- `app/dashboard/settings/page.tsx:46-77`
-  - Settings page is initialized from local `DEFAULTS`.
-- `features/communications/components/notifications-view.tsx:15-19`
-  - Notifications history is initialized from local constants and managed only in component state.
-
-Recommendation:
-- Mark these pages explicitly as mock/demo until connected, or wire them to backend APIs before treating them as production admin surfaces.
-
-### 2. Field schedule management is simulated, not real
-Priority: P0
+## P2: Correctness / Stability Risks
+### 1. Audit logging had a split-brain implementation; the front-end side has been reduced, but backend audit writes are still missing
+Priority: P2
 
 Why it matters:
-- This is especially risky because it looks actionable. An admin could believe they are viewing or managing actual slot occupancy.
-
-Evidence:
-- `app/dashboard/fields/page.tsx:201-216`
-  - Uses a hardcoded `TODAY = new Date(2026, 2, 21)` and a synthetic `getMockBookedSlots(...)`.
-- `app/dashboard/fields/page.tsx:277-318`
-  - Schedule state derives from mock slot generation and local blocked-slot state.
-- `app/dashboard/fields/page.tsx:760-953`
-  - Schedule tab, occupancy summary, and pricing note are all based on simulated values.
-
-Recommendation:
-- Either remove/flag the schedule controls until backed by real slot data, or connect them to the slot/availability APIs.
-
-### 3. Audit logging has a split-brain implementation
-Priority: P0
-
-Why it matters:
-- The portal has one audit UI backed by the backend API and a separate in-memory audit context used by other pages. That creates inconsistent audit history depending on where the action originated.
+- The audit page reads real backend audit data, but the portal still has no backend-backed audit write function in this repo.
+- The previous in-memory seeded audit history has been removed from the front-end context, which avoids a fake second source of truth, but audit events triggered in the UI still are not persisted to the backend from this codebase.
 
 Evidence:
 - `app/dashboard/audit/page.tsx:10-18`
   - Audit page loads from `listAuditLogs`.
-- `app/dashboard/audit-log-context.tsx:52-120`
-  - Audit context is seeded with local sample entries.
-- `app/dashboard/audit-log-context.tsx:219-236`
-  - `log(...)` only appends to in-memory React state.
+- `features/audit/api.ts:284-359`
+  - Audit API currently exposes read/export only.
+- `app/dashboard/audit-log-context.tsx`
+  - Front-end context is now a thin logger stub rather than a seeded in-memory audit store.
 - `app/dashboard/app-management/page.tsx:92-116`
   - App management uses `useAuditLog()` rather than a backend write path.
 
 Recommendation:
-- Consolidate on one backend-backed audit pipeline. Local context should not be the system of record.
-
-## P1: Functional Bugs Or Clear Product Gaps
-
-### 4. Turf KYC “Request Resubmit” button is a no-op
-Priority: P1
-
-Why it matters:
-- The button is visible and styled as active, but it performs nothing.
-
-Evidence:
-- `features/turfs/components/TurfKycUpload.tsx:522-527`
-  - `onClick={() => {}} // Could add resubmit logic if API supports it`
-
-Recommendation:
-- Either implement the action or disable/hide the button until supported.
-
-### 5. Settings “Save” does not persist anything
-Priority: P1
-
-Why it matters:
-- The user sees a save workflow, but nothing is written anywhere.
-
-Evidence:
-- `app/dashboard/settings/page.tsx:140-157`
-  - `handleSave()` only sets local `saved` state and clears `dirty`.
-
-Recommendation:
-- Treat this as a scope gap if intentional, but document it clearly in the UI until persistence exists.
-
-### 6. Notifications compose/history is local-only and uses simulated sending
-Priority: P1
-
-Why it matters:
-- The UI strongly implies production push operations, but it is just a local state demo.
-
-Evidence:
-- `features/communications/components/notifications-view.tsx:15-32`
-  - History is initialized from `INIT_HISTORY`.
-- `features/communications/components/notifications-view.tsx:67-90`
-  - `handleSend()` uses `setTimeout(...)` and inserts a local record.
-
-Recommendation:
-- Either integrate a real send API/history API, or mark the module as mock.
-
-### 7. App Management actions are local-only, despite looking operational
-Priority: P1
-
-Why it matters:
-- Release controls, force-update toggles, min version changes, and notifications all mutate local state only.
-
-Evidence:
-- `app/dashboard/app-management/page.tsx:42-67`
-  - Initial app state/history are seeded.
-- `app/dashboard/app-management/page.tsx:115-155`
-  - Force update and min-version actions mutate local state and local history.
-- `app/dashboard/app-management/page.tsx:560-569`
-  - The page itself admits integration is still needed for FCM broadcast.
-
-Recommendation:
-- Same as above: either integrate or explicitly present as a mock console.
+- Add a real backend write endpoint and front-end client for audit events.
 
 ## P2: Correctness / Stability Risks
 
-### 8. Lint baseline is failing badly, which masks real regressions
+### 2. Lint baseline is failing badly, which masks real regressions
 Priority: P2
 
 Why it matters:
@@ -160,22 +72,16 @@ Recommendation:
   2. `any` and API typing
   3. dead code and unused imports
 
-### 9. Authentication state is derived asynchronously in effects, creating avoidable blank/flicker behavior
+### 3. Authentication state was derived asynchronously in effects
 Priority: P2
 
-Why it matters:
-- Auth state is available synchronously from storage, but the app waits for an effect and renders `null` in the meantime.
+Status:
+- Fixed in this pass.
 
-Evidence:
-- `features/auth/components/auth-guard.tsx:8-20`
-  - `isAuthorized` starts `false`, then is set inside `useEffect`.
-- `features/auth/hooks.ts:8-17`
-  - Session is loaded in `useEffect` and then copied into state.
+What changed:
+- Auth/session now bootstrap synchronously from `getAdminSession()` instead of waiting for effects.
 
-Recommendation:
-- Derive initial auth/session synchronously from `getAdminSession()` instead of effect-driven bootstrapping.
-
-### 10. Multiple pages are anchored to hardcoded calendar dates
+### 4. Multiple pages are anchored to hardcoded calendar dates
 Priority: P2
 
 Why it matters:
@@ -184,15 +90,16 @@ Why it matters:
 Evidence:
 - `app/dashboard/layout.tsx:89`
   - Top bar shows `Saturday, March 21, 2026`.
-- `app/dashboard/fields/page.tsx:201`
-  - Hardcoded `TODAY`.
 - `app/dashboard/bookings/page.tsx:235`
   - Hardcoded `today`.
+
+Notes:
+- `app/dashboard/fields/page.tsx` still contains hardcoded schedule dates internally, but the non-working tabs are now intentionally unclickable.
 
 Recommendation:
 - Replace with actual current date or backend-provided date context.
 
-### 11. Hook dependency issues can produce stale closures / stale selected entities
+### 5. Hook dependency issues can produce stale closures / stale selected entities
 Priority: P2
 
 Why it matters:
@@ -213,7 +120,7 @@ Recommendation:
 
 ## P3: Code Quality / Refactor Debt
 
-### 12. API normalization logic is duplicated across user, vendor, and turf modules
+### 6. API normalization logic is duplicated across user, vendor, and turf modules
 Priority: P3
 
 Why it matters:
@@ -227,7 +134,7 @@ Evidence:
 Recommendation:
 - Extract shared API helpers into one typed utility module.
 
-### 13. Vendor and turf KYC modals still duplicate a large amount of state and upload logic
+### 7. Vendor and turf KYC modals still duplicate a large amount of state and upload logic
 Priority: P3
 
 Why it matters:
@@ -244,7 +151,7 @@ Recommendation:
   - upload/update flow
   - common footer action handling
 
-### 14. Very large page components should be broken down further
+### 8. Very large page components should be broken down further
 Priority: P3
 
 Why it matters:
@@ -264,7 +171,7 @@ Recommendation:
   - KYC modal
   - onboard/edit flows
 
-### 15. Dead code and obsolete helper paths are accumulating
+### 9. Dead code and obsolete helper paths are accumulating
 Priority: P3
 
 Why it matters:
@@ -273,12 +180,14 @@ Why it matters:
 Evidence:
 - `app/dashboard/fields/page.tsx:1394-1497`
   - Several KYC helper functions are defined but unused after the shared `TurfKycUpload` flow took over.
+- `features/turfs/components/TurfKycUpload.tsx`
+  - Resubmit UI has been removed in this pass, but there is still surrounding dead/unused surface area flagged by lint.
 - Many unused imports and state variables are reported by lint across dashboard pages.
 
 Recommendation:
 - Do a cleanup pass after each feature migration instead of leaving legacy helpers in place.
 
-### 16. `any` usage is widespread in exactly the areas where the app translates backend data
+### 10. `any` usage is widespread in exactly the areas where the app translates backend data
 Priority: P3
 
 Why it matters:
@@ -298,7 +207,7 @@ Recommendation:
 
 ## P4: Low-Severity Issues / Polish
 
-### 17. Accessibility and lint-purity issues remain in KYC/media flows
+### 11. Accessibility and lint-purity issues remain in KYC/media flows
 Priority: P4
 
 Evidence:
@@ -312,7 +221,7 @@ Evidence:
 Recommendation:
 - Clean these up during the lint pass; low cost, improves baseline quality.
 
-### 18. Toast/audit IDs still rely on ad hoc ID generation
+### 12. Toast IDs still rely on ad hoc ID generation
 Priority: P4
 
 Why it matters:
@@ -321,8 +230,6 @@ Why it matters:
 Evidence:
 - `features/toast/toast-context.tsx:72-83`
   - Uses `crypto.randomUUID()` fallback to `Date.now()` + `Math.random()`.
-- `app/dashboard/audit-log-context.tsx:223-230`
-  - Uses `Date.now()` and `Math.random()` for in-memory audit records.
 
 Recommendation:
 - Standardize on one UUID utility if these IDs survive outside component memory.
@@ -339,18 +246,9 @@ These are not immediate bugs, but they will reduce future breakage:
 
 ## Suggested Fix Order
 
-1. Decide product intent for demo/local-state pages:
-   - Dashboard
-   - Analytics
-   - Bookings
-   - Notifications
-   - App Management
-   - Settings
-2. Fix the clearly broken visible behavior:
-   - Turf KYC resubmit no-op
-   - hardcoded dates
-   - audit split-brain
-3. Restore lint health enough to make CI meaningful.
+1. Add a real backend audit write endpoint/client.
+2. Restore lint health enough to make CI meaningful.
+3. Replace remaining hardcoded date displays where the surface is intended to be live.
 4. Refactor duplicated API/KYC logic.
 
 ## Notes
