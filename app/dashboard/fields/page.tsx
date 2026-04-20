@@ -7,14 +7,20 @@ import {
   XCircle,
   ClockCountdown,
   Prohibit,
-  DotsThree,
-  X,
-  Phone,
-  Envelope,
-  CaretDown,
+  WarningCircle,
+  Plus,
+  DotsThreeVertical,
+  PencilSimple,
+  Trash,
+  FileText,
+  ArrowLeft,
+  ShieldCheck,
   Eye,
   ArrowsClockwise,
   Buildings,
+  Phone,
+  Envelope,
+  CaretDown,
   Star,
   Wrench,
   Funnel,
@@ -22,12 +28,8 @@ import {
   CaretRight,
   LockSimple,
   LockSimpleOpen,
-  Plus,
   UploadSimple,
-  FileText,
-  ArrowLeft,
-  ShieldCheck,
-  WarningCircle,
+  X,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import {
@@ -36,15 +38,23 @@ import {
   reviewTurfDocuments,
   banTurf,
   unbanTurf,
+  updateTurf,
   STATUS_CONFIG as TURF_STATUS_CONFIG,
   TurfReviewDto,
+  UpdateTurfDto,
   Turf,
   FieldStatus,
   createTurfForVendor,
   CreateTurfDto,
 } from "@/features/turfs";
 import { DashboardPagination } from "@/components/DashboardPagination";
-import { listVendors, Vendor, KYC_CFG } from "@/features/vendors";
+import {
+  listVendors,
+  Vendor,
+  KYC_CFG,
+  SPORT_COLOR,
+  STATUS_CFG as VENDOR_STATUS_CFG,
+} from "@/features/vendors";
 import { useToast } from "@/features/toast/toast-context";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -166,6 +176,17 @@ const INIT_FORM = {
 type FormData = typeof INIT_FORM;
 type FieldKycDocKey = (typeof KYC_DOCS_FIELD)[number]["key"];
 
+function avatar(name: string) {
+  return name
+    ? name
+        .split(" ")
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "??";
+}
+
 // ... actions menu remains similar but unified ...
 
 // ─── Actions Menu ─────────────────────────────────────────────────────────────
@@ -212,11 +233,15 @@ function FieldDetailPanel({
   onClose,
   onRefresh,
   onReviewKyc,
+  onConfirmAction,
+  onEdit,
 }: {
   field: Turf;
   onClose: () => void;
   onRefresh: () => void;
   onReviewKyc: (field: Turf) => void;
+  onConfirmAction: (type: "ban" | "unban" | "remove", field: Turf) => void;
+  onEdit: (field: Turf) => void;
 }) {
   const { showToast } = useToast();
   const [tab, setTab] = useState<"overview" | "schedule" | "analytics">(
@@ -916,14 +941,12 @@ function FieldDetailPanel({
                       <span className="font-semibold">
                         ₹{(field as any).pricePerHour}/hr
                       </span>
-
                     </div>
                     <div className="flex justify-between">
                       <span className="text-amber-600">Peak (5PM – close)</span>
                       <span className="font-semibold">
                         ₹{(field as any).peakPricePerHour}/hr
                       </span>
-
                     </div>
                   </div>
                 </div>
@@ -950,13 +973,11 @@ function FieldDetailPanel({
                       ? `₹${(((field as any).totalRevenue || 0) / 1000).toFixed(0)}K`
                       : "—",
                   sub: "all time",
-
                 },
                 {
                   label: "Avg. Rating",
                   value: (field.rating || 0) > 0 ? `${field.rating} ★` : "—",
                   sub: `${field.totalReviews || 0} reviews`,
-
                 },
                 {
                   label: "Avg / Booking",
@@ -1089,8 +1110,9 @@ function FieldDetailPanel({
         <div className="relative">
           {statusOpen && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-10">
-              {(Object.entries(STATUS_CONFIG) as [FieldStatus, any][]).map(
-                ([s, cfg]) => (
+              {(Object.entries(STATUS_CONFIG) as [FieldStatus, any][])
+                .filter(([s]) => s !== "banned")
+                .map(([s, cfg]) => (
                   <button
                     key={s}
                     onClick={() => {
@@ -1104,24 +1126,55 @@ function FieldDetailPanel({
                       {cfg.label}
                     </p>
                   </button>
-                ),
-              )}
+                ))}
             </div>
           )}
-          <div className="flex gap-2">
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
             <button
               onClick={() => setStatusOpen(!statusOpen)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all hover:shadow-sm"
             >
-              <ArrowsClockwise size={16} /> SET STATUS
+              <ArrowsClockwise size={18} /> SET STATUS
             </button>
             <button
               onClick={() => onReviewKyc(field)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-opacity"
+              className="flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-all hover:shadow-sm shadow-md"
               style={{ backgroundColor: "#8a9e60" }}
             >
-              <ShieldCheck size={16} weight="fill" /> REVIEW KYC
+              <ShieldCheck size={18} weight="fill" /> REVIEW KYC
             </button>
+          </div>
+
+          {/* Management Zone */}
+          <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100">
+            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
+              Management & Controls
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => onEdit(field)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                <PencilSimple size={14} /> Edit Field
+              </button>
+
+              {field.status === "banned" ? (
+                <button
+                  onClick={() => onConfirmAction("unban", field)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-colors"
+                >
+                  <CheckCircle size={14} /> Unban Field
+                </button>
+              ) : (
+                <button
+                  onClick={() => onConfirmAction("ban", field)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-colors"
+                >
+                  <XCircle size={14} /> Ban Field
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1156,6 +1209,20 @@ export default function FieldsPage() {
   const [sportOpen, setSportOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [selected, setSelected] = useState<Turf | null>(null);
+  const [actionMenu, setActionMenu] = useState<string | null>(null);
+
+  // Confirm modal
+  const [confirmModal, setConfirmModal] = useState<{
+    type: "ban" | "unban" | "remove";
+    field: Turf;
+  } | null>(null);
+
+  // Edit modal
+  const [editTurf, setEditTurf] = useState<Turf | null>(null);
+  const [editForm, setEditForm] = useState<UpdateTurfDto | null>(null);
+  const [editTab, setEditTab] = useState<"basic" | "pricing" | "sports">(
+    "basic",
+  );
 
   // Lists
   const [fields, setFields] = useState<Turf[]>([]);
@@ -1166,7 +1233,6 @@ export default function FieldsPage() {
   // Pagination
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-
 
   // Onboard modal state
   const [showOnboard, setShowOnboard] = useState(false);
@@ -1205,7 +1271,9 @@ export default function FieldsPage() {
 
       const payload: CreateTurfDto = {
         name: formData.name,
-        standardPricePaise: Math.round(parseFloat(formData.pricePerHour || "0") * 100),
+        standardPricePaise: Math.round(
+          parseFloat(formData.pricePerHour || "0") * 100,
+        ),
         cancellationWindowHrs: formData.cancellationWindowHrs
           ? parseInt(formData.cancellationWindowHrs)
           : undefined,
@@ -1361,6 +1429,114 @@ export default function FieldsPage() {
     }
   }
 
+  // Edit Helpers
+  function onEdit(field: Turf) {
+    setEditTurf(field);
+    setEditForm({
+      name: field.name,
+      standardPricePaise: field.standardPricePaise,
+      sports: field.sports,
+      amenities: field.amenities,
+      surfaceType: field.surfaceType,
+      capacity: field.capacity,
+      sizeFormat: field.sizeFormat,
+      weekdayOpen: field.weekdayOpen,
+      weekdayClose: field.weekdayClose,
+      weekendOpen: field.weekendOpen,
+      weekendClose: field.weekendClose,
+      address: {
+        ...field.address,
+        type: field.address?.type || "other",
+      },
+    });
+    setEditTab("basic");
+  }
+
+  async function saveEdit() {
+    if (!editTurf || !editForm) return;
+    try {
+      // sanitize and ensure backend contract
+      const payload: UpdateTurfDto = {
+        ...editForm,
+        address: editForm.address
+          ? {
+              type: editForm.address.type || "other",
+              city: editForm.address.city,
+              state: editForm.address.state,
+              pinCode: editForm.address.pinCode,
+              country: editForm.address.country || "India",
+              houseNumber:
+                editForm.address.houseNumber ||
+                (editForm.address as any).plotNumber ||
+                undefined,
+              landmark: editForm.address.landmark || undefined,
+              latitude: editForm.address.latitude
+                ? Number(editForm.address.latitude)
+                : undefined,
+              longitude: editForm.address.longitude
+                ? Number(editForm.address.longitude)
+                : undefined,
+              googleMapsLink: editForm.address.googleMapsLink || undefined,
+            }
+          : undefined,
+      };
+
+      await updateTurf(editTurf.id, payload);
+      showToast({
+        title: "Success",
+        description: `${editTurf.name} updated successfully.`,
+        tone: "success",
+      });
+      setEditTurf(null);
+      setEditForm(null);
+      refreshData();
+    } catch (err: any) {
+      showToast({
+        title: "Error",
+        description: err.message || "Failed to update field",
+        tone: "error",
+      });
+    }
+  }
+
+  // Confirm actions
+  async function handleConfirm() {
+    if (!confirmModal) return;
+    const { type, field } = confirmModal;
+    try {
+      if (type === "remove") {
+        // await deleteTurf(field.id); // Assuming delete functionality is not yet available in api
+        showToast({
+          title: "Action Restricted",
+          description: "Removing fields is currently restricted.",
+          tone: "warning",
+        });
+      } else if (type === "ban") {
+        await banTurf(field.id);
+        showToast({
+          title: "Banned",
+          description: `${field.name} has been banned.`,
+          tone: "error",
+        });
+      } else if (type === "unban") {
+        await unbanTurf(field.id);
+        showToast({
+          title: "Reactivated",
+          description: `${field.name} has been unbanned.`,
+          tone: "success",
+        });
+      }
+      setConfirmModal(null);
+      refreshData();
+    } catch (err: any) {
+      showToast({
+        title: "Error",
+        description: err.message || "Action failed",
+        tone: "error",
+      });
+    }
+  }
+
   const sportRef = useRef<HTMLDivElement>(null);
   const cityRef = useRef<HTMLDivElement>(null);
 
@@ -1406,7 +1582,6 @@ export default function FieldsPage() {
         listVendors({ limit: 100 }),
       ]);
 
-
       setFields(res.items);
       setVendors(vRes.items);
       setTotal(res.total);
@@ -1427,7 +1602,9 @@ export default function FieldsPage() {
 
       showToast({
         title: isAuthError ? "Field data unavailable" : "Error",
-        description: isAuthError ? "Unauthorised" : (err.message || "Failed to load data"),
+        description: isAuthError
+          ? "Unauthorised"
+          : err.message || "Failed to load data",
         tone: "error",
       });
     } finally {
@@ -1442,7 +1619,6 @@ export default function FieldsPage() {
   useEffect(() => {
     setPage(1);
   }, [statusTab, sportFilter, cityFilter, search]);
-
 
   const allSports = ["All", ...SPORTS_LIST];
   const allCities = [
@@ -1680,11 +1856,13 @@ export default function FieldsPage() {
                     "Field",
                     "Vendor",
                     "Location",
+                    "Sports",
                     "Price",
                     "Status",
                     "KYC",
                     "Bookings",
-                  ].map((h) => {
+                    "",
+                  ].map((h, idx) => {
                     const centered =
                       h === "Status" || h === "KYC" || h === "Bookings";
                     return (
@@ -1702,7 +1880,7 @@ export default function FieldsPage() {
               </thead>
 
               <tbody className="divide-y divide-gray-50">
-                {filtered.map((field) => {
+                {filtered.map((field, i) => {
                   const sc =
                     STATUS_CONFIG[field.status] || STATUS_CONFIG.pending;
                   const kycStatusValue =
@@ -1712,41 +1890,38 @@ export default function FieldsPage() {
                   const kyc =
                     KYC_CFG[kycStatusValue as keyof typeof KYC_CFG] ||
                     KYC_CFG.not_started;
-                  const isSelected = selected?.id === field.id;
+                  const KycIcon = kyc.icon;
 
                   return (
                     <tr
                       key={field.id}
                       onClick={() => setSelected(field)}
-                      className={`hover:bg-gray-50/60 transition-colors cursor-pointer ${
-                        isSelected ? "bg-[#8a9e60]/5" : ""
-                      }`}
+                      className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
+                        selected?.id === field.id ? "bg-[#8a9e60]/5" : ""
+                      } ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
                     >
                       {/* Field */}
-                      <td className="px-4 py-3.5">
-                        <div className="min-w-[180px]">
-                          <p className="font-semibold text-gray-800 text-sm mb-1">
-                            {field.name}
-                          </p>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {(field.sports || []).map((s) => (
-                              <span
-                                key={s}
-                                className="text-[10px] bg-gray-50 text-gray-500 border border-gray-100 px-1.5 py-0.5 rounded-md font-medium whitespace-nowrap capitalize"
-                              >
-                                {s.replace(/_/g, " ")}
-                              </span>
-                            ))}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+                            style={{ backgroundColor: "#8a9e60" }}
+                          >
+                            {avatar(field.name)}
                           </div>
-                          <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
-                            {field.id.slice(0, 8)}... ·{" "}
-                            {field.surfaceType.replace(/_/g, " ")}
-                          </p>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-800">
+                              {field.name}
+                            </p>
+                            <p className="text-[9px] text-gray-400 font-mono break-all max-w-[120px]">
+                              {field.id}
+                            </p>
+                          </div>
                         </div>
                       </td>
 
                       {/* Vendor */}
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div
                             className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
@@ -1774,56 +1949,107 @@ export default function FieldsPage() {
                       </td>
 
                       {/* Location */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex flex-col">
-                          <span className="text-xs text-gray-700 font-medium">
-                            {field.address?.city || "-"}
-                          </span>
-                          <span className="text-[10px] text-gray-400">
-                            {field.address?.state || "-"}
-                          </span>
+                      <td className="px-4 py-3">
+                        <p className="text-xs text-gray-700 font-medium">
+                          {field.address?.city || "-"}
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          {field.address?.state || "-"}
+                        </p>
+                      </td>
+
+                      {/* Sports */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {(field.sports || []).slice(0, 2).map((s) => (
+                            <span
+                              key={s}
+                              className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${SPORT_COLOR[s.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
+                            >
+                              {s.replace(/_/g, " ")}
+                            </span>
+                          ))}
+                          {(field.sports || []).length > 2 && (
+                            <div className="relative group">
+                              <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 cursor-help hover:bg-gray-100 transition-colors">
+                                +{(field.sports || []).length - 2}
+                              </span>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                                <div className="bg-white border border-gray-100 shadow-2xl rounded-xl p-3 min-w-[200px] max-w-[320px]">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                      All Sports Listed
+                                    </p>
+                                    <span className="text-[10px] font-bold text-[#8a9e60]">
+                                      {(field.sports || []).length} Total
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {(field.sports || []).map((s) => (
+                                      <span
+                                        key={s}
+                                        className={`text-[10px] font-medium px-2 py-0.5 rounded ${SPORT_COLOR[s.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
+                                      >
+                                        {s.replace(/_/g, " ")}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-gray-100 rotate-45 -mt-1.5" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </td>
 
                       {/* Price */}
-                      <td className="px-4 py-3.5">
-                        <p className="text-sm font-bold text-gray-800">
+                      <td className="px-4 py-3">
+                        <p className="text-xs font-bold text-gray-800">
                           ₹
                           {(
                             (field.standardPricePaise || 0) / 100
                           ).toLocaleString()}
                         </p>
-                        <p className="text-[10px] text-gray-400 font-medium">
-                          per hour
-                        </p>
+                        <p className="text-[10px] text-gray-400">per hour</p>
                       </td>
 
                       {/* Status */}
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3 text-center">
                         <span
                           className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${sc.cls}`}
                         >
                           <span
-                            className={`w-1 h-1 rounded-full shrink-0 ${sc.dot}`}
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`}
                           />
                           {sc.label.toUpperCase()}
                         </span>
                       </td>
 
                       {/* KYC */}
-                      <td className="px-4 py-3.5 text-center">
-                        <div
+                      <td className="px-4 py-3 text-center">
+                        <span
                           className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold whitespace-nowrap ${kyc.cls}`}
                         >
-                          <kyc.icon size={12} weight="fill" />
+                          {KycIcon && <KycIcon size={12} weight="fill" />}
                           {kyc.label.toUpperCase()}
-                        </div>
+                        </span>
                       </td>
 
                       {/* Bookings */}
-                      <td className="px-4 py-3.5 text-center">
-                        <p className="text-sm font-bold text-gray-800">-</p>
-                        <p className="text-[10px] text-gray-400">-</p>
+                      <td className="px-4 py-3 text-center text-xs font-semibold text-gray-700">
+                        {field.totalBookings || 0}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            className="p-1.5 rounded hover:bg-gray-100 text-gray-300 transition-colors"
+                            title="Click row for more"
+                          >
+                            <CaretRight size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1847,14 +2073,13 @@ export default function FieldsPage() {
           </div>
 
           {/* Footer */}
-          <DashboardPagination 
-            page={page} 
-            total={total} 
-            limit={limit} 
-            onPageChange={setPage} 
+          <DashboardPagination
+            page={page}
+            total={total}
+            limit={limit}
+            onPageChange={setPage}
             label="fields"
           />
-
         </div>
       </div>
 
@@ -2048,16 +2273,34 @@ export default function FieldsPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
-                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Address Type *</label>
-                       <div className="flex gap-3">
-                         {["home", "work", "other"].map(t => (
-                           <button key={t} onClick={() => setFormData(p => ({ ...p, address: { ...p.address, type: t as any } }))}
-                             className="flex-1 py-2 rounded-lg border text-xs font-medium capitalize transition-colors"
-                             style={formData.address.type === t ? { backgroundColor: "#8a9e60", color: "white", borderColor: "transparent" } : { borderColor: "#e5e7eb", color: "#6b7280" }}>
-                             {t}
-                           </button>
-                         ))}
-                       </div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        Address Type *
+                      </label>
+                      <div className="flex gap-3">
+                        {["home", "work", "other"].map((t) => (
+                          <button
+                            key={t}
+                            onClick={() =>
+                              setFormData((p) => ({
+                                ...p,
+                                address: { ...p.address, type: t as any },
+                              }))
+                            }
+                            className="flex-1 py-2 rounded-lg border text-xs font-medium capitalize transition-colors"
+                            style={
+                              formData.address.type === t
+                                ? {
+                                    backgroundColor: "#8a9e60",
+                                    color: "white",
+                                    borderColor: "transparent",
+                                  }
+                                : { borderColor: "#e5e7eb", color: "#6b7280" }
+                            }
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
@@ -2065,7 +2308,15 @@ export default function FieldsPage() {
                       </label>
                       <input
                         value={formData.address.houseNumber}
-                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, houseNumber: e.target.value } }))}
+                        onChange={(e) =>
+                          setFormData((p) => ({
+                            ...p,
+                            address: {
+                              ...p.address,
+                              houseNumber: e.target.value,
+                            },
+                          }))
+                        }
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="e.g. 402, Building A"
                       />
@@ -2076,7 +2327,12 @@ export default function FieldsPage() {
                       </label>
                       <input
                         value={formData.address.landmark}
-                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, landmark: e.target.value } }))}
+                        onChange={(e) =>
+                          setFormData((p) => ({
+                            ...p,
+                            address: { ...p.address, landmark: e.target.value },
+                          }))
+                        }
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="e.g. Near City Mall"
                       />
@@ -2089,7 +2345,12 @@ export default function FieldsPage() {
                       </label>
                       <input
                         value={formData.address.city}
-                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, city: e.target.value } }))}
+                        onChange={(e) =>
+                          setFormData((p) => ({
+                            ...p,
+                            address: { ...p.address, city: e.target.value },
+                          }))
+                        }
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="Mumbai"
                       />
@@ -2100,7 +2361,12 @@ export default function FieldsPage() {
                       </label>
                       <select
                         value={formData.address.state}
-                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, state: e.target.value } }))}
+                        onChange={(e) =>
+                          setFormData((p) => ({
+                            ...p,
+                            address: { ...p.address, state: e.target.value },
+                          }))
+                        }
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
                       >
                         <option value="">Select state</option>
@@ -2115,7 +2381,12 @@ export default function FieldsPage() {
                       </label>
                       <input
                         value={formData.address.pinCode}
-                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, pinCode: e.target.value } }))}
+                        onChange={(e) =>
+                          setFormData((p) => ({
+                            ...p,
+                            address: { ...p.address, pinCode: e.target.value },
+                          }))
+                        }
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="400001"
                         maxLength={6}
@@ -2127,7 +2398,12 @@ export default function FieldsPage() {
                       </label>
                       <input
                         value={formData.address.country}
-                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, country: e.target.value } }))}
+                        onChange={(e) =>
+                          setFormData((p) => ({
+                            ...p,
+                            address: { ...p.address, country: e.target.value },
+                          }))
+                        }
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="India"
                       />
@@ -2138,7 +2414,15 @@ export default function FieldsPage() {
                       </label>
                       <input
                         value={formData.address.googleMapsLink}
-                        onChange={(e) => setFormData(p => ({ ...p, address: { ...p.address, googleMapsLink: e.target.value } }))}
+                        onChange={(e) =>
+                          setFormData((p) => ({
+                            ...p,
+                            address: {
+                              ...p.address,
+                              googleMapsLink: e.target.value,
+                            },
+                          }))
+                        }
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="Paste maps URL"
                       />
@@ -2511,8 +2795,499 @@ export default function FieldsPage() {
             onClose={() => setSelected(null)}
             onRefresh={refreshData}
             onReviewKyc={openKycReview}
+            onConfirmAction={(type, f) => setConfirmModal({ type, field: f })}
+            onEdit={onEdit}
           />
         </>
+      )}
+
+      {/* Click-away */}
+      {actionMenu && (
+        <div
+          className="fixed inset-0 z-10"
+          onClick={() => setActionMenu(null)}
+        />
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          EDIT FIELD MODAL
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {editTurf && editForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="px-7 pt-6 pb-4 border-b border-gray-100 shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Edit Field Details
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {editTurf.name} · {editTurf.id}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditTurf(null);
+                    setEditForm(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex gap-1 border-b border-gray-100 -mb-4">
+                {(["basic", "pricing", "sports"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setEditTab(tab)}
+                    className={`px-4 py-2 text-xs font-semibold capitalize transition-colors ${editTab === tab ? "border-b-2 text-[#8a9e60]" : "text-gray-400 hover:text-gray-600"}`}
+                    style={editTab === tab ? { borderColor: "#8a9e60" } : {}}
+                  >
+                    {tab === "basic"
+                      ? "Basic Info"
+                      : tab === "pricing"
+                        ? "Pricing & Schedule"
+                        : "Sports & Amenities"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-7 py-6">
+              {editTab === "basic" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                      Field Name *
+                    </label>
+                    <input
+                      value={editForm.name || ""}
+                      onChange={(e) =>
+                        setEditForm((p) =>
+                          p ? { ...p, name: e.target.value } : p,
+                        )
+                      }
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                      placeholder="Field Name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        Size Format
+                      </label>
+                      <input
+                        value={editForm.sizeFormat || ""}
+                        onChange={(e) =>
+                          setEditForm((p) =>
+                            p ? { ...p, sizeFormat: e.target.value } : p,
+                          )
+                        }
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                        placeholder="e.g. 5v5, 7v7"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        Capacity
+                      </label>
+                      <input
+                        type="number"
+                        value={editForm.capacity || ""}
+                        onChange={(e) =>
+                          setEditForm((p) =>
+                            p
+                              ? { ...p, capacity: parseInt(e.target.value) }
+                              : p,
+                          )
+                        }
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                        placeholder="Max persons"
+                      />
+                    </div>
+                  </div>
+                  <div className="border-t border-gray-100 pt-4">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                      Location / Address
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          Address Type *
+                        </label>
+                        <select
+                          value={editForm.address?.type || "other"}
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p
+                                ? {
+                                    ...p,
+                                    address: {
+                                      ...p.address!,
+                                      type: e.target.value as any,
+                                    },
+                                  }
+                                : p
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
+                        >
+                          <option value="home">Home</option>
+                          <option value="work">Work</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          House/Plot Number
+                        </label>
+                        <input
+                          value={
+                            editForm.address?.houseNumber ||
+                            (editForm.address as any).plotNumber ||
+                            ""
+                          }
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p
+                                ? {
+                                    ...p,
+                                    address: {
+                                      ...p.address!,
+                                      houseNumber: e.target.value,
+                                    },
+                                  }
+                                : p
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                          placeholder="e.g. Plot 12"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          City *
+                        </label>
+                        <input
+                          value={editForm.address?.city || ""}
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p
+                                ? {
+                                    ...p,
+                                    address: {
+                                      ...p.address!,
+                                      city: e.target.value,
+                                    },
+                                  }
+                                : p
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                        />
+                      </div>
+                    </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          State *
+                        </label>
+                        <select
+                          value={editForm.address?.state || ""}
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p
+                                ? {
+                                    ...p,
+                                    address: {
+                                      ...p.address!,
+                                      state: e.target.value,
+                                    },
+                                  }
+                                : p,
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
+                        >
+                          <option value="">Select State</option>
+                          {STATES_LIST.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          Pincode *
+                        </label>
+                        <input
+                          value={editForm.address?.pinCode || ""}
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p
+                                ? {
+                                    ...p,
+                                    address: {
+                                      ...p.address!,
+                                      pinCode: e.target.value,
+                                    },
+                                  }
+                                : p,
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                          maxLength={6}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {editTab === "pricing" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                      Price per Hour (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      value={(editForm.standardPricePaise || 0) / 100}
+                      onChange={(e) =>
+                        setEditForm((p) =>
+                          p
+                            ? {
+                                ...p,
+                                standardPricePaise: Math.round(
+                                  parseFloat(e.target.value) * 100,
+                                ),
+                              }
+                            : p,
+                        )
+                      }
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                    />
+                  </div>
+                  <div className="border-t border-gray-100 pt-4">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                      Operating Schedule
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Weekday Open
+                        </label>
+                        <input
+                          type="time"
+                          value={editForm.weekdayOpen || ""}
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p ? { ...p, weekdayOpen: e.target.value } : p,
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Weekday Close
+                        </label>
+                        <input
+                          type="time"
+                          value={editForm.weekdayClose || ""}
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p ? { ...p, weekdayClose: e.target.value } : p,
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Weekend Open
+                        </label>
+                        <input
+                          type="time"
+                          value={editForm.weekendOpen || ""}
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p ? { ...p, weekendOpen: e.target.value } : p,
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Weekend Close
+                        </label>
+                        <input
+                          type="time"
+                          value={editForm.weekendClose || ""}
+                          onChange={(e) =>
+                            setEditForm((p) =>
+                              p ? { ...p, weekendClose: e.target.value } : p,
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {editTab === "sports" && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Sports *
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {SPORTS_LIST.map((s) => {
+                        const sel = editForm.sports?.includes(
+                          s.toLowerCase().replace(/ /g, "_") as any,
+                        );
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => {
+                              const slug = s
+                                .toLowerCase()
+                                .replace(/ /g, "_") as any;
+                              setEditForm((p) => {
+                                if (!p) return p;
+                                const sports = p.sports || [];
+                                return {
+                                  ...p,
+                                  sports: sports.includes(slug)
+                                    ? sports.filter((x) => x !== slug)
+                                    : [...sports, slug],
+                                };
+                              });
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${sel ? "bg-[#8a9e60] text-white border-transparent" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Amenities
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {FACILITIES_LIST.map((f) => {
+                        const slug = f.toLowerCase().replace(/ /g, "_") as any;
+                        const sel = editForm.amenities?.includes(slug);
+                        return (
+                          <button
+                            key={f}
+                            onClick={() => {
+                              setEditForm((p) => {
+                                if (!p) return p;
+                                const amenities = p.amenities || [];
+                                return {
+                                  ...p,
+                                  amenities: amenities.includes(slug)
+                                    ? amenities.filter((x) => x !== slug)
+                                    : [...amenities, slug],
+                                };
+                              });
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${sel ? "bg-[#8a9e60] text-white border-transparent" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                          >
+                            {f}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-7 py-4 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 bg-gray-50/50">
+              <button
+                onClick={() => {
+                  setEditTurf(null);
+                  setEditForm(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-white transition-colors bg-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                className="px-6 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#8a9e60" }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {confirmModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-6">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${confirmModal.type === "remove" ? "bg-red-50 text-red-600" : confirmModal.type === "ban" ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"}`}
+              >
+                {confirmModal.type === "remove" ? (
+                  <Trash size={24} weight="bold" />
+                ) : confirmModal.type === "ban" ? (
+                  <XCircle size={24} weight="bold" />
+                ) : (
+                  <CheckCircle size={24} weight="bold" />
+                )}
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2 capitalize">
+                {confirmModal.type} Field
+              </h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Are you sure you want to {confirmModal.type}{" "}
+                <b>{confirmModal.field.name}</b>? This action may have immediate
+                impact on field visibility and bookings.
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex gap-3">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                className={`flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90 ${confirmModal.type === "remove" ? "bg-red-500" : confirmModal.type === "ban" ? "bg-amber-500" : "bg-[#8a9e60]"}`}
+              >
+                Confirm{" "}
+                {confirmModal.type.charAt(0).toUpperCase() +
+                  confirmModal.type.slice(1)}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

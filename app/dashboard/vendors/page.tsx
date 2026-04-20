@@ -21,6 +21,10 @@ import {
   unbanVendor, 
   deleteVendor,
   reviewVendorKyc,
+  uploadVendorKycByAdmin,
+  getUploadUrl,
+  getSignedViewUrl,
+  getVendorById,
   KYC_CFG,
   STATUS_CFG,
   SPORT_COLOR,
@@ -30,23 +34,18 @@ import {
   STATES_LIST,
   BusinessType,
   PayoutCycle,
-  AdminOnboardVendorDto
+  AdminOnboardVendorDto,
+  VendorKycUpload,
+  KYC_DOCS,
 } from "@/features/vendors";
 import { DashboardPagination } from "@/components/DashboardPagination";
 
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type DocStatus = "pending" | "verified" | "rejected";
+
 
 // ── Config ─────────────────────────────────────────────────────────────────────
 const STEP_LABELS    = ["Business Info", "Location", "Banking", "KYC & Review"];
-const KYC_DOCS = [
-  { key: "identityProof",       label: "Identity Proof",        hint: "Aadhaar / Passport / Driving License" },
-  { key: "addressProof",        label: "Address Proof",         hint: "Utility bill / Bank statement" },
-  { key: "businessRegistration", label: "Business Registration", hint: "Incorporation cert / Partnership deed" },
-  { key: "gstCertificate",       label: "GST Certificate",       hint: "If GST registered" },
-  { key: "cancelledCheque",      label: "Cancelled Cheque",      hint: "For bank account verification" },
- ] as const;
 
 const BUSINESS_FIELDS = [
   { key: "ownerFullName" as const, label: "Owner Full Name *", placeholder: "Riaz Ahmed", type: "text" },
@@ -119,7 +118,7 @@ export default function VendorsPage() {
 
   // KYC review modal
   const [kycVendor, setKycVendor]     = useState<Vendor | null>(null);
-  const [kycDocs, setKycDocs]         = useState<Record<string, DocStatus>>({});
+
 
   // Confirm modal
   const [confirmModal, setConfirmModal] = useState<{ type: "ban" | "unban" | "remove"; vendor: Vendor } | null>(null);
@@ -276,116 +275,8 @@ export default function VendorsPage() {
   // KYC
   function openKycReview(v: Vendor) {
     setKycVendor(v);
-    const init: Record<string, DocStatus> = {};
-    KYC_DOCS.forEach((d) => {
-      const vVal = v.verification?.[d.key];
-      init[d.key] = vVal === true ? "verified" : vVal === false ? "rejected" : "pending";
-    });
-    setKycDocs(init);
-  }
-  function setDocStatus(key: string, s: DocStatus) {
-    setKycDocs(p => ({ ...p, [key]: s }));
-  }
-  async function applyKycVerify() {
-    if (!kycVendor) return;
-    try {
-      const verification: Record<string, boolean> = {};
-      Object.entries(kycDocs).forEach(([key, status]) => {
-        if (status === "verified") verification[key] = true;
-        if (status === "rejected") verification[key] = false;
-        // Omit if pending
-      });
-
-      await reviewVendorKyc(kycVendor.id, {
-        status: "verified",
-        reviewerNotes: "Approved by Admin via Portal.",
-        verification,
-      });
-      showToast({ title: "KYC Verified", description: `${kycVendor.businessName} KYC verified.`, tone: "success" });
-      setKycVendor(null);
-      refreshData();
-    } catch (err: any) {
-      showToast({ title: "Error", description: err.message || "Failed to verify KYC", tone: "error" });
-    }
   }
 
-  async function applyKycReject() {
-    if (!kycVendor) return;
-    try {
-      const verification: Record<string, boolean> = {};
-      Object.entries(kycDocs).forEach(([key, status]) => {
-        if (status === "verified") verification[key] = true;
-        if (status === "rejected") verification[key] = false;
-      });
-
-      await reviewVendorKyc(kycVendor.id, {
-        status: "rejected",
-        reviewerNotes: "Rejected by Admin via Portal.",
-        verification,
-      });
-      showToast({ title: "KYC Rejected", description: `${kycVendor.businessName} KYC rejected.`, tone: "error" });
-      
-      const updated = { ...kycVendor, kycStatus: "rejected" as KycStatus, verification };
-      if (selectedVendor?.id === kycVendor.id) setSelected(updated);
-
-      setKycVendor(null);
-      refreshData();
-    } catch (err: any) {
-      showToast({ title: "Error", description: err.message || "Failed to reject KYC", tone: "error" });
-    }
-  }
-
-  async function applyKycResubmit() {
-    if (!kycVendor) return;
-    try {
-      const verification: Record<string, boolean> = {};
-      Object.entries(kycDocs).forEach(([key, status]) => {
-        if (status === "verified") verification[key] = true;
-        if (status === "rejected") verification[key] = false;
-      });
-
-      await reviewVendorKyc(kycVendor.id, {
-        status: "in_review",
-        reviewerNotes: "Resubmission requested for certain documents.",
-        verification,
-      });
-      showToast({ title: "Resubmission Requested", description: `Requested resubmission for ${kycVendor.businessName}.`, tone: "warning" });
-      
-      const updated = { ...kycVendor, kycStatus: "in_review" as KycStatus, verification };
-      if (selectedVendor?.id === kycVendor.id) setSelected(updated);
-
-      setKycVendor(null);
-      refreshData();
-    } catch (err: any) {
-      showToast({ title: "Error", description: err.message || "Failed to request resubmission", tone: "error" });
-    }
-  }
-
-  async function saveKycReview() {
-    if (!kycVendor) return;
-    try {
-      const verification: Record<string, boolean> = {};
-      Object.entries(kycDocs).forEach(([key, status]) => {
-        if (status === "verified") verification[key] = true;
-        if (status === "rejected") verification[key] = false;
-      });
-
-      await reviewVendorKyc(kycVendor.id, {
-        status: "in_review",
-        reviewerNotes: "Review progress saved by admin.",
-        verification,
-      });
-      showToast({ title: "Progress Saved", description: "Document verification states updated.", tone: "success" });
-      
-      const updated = { ...kycVendor, kycStatus: "in_review" as KycStatus, verification };
-      if (selectedVendor?.id === kycVendor.id) setSelected(updated);
-
-      setKycVendor(null);
-      refreshData();
-    } catch (err: any) {
-      showToast({ title: "Error", description: err.message || "Failed to save progress", tone: "error" });
-    }
-  }
   
   // Confirm actions
   async function handleConfirm() {
@@ -485,7 +376,9 @@ export default function VendorsPage() {
             {filtered.length === 0 ? (
               <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">No vendors found.</td></tr>
             ) : filtered.map((v, i) => {
-              const kc = KYC_CFG[v.kycStatus]; const sc = STATUS_CFG[v.status]; const KycIcon = kc?.icon || WarningCircle;
+              const kc = KYC_CFG[v.kycStatus]; 
+              const sc = STATUS_CFG[v.status] || { label: v.status, cls: "bg-gray-100 text-gray-700", dot: "bg-gray-400" }; 
+              const KycIcon = kc?.icon || WarningCircle;
               return (
                 <tr key={v.id} className={`hover:bg-gray-50/50 transition-colors ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}>
                   <td className="px-4 py-3">
@@ -584,7 +477,7 @@ export default function VendorsPage() {
                   <h2 className="font-bold text-gray-800 text-base">{selectedVendor.businessName}</h2>
                   <p className="text-xs text-gray-400 font-mono">{selectedVendor.id}</p>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_CFG[selectedVendor.status].cls}`}>{STATUS_CFG[selectedVendor.status].label}</span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-100 text-gray-700"}`}>{STATUS_CFG[selectedVendor.status]?.label || selectedVendor.status}</span>
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${KYC_CFG[selectedVendor.kycStatus]?.cls || "bg-gray-100"}`}>KYC: {KYC_CFG[selectedVendor.kycStatus]?.label || selectedVendor.kycStatus}</span>
                   </div>
                 </div>
@@ -647,7 +540,7 @@ export default function VendorsPage() {
                 <div className="space-y-1">
                   {KYC_DOCS.map((doc) => {
                     const vVal = selectedVendor.verification?.[doc.key];
-                    const s: DocStatus = vVal === true ? "verified" : vVal === false ? "rejected" : "pending";
+                    const s = vVal === true ? "verified" : vVal === false ? "rejected" : "pending";
                     return (
                       <div key={doc.key} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                         <div className="flex items-center gap-2"><FileText size={13} className="text-gray-400" /><span className="text-xs text-gray-600">{doc.label}</span></div>
@@ -1068,66 +961,16 @@ export default function VendorsPage() {
           KYC REVIEW MODAL
       ═══════════════════════════════════════════════════════════════════════ */}
       {kycVendor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
-            <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#8a9e60" }}>{avatar(kycVendor.businessName)}</div>
-                  <div>
-                    <h2 className="font-bold text-gray-900">KYC Review</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">{kycVendor.businessName} · {kycVendor.id}</p>
-                  </div>
-                </div>
-                <button onClick={() => setKycVendor(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
-              </div>
-            </div>
-            <div className="px-6 py-5 space-y-3 flex-1 overflow-y-auto">
-              <p className="text-xs text-gray-500">Review each document individually, then approve or reject the vendor&apos;s KYC.</p>
-              {KYC_DOCS.map(({ key, label, hint }) => {
-                const s = kycDocs[key] ?? "pending";
-                return (
-                  <div key={key} className={`rounded-xl border p-4 transition-colors ${s === "verified" ? "border-green-200 bg-green-50/40" : s === "rejected" ? "border-red-200 bg-red-50/30" : "border-gray-200"}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <FileText size={16} className={`mt-0.5 shrink-0 ${s === "verified" ? "text-green-500" : s === "rejected" ? "text-red-400" : "text-gray-400"}`} />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800">{label}</p>
-                          <p className="text-[10px] text-gray-400">{hint}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${s === "verified" ? "bg-green-100 text-green-700" : s === "rejected" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}>
-                          {s === "verified" ? "Verified" : s === "rejected" ? "Rejected" : "Pending"}
-                        </span>
-                        <button onClick={() => setDocStatus(key, "verified")}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center border text-xs font-medium transition-colors ${s === "verified" ? "border-green-400 bg-green-500 text-white" : "border-gray-200 text-gray-400 hover:border-green-400 hover:text-green-500"}`} title="Approve">
-                          <CheckCircle size={13} weight="fill" />
-                        </button>
-                        <button onClick={() => setDocStatus(key, "rejected")}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center border text-xs font-medium transition-colors ${s === "rejected" ? "border-red-400 bg-red-500 text-white" : "border-gray-200 text-gray-400 hover:border-red-400 hover:text-red-500"}`} title="Reject">
-                          <XCircle size={13} weight="fill" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap gap-2 shrink-0 bg-gray-50/50">
-              <button onClick={saveKycReview} className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"><FileText size={13} />Save Review</button>
-              <button onClick={applyKycReject} className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"><XCircle size={13} />Reject KYC</button>
-              <button onClick={applyKycResubmit} className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-amber-200 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5"><WarningCircle size={13} />Request Resubmit</button>
-              <button 
-                onClick={applyKycVerify} 
-                className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 ${!KYC_DOCS.every(d => kycDocs[d.key] === "verified") ? "opacity-50 pointer-events-none" : ""}`} 
-                style={{ backgroundColor: "#8a9e60" }}
-              >
-                <CheckCircle size={13} />Verify KYC
-              </button>
-            </div>
-          </div>
-        </div>
+        <VendorKycUpload
+          vendor={kycVendor}
+          onClose={() => setKycVendor(null)}
+          onSuccess={() => {
+            refreshData();
+            if (selectedVendor?.id === kycVendor.id) {
+              getVendorById(kycVendor.id).then(setSelected).catch(() => {});
+            }
+          }}
+        />
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════

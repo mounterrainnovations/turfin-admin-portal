@@ -1,5 +1,5 @@
 import { getAdminSession } from "@/features/auth/session";
-import { Vendor, AdminOnboardVendorDto, UpdateVendorDto, VendorListResult, KycReviewDto } from "./types";
+import { Vendor, AdminOnboardVendorDto, UpdateVendorDto, VendorListResult, KycReviewDto, SubmitKycDto } from "./types";
 
 function getApiUrl() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -101,6 +101,12 @@ export async function listVendors(params: { page?: number; limit?: number; statu
     phone: v.phone || "-",
     address: v.address || {},
     bankingDetails: v.bankingDetails || {},
+    kyc: v.kyc ? {
+      ...v.kyc,
+      status: (v.kyc.status || "not_started").toLowerCase(),
+      verification: v.kyc.verification || {},
+      documents: v.kyc.documents || {},
+    } : undefined,
     verification: v.kyc?.verification || v.verification || {},
     kycStatus: (v.kyc?.status || v.kycStatus || "not_started").toLowerCase(),
     joinedAt: v.joinedAt || v.createdAt || new Date().toISOString(),
@@ -172,6 +178,41 @@ export async function reviewVendorKyc(vendorId: string, dto: KycReviewDto): Prom
     body: JSON.stringify(dto),
   });
   await handleResponse(response);
+}
+
+export async function uploadVendorKycByAdmin(vendorId: string, data: SubmitKycDto) {
+  const response = await fetch(`${getApiUrl()}/admin/vendors/${vendorId}/kyc`, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getAccessToken()}` 
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(response);
+}
+
+export async function getUploadUrl(path: string, fileType: string): Promise<{ uploadUrl: string }> {
+  const url = new URL(`${getApiUrl()}/storage/upload-url`);
+  url.searchParams.set("path", path);
+  url.searchParams.set("fileType", fileType);
+  
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  });
+  const payload = await handleResponse(response);
+  return payload.data;
+}
+
+export async function getSignedViewUrl(path: string): Promise<{ signedUrl: string }> {
+  const url = new URL(`${getApiUrl()}/storage/view-url`);
+  url.searchParams.set("path", path);
+  
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  });
+  const payload = await handleResponse(response);
+  return payload.data;
 }
 
 export async function deleteVendor(vendorId: string): Promise<void> {

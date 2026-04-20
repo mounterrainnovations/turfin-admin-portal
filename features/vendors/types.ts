@@ -67,8 +67,9 @@ export interface Vendor {
   kyc?: {
     status: KycStatus;
     verification: Record<string, boolean>;
+    documents?: KycDocuments;
   };
-  
+
   // UI helper fields (not all in backend, but used by UI)
   fields?: any[];
   sports?: string[];
@@ -112,6 +113,10 @@ export interface KycReviewDto {
   status: KycStatus;
   reviewerNotes?: string;
   verification?: Record<string, boolean>;
+}
+
+export interface SubmitKycDto {
+  documents: KycDocuments;
 }
 
 export interface VendorListResult {

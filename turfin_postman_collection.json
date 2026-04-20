@@ -2215,6 +2215,175 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Reviews",
+      "description": "Operations for turf ratings and reviews across different actor scopes.",
+      "item": [
+        {
+          "name": "Public",
+          "item": [
+            {
+              "name": "List Turf Reviews",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/turfs/:turfId/reviews",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["turfs", ":turfId", "reviews"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                },
+                "description": "### Expected Response: ReviewResponseDto[]\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | Unique review identifier |\n| userId | string | ID of the user who wrote the review |\n| fieldId | string | ID of the turf being reviewed |\n| bookingId | string | Linked verified booking ID |\n| score | number | Rating score (0-5, one decimal point) |\n| comment | string | User's feedback text (optional) |\n| user | ReviewUserDto | Basic profile info of the reviewer |\n| createdAt | Date | Relationship creation timestamp |"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "Create Review",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fieldId\": \"{{turfId}}\", // [MANDATORY] UUID of the turf\n  \"bookingId\": \"{{bookingId}}\", // [MANDATORY] UUID of a completed booking\n  \"score\": 4.5, // [MANDATORY] 0.0 to 5.0\n  \"comment\": \"Great turf, well maintained!\" // [OPTIONAL]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/me/reviews",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "me", "reviews"]
+                },
+                "description": "### Expected Response: ReviewResponseDto\n\nSubmit a rating and review for a completed booking. Re-calculates turf total rating atomically.\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | Unique review identifier |\n| userId | string | ID of the user who wrote the review |\n| fieldId | string | ID of the turf being reviewed |\n| bookingId | string | Linked verified booking ID |\n| score | number | Rating score (0-5, one decimal point) |\n| comment | string | User's feedback text (optional) |\n| createdAt | Date | Relationship creation timestamp |"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Vendor",
+          "item": [
+            {
+              "name": "List Own Turf Reviews",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/vendor/turfs/:turfId/reviews",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendor", "turfs", ":turfId", "reviews"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                },
+                "description": "### Expected Response: ReviewResponseDto[]\n\nFetch reviews for a turf owned by the authenticated vendor.\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | Unique review identifier |\n| userId | string | Reviewer ID |\n| fieldId | string | Turf ID |\n| score | number | 0.0-5.0 |\n| comment | string | Feedback |\n| createdAt | Date | Timestamp |"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Admin",
+          "item": [
+            {
+              "name": "List Turf Reviews (Admin)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/turfs/:turfId/reviews",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId", "reviews"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                },
+                "description": "### Expected Response: ReviewResponseDto[]\n\nGlobal access to reviews for any turf.\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | Unique review identifier |\n| userId | string | Reviewer ID |\n| fieldId | string | Turf ID |\n| score | number | 0.0-5.0 |\n| comment | string | Feedback |\n| createdAt | Date | Timestamp |"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Review",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/reviews/:reviewId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "reviews", ":reviewId"],
+                  "variable": [
+                    {
+                      "key": "reviewId",
+                      "value": "{{reviewId}}"
+                    }
+                  ]
+                },
+                "description": "Admin capability to moderate reviews. Deleting a review will trigger an atomic recalculation of the turf's aggregate rating."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -2245,6 +2414,16 @@
     },
     {
       "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reviewId",
       "value": "",
       "type": "string"
     }
