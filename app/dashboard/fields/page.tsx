@@ -1847,11 +1847,11 @@ export default function FieldsPage() {
 
       {/* Table */}
       <div className="flex-1 overflow-hidden px-6 pb-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-full flex flex-col overflow-hidden">
-          <div className="overflow-x-auto overflow-y-auto flex-1">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50/80 sticky top-0 z-10">
-                <tr>
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/60">
                   {[
                     "Field",
                     "Vendor",
@@ -1862,20 +1862,14 @@ export default function FieldsPage() {
                     "KYC",
                     "Bookings",
                     "",
-                  ].map((h, idx) => {
-                    const centered =
-                      h === "Status" || h === "KYC" || h === "Bookings";
-                    return (
-                      <th
-                        key={h}
-                        className={`${
-                          centered ? "text-center" : "text-left"
-                        } px-4 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap`}
-                      >
-                        {h}
-                      </th>
-                    );
-                  })}
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
 
@@ -2014,24 +2008,24 @@ export default function FieldsPage() {
                       </td>
 
                       {/* Status */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3">
                         <span
-                          className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${sc.cls}`}
+                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${sc.cls}`}
                         >
                           <span
                             className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`}
                           />
-                          {sc.label.toUpperCase()}
+                          {sc.label}
                         </span>
                       </td>
 
                       {/* KYC */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold whitespace-nowrap ${kyc.cls}`}
+                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${kyc.cls}`}
                         >
-                          {KycIcon && <KycIcon size={12} weight="fill" />}
-                          {kyc.label.toUpperCase()}
+                          {KycIcon && <KycIcon size={10} weight="fill" />}
+                          {kyc.label}
                         </span>
                       </td>
 
@@ -2041,14 +2035,39 @@ export default function FieldsPage() {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            className="p-1.5 rounded hover:bg-gray-100 text-gray-300 transition-colors"
-                            title="Click row for more"
-                          >
-                            <CaretRight size={14} />
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setSelected(field)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="View">
+                            <Eye size={14} />
                           </button>
+                          <button onClick={() => onEdit(field)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Edit">
+                            <PencilSimple size={14} />
+                          </button>
+                          <div className="relative">
+                            <button onClick={() => setActionMenu(actionMenu === field.id ? null : field.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                              <DotsThreeVertical size={14} />
+                            </button>
+                            {actionMenu === field.id && (
+                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[148px]">
+                                {field.status === "banned" ? (
+                                  <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "unban", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <CheckCircle size={13} className="text-green-500" />Unban
+                                  </button>
+                                ) : (
+                                  <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "ban", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <XCircle size={13} className="text-amber-500" />Ban
+                                  </button>
+                                )}
+                                <button onClick={() => { setActionMenu(null); openKycReview(field); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                  <ShieldCheck size={13} className="text-blue-500" />Review KYC
+                                </button>
+                                <div className="border-t border-gray-100 my-1" />
+                                <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "remove", field }); }} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2">
+                                  <Trash size={13} />Remove
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -2071,8 +2090,6 @@ export default function FieldsPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Footer */}
           <DashboardPagination
             page={page}
             total={total}

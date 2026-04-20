@@ -314,7 +314,7 @@ export default function AuditPage() {
 
         {/* Search + filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 w-64">
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 w-64">
             <MagnifyingGlass size={13} className="text-gray-400 shrink-0" />
             <input
               value={search}
@@ -364,16 +364,17 @@ export default function AuditPage() {
       </div>
 
       {/* ── Log Table ── */}
-      <div className="flex-1 overflow-y-auto bg-white">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-6 mt-4 mb-0 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
 
-        {/* Column headers */}
-        <div className="grid grid-cols-[130px_1.15fr_0.95fr_0.95fr_110px] gap-4 px-6 py-2 border-b border-gray-100 bg-gray-50 sticky top-0 z-10">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Time</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Action</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Target</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Done By</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</span>
-        </div>
+          {/* Column headers */}
+          <div className="grid grid-cols-[130px_1.15fr_0.95fr_0.95fr_110px] gap-4 px-6 py-2.5 border-b border-gray-100 bg-gray-50/60">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Time</span>
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Action</span>
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Target</span>
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Done By</span>
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Status</span>
+          </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
@@ -468,6 +469,7 @@ export default function AuditPage() {
             </div>
           ))
         )}
+        </div>
       </div>
       <div className="bg-white border-t border-gray-100 shrink-0">
         <DashboardPagination 
