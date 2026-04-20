@@ -16,8 +16,10 @@ export async function authenticatedFetch(
   const accessToken = session?.accessToken;
 
   if (!accessToken) {
-    // Clear session just in case it was partially invalid
     clearAdminSession();
+    if (typeof window !== "undefined") {
+      window.location.replace("/");
+    }
     throw new Error("Your admin session is missing. Please sign in again.");
   }
 
@@ -32,6 +34,9 @@ export async function authenticatedFetch(
     const refreshToken = session?.refreshToken;
     if (!refreshToken) {
       clearAdminSession();
+      if (typeof window !== "undefined") {
+        window.location.replace("/");
+      }
       throw new Error("Session expired. Please sign in again.");
     }
 
@@ -43,6 +48,9 @@ export async function authenticatedFetch(
       return await fetch(url, { ...options, headers });
     } catch (error) {
       clearAdminSession();
+      if (typeof window !== "undefined") {
+        window.location.replace("/");
+      }
       throw new Error("Session expired. Please sign in again.");
     }
   }
