@@ -5,6 +5,7 @@ import {
   FileText,
   CheckCircle,
   XCircle,
+  Eye,
   UploadSimple,
   X,
   WarningCircle,
@@ -18,7 +19,6 @@ import {
 } from "../api";
 import { useToast } from "@/features/toast/toast-context";
 import { uploadToStorage } from "../utils";
-import { KycFileActions } from "./KycFileActions";
 
 interface VendorKycUploadProps {
   vendor: Vendor;
@@ -316,7 +316,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         backdropFilter: "blur(4px)",
       }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -327,7 +327,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
                 {avatar(vendor.businessName)}
               </div>
               <div>
-                <h2 className="font-bold text-gray-900">KYC Review</h2>
+                <h2 className="font-bold text-gray-900">Vendor KYC Review</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {vendor.businessName} · {vendor.id}
                 </p>
@@ -341,7 +341,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
             </button>
           </div>
         </div>
-        <div className="px-6 py-5 space-y-3 flex-1 overflow-y-auto">
+        <div className="px-6 py-5 space-y-4 flex-1 overflow-y-auto">
           <p className="text-xs text-gray-500">
             Review each document individually, then approve or reject the
             vendor's KYC.
@@ -355,12 +355,13 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
           />
           {KYC_DOCS.map(({ key, label, hint }) => {
             const s = kycDocs[key] ?? "pending";
+            const docPath = documentPaths[key];
             return (
               <div
                 key={key}
                 className={`rounded-xl border p-4 transition-colors ${s === "verified" ? "border-green-200 bg-green-50/40" : s === "rejected" ? "border-red-200 bg-red-50/30" : "border-gray-200"}`}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-start gap-3">
                     <FileText
                       size={16}
@@ -398,28 +399,31 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
                       <XCircle size={13} weight="fill" />
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setUploadingDoc(key);
-                        fileInputRef.current?.click();
-                      }}
-                      disabled={uploadingDoc === key}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center border border-gray-200 transition-colors ${uploadingDoc === key ? "bg-gray-50 text-gray-300" : "text-gray-400 hover:border-[#8a9e60] hover:text-[#8a9e60]"}`}
-                      title="Upload Document"
-                    >
-                      {uploadingDoc === key ? (
-                        <div className="w-3 h-3 border-2 border-[#8a9e60] border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <UploadSimple size={13} weight="bold" />
-                      )}
-                    </button>
-                    <KycFileActions
-                      url={documentPaths[key]}
-                      onView={() => handleViewDocument(key)}
-                      onRemove={() => {}}
-                      showBadge={false}
-                    />
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleViewDocument(key)}
+                    disabled={!docPath}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${docPath ? "border-gray-200 text-gray-600 hover:bg-gray-50" : "border-gray-100 text-gray-300 pointer-events-none"}`}
+                  >
+                    <Eye size={12} /> View Document
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUploadingDoc(key);
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={uploadingDoc === key}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${uploadingDoc === key ? "border-gray-100 text-gray-300 bg-gray-50" : "border-[#8a9e60] text-[#8a9e60] hover:bg-[#8a9e60]/5"}`}
+                  >
+                    {uploadingDoc === key ? (
+                      <div className="w-3 h-3 border-2 border-[#8a9e60] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <UploadSimple size={12} />
+                    )}
+                    Replace
+                  </button>
                 </div>
               </div>
             );

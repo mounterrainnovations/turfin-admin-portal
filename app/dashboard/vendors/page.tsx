@@ -688,9 +688,12 @@ export default function VendorsPage() {
                 return (
                   <tr
                     key={v.id}
-                    className={`hover:bg-gray-50/50 transition-colors ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
+                    onClick={() => setSelected(v)}
+                    className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
+                      selectedVendor?.id === v.id ? "bg-[#8a9e60]/5" : ""
+                    } ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-3">
                         <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
@@ -885,54 +888,87 @@ export default function VendorsPage() {
       {selectedVendor && (
         <div className="fixed inset-0 z-40 flex">
           <div
-            className="flex-1 bg-black/40"
+            className="flex-1 bg-black/10"
             onClick={() => setSelected(null)}
           />
-          <div className="w-[480px] bg-white h-full flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex items-start justify-between p-6 border-b border-gray-100 shrink-0">
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-                  style={{ backgroundColor: "#8a9e60" }}
-                >
-                  {avatar(selectedVendor.businessName)}
-                </div>
-                <div>
-                  <h2 className="font-bold text-gray-800 text-base">
-                    {selectedVendor.businessName}
-                  </h2>
-                  <p className="text-xs text-gray-400 font-mono">
-                    {selectedVendor.id}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-100 text-gray-700"}`}
-                    >
-                      {STATUS_CFG[selectedVendor.status]?.label ||
-                        selectedVendor.status}
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${KYC_CFG[selectedVendor.kycStatus]?.cls || "bg-gray-100"}`}
-                    >
-                      KYC:{" "}
-                      {KYC_CFG[selectedVendor.kycStatus]?.label ||
-                        selectedVendor.kycStatus}
-                    </span>
+          <div className="w-[420px] bg-white h-full flex flex-col shadow-2xl overflow-hidden border-l border-gray-100">
+            <div
+              className="shrink-0 px-5 py-4 flex items-start justify-between"
+              style={{ background: "linear-gradient(135deg,#8a9e60,#6e8245)" }}
+            >
+              <div className="flex-1 min-w-0 pr-3">
+                <p className="text-white/60 text-[11px] font-medium mb-0.5">
+                  {selectedVendor.id}
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs shrink-0 bg-white/10 border border-white/15">
+                    {avatar(selectedVendor.businessName)}
                   </div>
+                  <div className="min-w-0">
+                    <h2 className="text-white font-bold text-base leading-tight truncate">
+                      {selectedVendor.businessName}
+                    </h2>
+                    <p className="text-white/60 text-[11px] mt-0.5 flex items-center gap-1 leading-relaxed">
+                      <MapPin size={10} /> {selectedVendor.address?.city || "—"},{" "}
+                      {selectedVendor.address?.state || "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-white/10 text-white border-white/20"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${STATUS_CFG[selectedVendor.status]?.dot || "bg-white/70"}`}
+                    />
+                    {(STATUS_CFG[selectedVendor.status]?.label ||
+                      selectedVendor.status
+                    ).toUpperCase()}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-white/10 text-white border-white/20">
+                    {(
+                      KYC_CFG[selectedVendor.kycStatus]?.label ||
+                      selectedVendor.kycStatus
+                    ).toUpperCase()}
+                  </span>
                 </div>
               </div>
               <button
                 onClick={() => setSelected(null)}
-                className="text-gray-400 hover:text-gray-600 p-1 shrink-0"
+                className="text-white/60 hover:text-white shrink-0 mt-0.5"
               >
                 <X size={20} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <section>
-                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Contact Information
-                </h3>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-gray-800">
+                    {selectedVendor.fields?.length || 0}
+                  </p>
+                  <p className="text-[10px] text-gray-400">fields</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-gray-800">
+                    {selectedVendor.commissionPct}%
+                  </p>
+                  <p className="text-[10px] text-gray-400">commission</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-gray-800">
+                    {(selectedVendor.revenue ?? 0) > 0
+                      ? `₹${Math.round((selectedVendor.revenue ?? 0) / 1000)}K`
+                      : "—"}
+                  </p>
+                  <p className="text-[10px] text-gray-400">revenue</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Contact
+                </p>
                 <div className="space-y-2.5">
                   {[
                     {
@@ -954,146 +990,114 @@ export default function VendorsPage() {
                         : "—",
                     },
                   ].map(({ icon: Icon, label, val }) => (
-                    <div key={label} className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded bg-gray-50 flex items-center justify-center shrink-0">
-                        <Icon size={14} className="text-gray-400" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-gray-400">{label}</p>
-                        <p className="text-xs text-gray-700 font-medium">
-                          {val}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-              <section>
-                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Location
-                </h3>
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded bg-gray-50 flex items-center justify-center shrink-0 mt-0.5">
-                    <MapPin size={14} className="text-gray-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-700">
-                      {selectedVendor.address?.houseNumber}{" "}
-                      {selectedVendor.address?.landmark}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {selectedVendor.address?.city},{" "}
-                      {selectedVendor.address?.state} –{" "}
-                      {selectedVendor.address?.pinCode}
-                    </p>
-                  </div>
-                </div>
-              </section>
-              <section>
-                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Turf Details
-                </h3>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  {[
-                    {
-                      label: "Fields",
-                      val: String(selectedVendor.fields?.length || 0),
-                      lg: true,
-                    },
-                    {
-                      label: "Surface",
-                      val: selectedVendor.fields?.[0]?.surfaceType || "—",
-                      lg: false,
-                    },
-                    {
-                      label: "Commission",
-                      val: `${selectedVendor.commissionPct}%`,
-                      lg: false,
-                    },
-                    {
-                      label: "Payout",
-                      val: selectedVendor.payoutCycle,
-                      lg: false,
-                    },
-                  ].map(({ label, val, lg }) => (
-                    <div key={label} className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-[10px] text-gray-400 mb-1">{label}</p>
-                      <p
-                        className={`font-semibold text-gray-800 ${lg ? "text-lg" : "text-xs"}`}
-                      >
+                    <div
+                      key={label}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="text-gray-400 flex items-center gap-2">
+                        <Icon size={13} className="text-gray-400" />
+                        {label}
+                      </span>
+                      <span className="font-medium text-gray-700 text-right max-w-[58%] break-words">
                         {val}
-                      </p>
+                      </span>
                     </div>
                   ))}
                 </div>
-                <div className="mb-3">
-                  <p className="text-[10px] text-gray-400 mb-2">
-                    Sports Offered
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Location
+                </p>
+                <div className="bg-gray-50 rounded-xl p-3.5">
+                  <p className="text-sm font-semibold text-gray-800">
+                    {selectedVendor.address?.houseNumber || "—"}{" "}
+                    {selectedVendor.address?.landmark || ""}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(selectedVendor.sports || []).map((s) => (
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    {selectedVendor.address?.city || "—"},{" "}
+                    {selectedVendor.address?.state || "—"}{" "}
+                    {selectedVendor.address?.pinCode
+                      ? `- ${selectedVendor.address.pinCode}`
+                      : ""}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Business
+                </p>
+                <div className="space-y-2.5">
+                  {[
+                    ["Business Type", selectedVendor.businessType || "—"],
+                    ["Payout Cycle", selectedVendor.payoutCycle || "—"],
+                    ["Surface", selectedVendor.fields?.[0]?.surfaceType || "—"],
+                    ["GST Number", selectedVendor.gstNumber || "—"],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="text-gray-400">{label}</span>
+                      <span className="font-medium text-gray-700 text-right max-w-[55%] capitalize">
+                        {value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Sports
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(selectedVendor.sports || []).length > 0 ? (
+                    (selectedVendor.sports || []).map((s) => (
                       <span
                         key={s}
-                        className={`text-[10px] font-medium px-2 py-0.5 rounded ${SPORT_COLOR[s] ?? "bg-gray-100 text-gray-600"}`}
+                        className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${SPORT_COLOR[s] ?? "bg-gray-100 text-gray-600"}`}
                       >
                         {s}
                       </span>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-gray-300 italic">
+                      No sports listed
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <p className="text-[10px] text-gray-400 mb-2">Facilities</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(selectedVendor.facilities || []).map((f) => (
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Facilities
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(selectedVendor.facilities || []).length > 0 ? (
+                    (selectedVendor.facilities || []).map((f) => (
                       <span
                         key={f}
-                        className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-600"
+                        className="text-[11px] bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium"
                       >
                         {f}
                       </span>
-                    ))}
-                  </div>
-                </div>
-              </section>
-              <section>
-                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Financial
-                </h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    {
-                      label: "Revenue",
-                      val:
-                        (selectedVendor.revenue ?? 0) > 0
-                          ? `₹${selectedVendor.revenue?.toLocaleString("en-IN")}`
-                          : "—",
-                    },
-                    {
-                      label: "Commission",
-                      val: `${selectedVendor.commissionPct}%`,
-                    },
-                    { label: "Payout", val: selectedVendor.payoutCycle },
-                  ].map(({ label, val }) => (
-                    <div key={label} className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-[10px] text-gray-400 mb-1">{label}</p>
-                      <p className="text-sm font-bold text-gray-800">{val}</p>
-                    </div>
-                  ))}
-                </div>
-                {selectedVendor.gstNumber && (
-                  <p className="text-[10px] text-gray-400 mt-2">
-                    GST:{" "}
-                    <span className="font-mono text-gray-600">
-                      {selectedVendor.gstNumber}
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-gray-300 italic">
+                      No facilities listed
                     </span>
-                  </p>
-                )}
-              </section>
-              <section>
-                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
                   KYC Documents
-                </h3>
-                <div className="space-y-1">
+                </p>
+                <div className="space-y-2">
                   {KYC_DOCS.map((doc) => {
                     const vVal = selectedVendor.verification?.[doc.key];
                     const s =
@@ -1105,11 +1109,11 @@ export default function VendorsPage() {
                     return (
                       <div
                         key={doc.key}
-                        className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+                        className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5"
                       >
                         <div className="flex items-center gap-2">
                           <FileText size={13} className="text-gray-400" />
-                          <span className="text-xs text-gray-600">
+                          <span className="text-xs text-gray-700">
                             {doc.label}
                           </span>
                         </div>
@@ -1126,53 +1130,59 @@ export default function VendorsPage() {
                     );
                   })}
                 </div>
-              </section>
+              </div>
             </div>
-            <div className="p-4 border-t border-gray-100 flex gap-2 shrink-0">
-              <button
-                onClick={() => openEdit(selectedVendor)}
-                className="flex-1 py-2 text-xs font-semibold border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <PencilSimple size={13} />
-                Edit
-              </button>
-              <button
-                onClick={() => openKycReview(selectedVendor)}
-                className="flex-1 py-2 text-xs font-semibold border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <ShieldCheck size={13} />
-                KYC Review
-              </button>
-              {selectedVendor.status === "banned" ? (
+
+            <div className="shrink-0 border-t border-gray-100 p-4 bg-gray-50/50">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => openEdit(selectedVendor)}
+                  className="flex-1 py-2 text-xs font-semibold border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <PencilSimple size={13} />
+                  Edit
+                </button>
+                <button
+                  onClick={() => openKycReview(selectedVendor)}
+                  className="flex-1 py-2 text-xs font-semibold border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <ShieldCheck size={13} />
+                  KYC Review
+                </button>
+              </div>
+              <div className="flex gap-2 mt-2">
+                {selectedVendor.status === "banned" ? (
+                  <button
+                    onClick={() =>
+                      setConfirmModal({ type: "unban", vendor: selectedVendor })
+                    }
+                    className="flex-1 py-2 text-xs font-semibold rounded-lg text-white flex items-center justify-center gap-1.5"
+                    style={{ backgroundColor: "#8a9e60" }}
+                  >
+                    <CheckCircle size={13} />
+                    Unban
+                  </button>
+                ) : (
+                  <button
+                    onClick={() =>
+                      setConfirmModal({ type: "ban", vendor: selectedVendor })
+                    }
+                    className="flex-1 py-2 text-xs font-semibold rounded-lg text-white bg-amber-500 flex items-center justify-center gap-1.5"
+                  >
+                    <XCircle size={13} />
+                    Ban
+                  </button>
+                )}
                 <button
                   onClick={() =>
-                    setConfirmModal({ type: "unban", vendor: selectedVendor })
+                    setConfirmModal({ type: "remove", vendor: selectedVendor })
                   }
-                  className="flex-1 py-2 text-xs font-semibold rounded-lg text-white flex items-center justify-center gap-1.5"
-                  style={{ backgroundColor: "#8a9e60" }}
+                  className="flex-1 py-2 text-xs font-semibold border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <CheckCircle size={13} />
-                  Unban
+                  <Trash size={13} />
+                  Remove
                 </button>
-              ) : (
-                <button
-                  onClick={() =>
-                    setConfirmModal({ type: "ban", vendor: selectedVendor })
-                  }
-                  className="flex-1 py-2 text-xs font-semibold rounded-lg text-white bg-amber-500 flex items-center justify-center gap-1.5"
-                >
-                  <XCircle size={13} />
-                  Ban
-                </button>
-              )}
-              <button
-                onClick={() =>
-                  setConfirmModal({ type: "remove", vendor: selectedVendor })
-                }
-                className="py-2 px-3 text-xs font-semibold border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-              >
-                <Trash size={14} />
-              </button>
+              </div>
             </div>
           </div>
         </div>
