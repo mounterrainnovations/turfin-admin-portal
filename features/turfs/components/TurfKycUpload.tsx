@@ -520,13 +520,6 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
             Reject KYC
           </button>
           <button
-            onClick={() => {}} // Could add resubmit logic if API supports it
-            className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-amber-200 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5"
-          >
-            <WarningCircle size={13} />
-            Request Resubmit
-          </button>
-          <button
             onClick={applyKycVerify}
             className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 ${!KYC_DOCS_FIELD.every((d) => kycDocs[d.key] === "verified") ? "opacity-50 pointer-events-none" : ""}`}
             style={{ backgroundColor: "#8a9e60" }}

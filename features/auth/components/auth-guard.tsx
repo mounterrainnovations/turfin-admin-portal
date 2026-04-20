@@ -6,18 +6,22 @@ import { getAdminSession } from "../session";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const session = getAdminSession();
-    if (!session) {
-      router.replace("/");
-    } else {
-      setIsAuthorized(true);
-    }
-  }, [router]);
+    setMounted(true);
+  }, []);
 
-  if (!isAuthorized) {
+  const session = getAdminSession();
+  const isAuthorized = Boolean(session);
+
+  useEffect(() => {
+    if (mounted && !isAuthorized) {
+      router.replace("/");
+    }
+  }, [router, isAuthorized, mounted]);
+
+  if (!mounted || !isAuthorized) {
     return null; // Or a loading spinner that matches the UI
   }
 

@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getAdminSession, clearAdminSession } from "./session";
 import type { AdminSession } from "./types";
 import { useRouter } from "next/navigation";
 
 export function useAuth() {
-  const [session, setSession] = useState<AdminSession | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<AdminSession | null>(() =>
+    getAdminSession(),
+  );
   const router = useRouter();
-
-  useEffect(() => {
-    const s = getAdminSession();
-    setSession(s);
-    setIsLoading(false);
-  }, []);
 
   const logout = () => {
     clearAdminSession();
@@ -22,5 +17,5 @@ export function useAuth() {
     router.replace("/");
   };
 
-  return { session, isLoading, logout };
+  return { session, isLoading: false, logout };
 }
