@@ -1,5 +1,10 @@
-import { getAdminSession } from "@/features/auth/session";
-import type { AuditEntry, AuditListResult, AuditSeverity, BackendAuditCategory } from "./types";
+import { authenticatedFetch } from "@/features/auth/request";
+import type {
+  AuditEntry,
+  AuditListResult,
+  AuditSeverity,
+  BackendAuditCategory,
+} from "./types";
 
 const AUDIT_CATEGORIES: BackendAuditCategory[] = [
   "auth",
@@ -21,16 +26,6 @@ function getApiUrl() {
   }
 
   return apiUrl.replace(/\/$/, "");
-}
-
-function getAccessToken() {
-  const session = getAdminSession();
-
-  if (!session?.accessToken) {
-    throw new Error("Your admin session is missing. Please sign in again.");
-  }
-
-  return session.accessToken;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -171,9 +166,7 @@ function adaptAuditEntry(item: unknown, index: number): AuditEntry {
     readString(record.type) ??
     "-";
   const action =
-    readString(record.action) ??
-    readString(record.title) ??
-    eventType;
+    readString(record.action) ?? readString(record.title) ?? eventType;
   const description =
     readString(record.description) ??
     readString(record.message) ??
@@ -203,18 +196,9 @@ function adaptAuditEntry(item: unknown, index: number): AuditEntry {
         readString(actor.fullName) ??
         "-",
       email: readString(actor.email) ?? "-",
-      role:
-        readString(actor.role) ??
-        readString(actor.userRole) ??
-        "-",
-      ip:
-        readString(actor.ip) ??
-        readString(actor.ipAddress) ??
-        "-",
-      session:
-        readString(actor.session) ??
-        readString(actor.sessionId) ??
-        "-",
+      role: readString(actor.role) ?? readString(actor.userRole) ?? "-",
+      ip: readString(actor.ip) ?? readString(actor.ipAddress) ?? "-",
+      session: readString(actor.session) ?? readString(actor.sessionId) ?? "-",
     },
     resource: resource
       ? {
@@ -222,10 +206,7 @@ function adaptAuditEntry(item: unknown, index: number): AuditEntry {
             readString(resource.type) ??
             readString(resource.resourceType) ??
             "-",
-          id:
-            readString(resource.id) ??
-            readString(resource.resourceId) ??
-            "-",
+          id: readString(resource.id) ?? readString(resource.resourceId) ?? "-",
           label:
             readString(resource.label) ??
             readString(resource.name) ??
@@ -257,26 +238,18 @@ function adaptAuditEntry(item: unknown, index: number): AuditEntry {
       readString(actor.ip) ??
       "-",
     userAgent:
-      readString(record.userAgent) ??
-      readString(record.user_agent) ??
-      "-",
-    route:
-      readString(metadata.route) ??
-      "-",
-    url:
-      readString(metadata.url) ??
-      "-",
-    method:
-      readString(metadata.method) ??
-      "-",
+      readString(record.userAgent) ?? readString(record.user_agent) ?? "-",
+    route: readString(metadata.route) ?? "-",
+    url: readString(metadata.url) ?? "-",
+    method: readString(metadata.method) ?? "-",
     httpStatus:
       typeof metadata.httpStatus === "number"
         ? String(metadata.httpStatus)
-        : readString(metadata.httpStatus) ?? "-",
+        : (readString(metadata.httpStatus) ?? "-"),
     durationMs:
       typeof metadata.durationMs === "number"
         ? `${metadata.durationMs}ms`
-        : readString(metadata.durationMs) ?? "-",
+        : (readString(metadata.durationMs) ?? "-"),
     payloadData: redactSecrets(payload),
     responseData: redactSecrets(responseMeta),
   };
@@ -293,7 +266,10 @@ async function parseResponse(response: Response) {
   return text ? { message: text } : null;
 }
 
-function buildAuditUrl(pathname: string, query: Record<string, string | undefined>) {
+function buildAuditUrl(
+  pathname: string,
+  query: Record<string, string | undefined>,
+) {
   const url = new URL(`${getApiUrl()}${pathname}`);
 
   for (const [key, value] of Object.entries(query)) {
@@ -305,29 +281,31 @@ function buildAuditUrl(pathname: string, query: Record<string, string | undefine
   return url.toString();
 }
 
-export async function listAuditLogs(params: {
-  page?: number;
-  limit?: number;
-  category?: BackendAuditCategory | "all";
-  eventType?: string;
-  actorId?: string;
-  search?: string;
-} = {}): Promise<AuditListResult> {
-  const response = await fetch(
+export async function listAuditLogs(
+  params: {
+    page?: number;
+    limit?: number;
+    category?: BackendAuditCategory | "all";
+    eventType?: string;
+    actorId?: string;
+    search?: string;
+  } = {},
+): Promise<AuditListResult> {
+  const response = await authenticatedFetch(
     buildAuditUrl("/audit", {
       page: String(params.page ?? 1),
 
       limit: String(params.limit ?? 100),
-      category: params.category && params.category !== "all" ? params.category : undefined,
+      category:
+        params.category && params.category !== "all"
+          ? params.category
+          : undefined,
       eventType: params.eventType,
       actorId: params.actorId,
       search: params.search,
     }),
 
     {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-      },
       cache: "no-store",
     },
   );
@@ -335,11 +313,13 @@ export async function listAuditLogs(params: {
   const payload = await parseResponse(response);
 
   if (!response.ok) {
-    const errorMsg = 
-      payload?.error?.message || 
-      payload?.message || 
-      findStringDeep(payload, ["message", "error"]) || 
-      (typeof payload === 'string' && payload.trim() ? payload : "Unable to load audit logs.");
+    const errorMsg =
+      payload?.error?.message ||
+      payload?.message ||
+      findStringDeep(payload, ["message", "error"]) ||
+      (typeof payload === "string" && payload.trim()
+        ? payload
+        : "Unable to load audit logs.");
     throw new Error(errorMsg);
   }
 
@@ -355,25 +335,26 @@ export async function exportAuditCsv(params: {
   category?: BackendAuditCategory | "all";
   actorId?: string;
 }) {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     buildAuditUrl("/audit/export/csv", {
-      category: params.category && params.category !== "all" ? params.category : undefined,
+      category:
+        params.category && params.category !== "all"
+          ? params.category
+          : undefined,
       actorId: params.actorId,
     }),
-    {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-      },
-    },
+    {},
   );
 
   if (!response.ok) {
     const payload = await parseResponse(response);
-    const errorMsg = 
-      payload?.error?.message || 
-      payload?.message || 
-      findStringDeep(payload, ["message", "error"]) || 
-      (typeof payload === 'string' && payload.trim() ? payload : "Unable to export audit logs.");
+    const errorMsg =
+      payload?.error?.message ||
+      payload?.message ||
+      findStringDeep(payload, ["message", "error"]) ||
+      (typeof payload === "string" && payload.trim()
+        ? payload
+        : "Unable to export audit logs.");
     throw new Error(errorMsg);
   }
 

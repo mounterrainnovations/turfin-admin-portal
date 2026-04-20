@@ -1,4 +1,4 @@
-import { getAdminSession } from "@/features/auth/session";
+import { authenticatedFetch } from "@/features/auth/request";
 import { 
   Permission, 
   Role, 
@@ -15,12 +15,6 @@ function getApiUrl() {
   return apiUrl.replace(/\/$/, "");
 }
 
-function getAccessToken() {
-  const session = getAdminSession();
-  if (!session?.accessToken)
-    throw new Error("Your admin session is missing. Please sign in again.");
-  return session.accessToken;
-}
 
 async function handleResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
@@ -43,8 +37,7 @@ async function handleResponse(response: Response) {
 // ── Permission catalogue ─────────────────────────────────────────────────
 
 export async function listPermissions(): Promise<Permission[]> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins/permissions`, {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins/permissions`, {
     cache: "no-store",
   });
   const data = await handleResponse(response);
@@ -54,8 +47,7 @@ export async function listPermissions(): Promise<Permission[]> {
 // ── Custom role management ───────────────────────────────────────────────
 
 export async function listRoles(): Promise<Role[]> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins/roles`, {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins/roles`, {
     cache: "no-store",
   });
   const data = await handleResponse(response);
@@ -63,11 +55,10 @@ export async function listRoles(): Promise<Role[]> {
 }
 
 export async function createRole(dto: CreateRoleDto): Promise<Role> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins/roles`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins/roles`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
     },
     body: JSON.stringify(dto),
   });
@@ -76,11 +67,10 @@ export async function createRole(dto: CreateRoleDto): Promise<Role> {
 }
 
 export async function updateRolePermissions(roleId: string, dto: UpdateRolePermissionsDto): Promise<Role> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins/roles/${roleId}/permissions`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins/roles/${roleId}/permissions`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
     },
     body: JSON.stringify(dto),
   });
@@ -89,9 +79,8 @@ export async function updateRolePermissions(roleId: string, dto: UpdateRolePermi
 }
 
 export async function deleteRole(roleId: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins/roles/${roleId}`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins/roles/${roleId}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
   });
   await handleResponse(response);
 }
@@ -99,8 +88,7 @@ export async function deleteRole(roleId: string): Promise<void> {
 // ── Sub-admin account management ─────────────────────────────────────────
 
 export async function listSubAdmins(): Promise<SubAdmin[]> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins`, {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins`, {
     cache: "no-store",
   });
   const data = await handleResponse(response);
@@ -108,11 +96,10 @@ export async function listSubAdmins(): Promise<SubAdmin[]> {
 }
 
 export async function createSubAdmin(dto: CreateSubAdminDto): Promise<{ identityId: string; email: string }> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
     },
     body: JSON.stringify(dto),
   });
@@ -121,16 +108,14 @@ export async function createSubAdmin(dto: CreateSubAdminDto): Promise<{ identity
 }
 
 export async function deleteSubAdmin(id: string): Promise<void> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins/${id}`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins/${id}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
   });
   await handleResponse(response);
 }
 
 export async function getSubAdminRoles(id: string): Promise<Role[]> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins/${id}/roles`, {
-    headers: { Authorization: `Bearer ${getAccessToken()}` },
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins/${id}/roles`, {
     cache: "no-store",
   });
   const data = await handleResponse(response);
@@ -138,11 +123,10 @@ export async function getSubAdminRoles(id: string): Promise<Role[]> {
 }
 
 export async function assignRolesToSubAdmin(id: string, dto: AssignRolesToSubAdminDto): Promise<Role[]> {
-  const response = await fetch(`${getApiUrl()}/admin/sub-admins/${id}/roles`, {
+  const response = await authenticatedFetch(`${getApiUrl()}/admin/sub-admins/${id}/roles`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAccessToken()}`,
     },
     body: JSON.stringify(dto),
   });

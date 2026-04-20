@@ -52,3 +52,31 @@ export const SURFACE_LIST = ["artificial_turf", "natural_grass", "concrete", "wo
 export const STATES_LIST = [
   "Maharashtra", "Karnataka", "Delhi", "Gujarat", "Tamil Nadu", "Telangana", "West Bengal", "Rajasthan", "Uttar Pradesh", "Punjab"
 ];
+
+export const KYC_DOCS = [
+  {
+    key: "identityProof",
+    label: "Identity Proof",
+    hint: "Aadhaar / Passport / Driving License",
+  },
+  {
+    key: "addressProof",
+    label: "Address Proof",
+    hint: "Utility bill / Bank statement",
+  },
+  {
+    key: "businessRegistration",
+    label: "Business Registration",
+    hint: "Incorporation cert / Partnership deed",
+  },
+  {
+    key: "gstCertificate",
+    label: "GST Certificate",
+    hint: "If GST registered",
+  },
+  {
+    key: "cancelledCheque",
+    label: "Cancelled Cheque",
+    hint: "For bank account verification",
+  },
+] as const;

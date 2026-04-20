@@ -183,3 +183,50 @@ export async function signInAdmin(input: SignInInput): Promise<AdminSession> {
     raw: payload,
   };
 }
+
+export async function refreshTokenAdmin(
+  refreshToken: string,
+): Promise<AdminSession> {
+  const response = await fetch(`${getApiUrl()}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  let payload: unknown = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      findStringDeep(payload, ["message", "error"]) ?? "Refresh failed.";
+    throw new Error(message);
+  }
+
+  const accessToken = extractAccessToken(payload);
+  if (!accessToken) {
+    throw new Error("Refresh succeeded but no access token was returned.");
+  }
+
+  const tokenPayload = decodeJwtPayload(accessToken);
+  const role = extractRole(payload, tokenPayload);
+
+  if (!role) {
+    throw new Error("User role not found in refreshed session.");
+  }
+
+  return {
+    accessToken,
+    refreshToken: extractRefreshToken(payload) ?? refreshToken, // Use new one or fallback to old one
+    role,
+    email: extractEmail(payload, tokenPayload),
+    displayName: extractDisplayName(payload, tokenPayload),
+    raw: payload,
+  };
+}

@@ -34,6 +34,53 @@ The following are the available enums parsed across the codebase:
 
 ---
 
+## Reviews (New)
+
+### CreateReviewDto
+**File**: `src/modules/reviews/dto/create-review.dto.ts`
+
+| Field | Type | Required | Description | Constraints/Decorators |
+|-------|------|----------|-------------|------------------------|
+| `fieldId` | `string` | Yes | UUID of the turf being reviewed | `@IsUUID()` |
+| `bookingId` | `string` | Yes | UUID of the verified booking | `@IsUUID()` |
+| `score` | `number` | Yes | Rating from 0.0 to 5.0 | `@IsNumber()`, `@Min(0)`, `@Max(5)` |
+| `comment` | `string` | No | Optional text feedback | `@IsString()` |
+
+### ReviewResponseDto
+**File**: `src/modules/reviews/dto/review-response.dto.ts`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `string` | Yes | Unique review ID |
+| `userId` | `string` | Yes | Author's internal user ID |
+| `fieldId` | `string` | Yes | Target turf ID |
+| `bookingId` | `string` | Yes | Linked booking ID |
+| `score` | `number` | Yes | Numeric score (float) |
+| `comment` | `string` | No | Feedback text |
+| `user` | `ReviewUserDto` | No | Nested author profile (summary) |
+| `createdAt` | `Date` | Yes | Review creation timestamp |
+
+### ReviewUserDto
+**File**: `src/modules/reviews/dto/review-response.dto.ts`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `firstName` | `string` | User's first name |
+| `lastName` | `string` | User's last name |
+| `avatarUrl` | `string \| null` | Profile image URL |
+
+### TurfRatingDto
+**File**: `src/modules/turfs/dto/turf-rating.dto.ts`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `avgScore` | `number` | Yes | Calculated average score (0-5) |
+| `totalReviews` | `number` | Yes | Count of verified reviews |
+
+
+
+---
+
 ## Common
 
 ### PaginationQueryDto
@@ -412,6 +459,7 @@ The following are the available enums parsed across the codebase:
 | `vendorWhatsapp` | `string` | No | `@Expose()` |
 | `fieldPhotos` | `string[]` | No | `@Expose()` |
 | `kyc` | `TurfDocumentsResponseDto` | No | `@Expose()`, `@Type(()` |
+| `rating` | `TurfRatingDto` | No | `@Expose()`, `@Type(()` |
 | `createdAt` | `Date` | Yes | `@Expose()` |
 | `updatedAt` | `Date` | Yes | `@Expose()` |
 
