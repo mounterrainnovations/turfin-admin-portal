@@ -65,6 +65,23 @@ export interface Turf {
   totalRevenuePaise?: number;
   listedAt?: string;
   description?: string;
+  // Backend returns KYC data nested under 'kyc' key (TurfResponseDto.kyc = TurfDocumentsResponseDto)
+  kyc?: {
+    id?: string;
+    fieldId?: string;
+    status: KycStatus;
+    verification: Record<string, boolean>;
+    documents: {
+      propertyDocument?: string;
+      municipalNoc?: string;
+      liabilityInsurance?: string;
+      fieldPhotos?: string[];
+    };
+    reviewedBy?: string | null;
+    reviewedAt?: string | null;
+    submittedAt?: string | null;
+  };
+  // Legacy / fallback shape (kept for compat)
   documents?: {
     status: KycStatus;
     verification: Record<string, boolean>;
@@ -95,6 +112,17 @@ export interface CreateTurfDto {
 
 export interface UpdateTurfDto extends Partial<CreateTurfDto> {
   status?: FieldStatus;
+}
+
+export interface TurfDocumentsDto {
+  propertyDocument?: string;
+  municipalNoc?: string;
+  liabilityInsurance?: string;
+  fieldPhotos?: string[];
+}
+
+export interface SubmitTurfDocumentsDto {
+  documents: TurfDocumentsDto;
 }
 
 export interface TurfReviewDto {

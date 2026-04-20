@@ -5,6 +5,7 @@ import {
   CreateTurfDto,
   UpdateTurfDto,
   TurfReviewDto,
+  SubmitTurfDocumentsDto,
 } from "./types";
 
 function getApiUrl() {
@@ -89,9 +90,18 @@ export async function listTurfs(
   const items = rawItems.map((t: any) => ({
     ...t,
     status: (t.status || "pending").toLowerCase(),
-    kycStatus: (t.kycStatus || "not_started").toLowerCase(),
+    kycStatus: (t.kyc?.status || t.kycStatus || "not_started").toLowerCase(),
+    verification: t.kyc?.verification || t.verification || {},
     address: t.address || {},
     vendor: t.vendor || {},
+    kyc: t.kyc
+      ? {
+          ...t.kyc,
+          status: (t.kyc.status || "not_started").toLowerCase(),
+          verification: t.kyc.verification || {},
+          documents: t.kyc.documents || {},
+        }
+      : undefined,
     listedAt: t.createdAt || t.listedAt || new Date().toISOString(),
   }));
 
@@ -105,7 +115,25 @@ export async function getTurfById(turfId: string): Promise<Turf> {
   const response = await authenticatedFetch(`${getApiUrl()}/admin/turfs/${turfId}`, {
     cache: "no-store",
   });
-  return handleResponse(response);
+  const t = await handleResponse(response);
+  // Normalize to same shape as listTurfs so components always see consistent data
+  return {
+    ...t,
+    status: (t.status || "pending").toLowerCase(),
+    kycStatus: (t.kyc?.status || t.kycStatus || "not_started").toLowerCase(),
+    verification: t.kyc?.verification || t.verification || {},
+    address: t.address || {},
+    vendor: t.vendor || {},
+    kyc: t.kyc
+      ? {
+          ...t.kyc,
+          status: (t.kyc.status || "not_started").toLowerCase(),
+          verification: t.kyc.verification || {},
+          documents: t.kyc.documents || {},
+        }
+      : undefined,
+    listedAt: t.createdAt || t.listedAt || new Date().toISOString(),
+  };
 }
 
 export async function createTurfForVendor(
@@ -181,5 +209,22 @@ export async function updateTurf(
     },
     body: JSON.stringify(dto),
   });
+  return handleResponse(response);
+}
+
+export async function uploadTurfDocuments(
+  turfId: string,
+  dto: SubmitTurfDocumentsDto,
+): Promise<any> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/turfs/${turfId}/documents`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(dto),
+    },
+  );
   return handleResponse(response);
 }

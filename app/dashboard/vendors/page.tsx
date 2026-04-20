@@ -26,7 +26,7 @@ import {
   CaretRight,
   CurrencyDollar,
 } from "@phosphor-icons/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "@/features/toast/toast-context";
 import {
   Vendor,
@@ -55,7 +55,9 @@ import {
   AdminOnboardVendorDto,
   VendorKycUpload,
   KYC_DOCS,
+  KycFileActions,
 } from "@/features/vendors";
+import { uploadToStorage, performSequentialUploads } from "@/features/vendors/utils";
 import { DashboardPagination } from "@/components/DashboardPagination";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -206,6 +208,11 @@ export default function VendorsPage() {
   const [showOnboard, setShowOnboard] = useState(false);
   const [onboardStep, setOnboardStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({ ...INIT_FORM });
+  const [onboardKycFiles, setOnboardKycFiles] = useState<
+    Partial<Record<KycDocKey, File>>
+  >({});
+  const [uploadingDocKey, setUploadingDocKey] = useState<KycDocKey | null>(null);
+  const onboardingFileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit modal
   const [editVendor, setEditVendor] = useState<Vendor | null>(null);
@@ -322,11 +329,25 @@ export default function VendorsPage() {
     setShowOnboard(false);
     setOnboardStep(1);
     setFormData({ ...INIT_FORM });
+    setOnboardKycFiles({});
+    setUploadingDocKey(null);
     setBanReason("");
   };
 
+  const handleOnboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && uploadingDocKey) {
+      setOnboardKycFiles((prev) => ({ ...prev, [uploadingDocKey]: file }));
+      setField(uploadingDocKey, file.name);
+    }
+    setUploadingDocKey(null);
+    if (onboardingFileInputRef.current) onboardingFileInputRef.current.value = "";
+  };
+
   const submitOnboard = async () => {
+    setIsLoading(true);
     try {
+      // 1. Create Vendor
       const dto: AdminOnboardVendorDto = {
         email: formData.email,
         password: formData.password,
@@ -354,9 +375,35 @@ export default function VendorsPage() {
           payoutCycle: formData.payoutCycle,
         },
       };
-      await onboardVendor(dto);
+
+      const vendor = await onboardVendor(dto);
+      const vendorId = vendor.id;
+
+      // 2. Sequential Uploads for KYC (if any)
+      if (Object.keys(onboardKycFiles).length > 0) {
+        try {
+          const s3Paths = await performSequentialUploads(
+            vendorId,
+            onboardKycFiles,
+            "vendor"
+          );
+
+          // 3. Finalize KYC with backend
+          await uploadVendorKycByAdmin(vendorId, {
+            documents: s3Paths as any,
+          });
+        } catch (uploadError: any) {
+          console.error("KYC upload error:", uploadError);
+          showToast({
+            title: "Partial Success",
+            description: "Vendor created but document upload failed. You can upload them later.",
+            tone: "warning",
+          });
+        }
+      }
+
       showToast({
-        title: "Success",
+        title: "Vendor Onboarded",
         description: `${formData.businessName} onboarded successfully.`,
         tone: "success",
       });
@@ -368,6 +415,8 @@ export default function VendorsPage() {
         description: err.message || "Failed to onboard vendor",
         tone: "error",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1490,38 +1539,49 @@ export default function VendorsPage() {
                       Upload KYC Documents
                     </h3>
                     <div className="space-y-2.5">
+                      <input
+                        type="file"
+                        ref={onboardingFileInputRef}
+                        className="hidden"
+                        onChange={handleOnboardFileSelect}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
                       {KYC_DOCS.map(({ key, label, hint }) => {
-                        const uploaded = !!formData[key as KycDocKey];
+                        const file = onboardKycFiles[key as KycDocKey];
+                        const uploaded = !!file;
                         return (
                           <div
                             key={key}
                             className="border border-dashed border-gray-200 rounded-xl p-3.5 flex items-center justify-between hover:border-[#8a9e60] transition-colors group cursor-pointer"
+                            onClick={() => {
+                              if (!uploaded) {
+                                setUploadingDocKey(key as KycDocKey);
+                                onboardingFileInputRef.current?.click();
+                              }
+                            }}
                           >
-                            <div>
+                            <div className="flex-1">
                               <p className="text-xs font-semibold text-gray-700">
                                 {label}
                               </p>
-                              <p className="text-[10px] text-gray-400 mt-0.5">
-                                {hint}
+                              <p className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[200px]">
+                                {uploaded ? file.name : hint}
                               </p>
                             </div>
                             {uploaded ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                                  Uploaded
-                                </span>
-                                <button
-                                  onClick={() => setField(key, "")}
-                                  className="text-gray-300 hover:text-red-400"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
+                              <KycFileActions
+                                file={file}
+                                onRemove={() => {
+                                  setOnboardKycFiles((prev) => {
+                                    const next = { ...prev };
+                                    delete next[key as KycDocKey];
+                                    return next;
+                                  });
+                                  setField(key as any, "");
+                                }}
+                              />
                             ) : (
-                              <button
-                                onClick={() => setField(key, "uploaded.pdf")}
-                                className="flex items-center gap-1 text-[10px] font-medium text-[#8a9e60] border border-[#8a9e60] px-2.5 py-1 rounded-lg transition-colors group-hover:bg-[#8a9e60] group-hover:text-white"
-                              >
+                              <button className="flex items-center gap-1 text-[10px] font-medium text-[#8a9e60] border border-[#8a9e60] px-2.5 py-1 rounded-lg transition-colors group-hover:bg-[#8a9e60] group-hover:text-white">
                                 <UploadSimple size={11} />
                                 Upload
                               </button>
@@ -1979,13 +2039,15 @@ export default function VendorsPage() {
         <VendorKycUpload
           vendor={kycVendor}
           onClose={() => setKycVendor(null)}
-          onSuccess={() => {
+          onSuccess={async () => {
             refreshData();
-            if (selectedVendor?.id === kycVendor.id) {
-              getVendorById(kycVendor.id)
-                .then(setSelected)
-                .catch(() => {});
-            }
+            try {
+              const updated = await getVendorById(kycVendor.id);
+              setKycVendor(updated);
+              if (selectedVendor?.id === updated.id) {
+                setSelected(updated);
+              }
+            } catch {}
           }}
         />
       )}

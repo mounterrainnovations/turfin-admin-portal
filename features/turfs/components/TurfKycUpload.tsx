@@ -5,33 +5,61 @@ import {
   FileText,
   CheckCircle,
   XCircle,
+  Eye,
   UploadSimple,
   X,
   WarningCircle,
+  Image,
 } from "@phosphor-icons/react";
-import { Vendor, KycDocuments } from "../types";
-import { KYC_DOCS } from "../constants";
-import {
-  uploadVendorKycByAdmin,
-  reviewVendorKyc,
-  getSignedViewUrl,
-} from "../api";
+import { Turf, SubmitTurfDocumentsDto, TurfReviewDto } from "../types";
+import { uploadTurfDocuments, reviewTurfDocuments } from "../api";
+import { getSignedViewUrl } from "@/features/vendors/api";
 import { useToast } from "@/features/toast/toast-context";
-import { uploadToStorage } from "../utils";
-import { KycFileActions } from "./KycFileActions";
+import { uploadToStorage } from "@/features/vendors/utils";
 
-interface VendorKycUploadProps {
-  vendor: Vendor;
+const KYC_DOCS_FIELD = [
+  {
+    key: "propertyDocument",
+    label: "Property Document",
+    hint: "Ownership or Lease Agreement",
+  },
+  {
+    key: "municipalNoc",
+    label: "Municipal NOC",
+    hint: "No Objection Certificate",
+  },
+  {
+    key: "liabilityInsurance",
+    label: "Liability Insurance",
+    hint: "Active public liability insurance",
+  },
+  {
+    key: "fieldPhotos",
+    label: "Field Photos",
+    hint: "High-resolution facility images (Max 5)",
+  },
+] as const;
+
+interface TurfKycUploadProps {
+  turf: Turf;
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
 
 type DocStatus = "verified" | "rejected" | "pending";
 
-function resolveVendorDocuments(vendor: Vendor): Partial<KycDocuments> {
+function resolveTurfDocuments(turf: Turf): Partial<SubmitTurfDocumentsDto["documents"]> {
+  const legacyDocuments =
+    turf.documents &&
+    "documents" in turf.documents &&
+    turf.documents.documents &&
+    typeof turf.documents.documents === "object"
+      ? turf.documents.documents
+      : (turf.documents as any);
+
   return {
-    ...(vendor as any).documents,
-    ...(vendor.kyc?.documents || {}),
+    ...(legacyDocuments || {}),
+    ...(turf.kyc?.documents || {}),
   };
 }
 
@@ -41,7 +69,7 @@ function applyVerificationToStatuses(
 ) {
   const next: Record<string, DocStatus> = { ...current };
 
-  KYC_DOCS.forEach((d) => {
+  KYC_DOCS_FIELD.forEach((d) => {
     if (!next[d.key]) next[d.key] = "pending";
   });
 
@@ -52,8 +80,8 @@ function applyVerificationToStatuses(
   return next;
 }
 
-export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
-  vendor,
+export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
+  turf,
   onClose,
   onSuccess,
 }) => {
@@ -61,23 +89,21 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const [kycDocs, setKycDocs] = useState<Record<string, DocStatus>>({});
-  const [documentPaths, setDocumentPaths] = useState<
-    Partial<Record<string, string>>
-  >({});
+  const [documentPaths, setDocumentPaths] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    const verification = vendor.kyc?.verification || vendor.verification || {};
-    const docs = resolveVendorDocuments(vendor);
+    const verification = turf.kyc?.verification || turf.verification;
+    const docs = resolveTurfDocuments(turf);
 
     setKycDocs((prev) => {
       const initial: Record<string, DocStatus> =
         prev && Object.keys(prev).length > 0 ? { ...prev } : {};
 
-      KYC_DOCS.forEach((d) => {
+      KYC_DOCS_FIELD.forEach((d) => {
         if (!initial[d.key]) initial[d.key] = "pending";
       });
 
-      Object.entries(verification).forEach(([key, ok]) => {
+      Object.entries(verification || {}).forEach(([key, ok]) => {
         initial[key] = ok ? "verified" : "rejected";
       });
 
@@ -87,13 +113,13 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     setDocumentPaths((prev) => {
       const next = { ...prev };
       Object.entries(docs).forEach(([key, path]) => {
-        if (typeof path === "string" && path.trim()) {
+        if (path && ((typeof path === "string" && path.trim()) || Array.isArray(path))) {
           next[key] = path;
         }
       });
       return next;
     });
-  }, [vendor]);
+  }, [turf]);
 
   const setDocStatus = (key: string, status: DocStatus) => {
     setKycDocs((prev) => ({ ...prev, [key]: status }));
@@ -107,23 +133,39 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
 
     try {
       const docKey = uploadingDoc;
+      const isPhoto = docKey === "fieldPhotos";
+
       // 1. & 2. Get signed URL & Upload to Storage
-      const path = await uploadToStorage(vendor.id, docKey, file, "vendor");
+      const path = await uploadToStorage(turf.id, docKey, file, "turf");
 
       // 3. Finalize KYC with backend (Partial Update)
-      const kycResponse = await uploadVendorKycByAdmin(vendor.id, {
-        documents: { [docKey]: path } as any,
+      let updatedDocuments: any = { [docKey]: path };
+
+      if (isPhoto) {
+        const existingPhotos = Array.isArray(documentPaths.fieldPhotos)
+          ? (documentPaths.fieldPhotos as string[])
+          : [];
+        // Append new photo (up to 5)
+        const newPhotos = [...existingPhotos, path].slice(-5);
+        updatedDocuments = { fieldPhotos: newPhotos };
+        setDocumentPaths((prev) => ({ ...prev, fieldPhotos: newPhotos }));
+      } else {
+        setDocumentPaths((prev) => ({ ...prev, [docKey]: path }));
+      }
+
+      const documentsResponse = await uploadTurfDocuments(turf.id, {
+        documents: updatedDocuments,
       });
 
       setDocumentPaths((prev) => ({
         ...prev,
-        ...((kycResponse as any)?.documents || {}),
-        [docKey]: path,
+        ...((documentsResponse as any)?.documents || {}),
+        ...(isPhoto ? { fieldPhotos: updatedDocuments.fieldPhotos } : { [docKey]: path }),
       }));
       setKycDocs((prev) => {
         const next = applyVerificationToStatuses(
           prev,
-          (kycResponse as any)?.verification,
+          (documentsResponse as any)?.verification,
         );
         next[docKey] = "pending";
         return next;
@@ -131,7 +173,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
 
       showToast({
         title: "Upload Successful",
-        description: `${docKey.replace(/([A-Z])/g, " $1")} has been uploaded.`,
+        description: `${docKey.replace(/([A-Z])/g, " $1")} has been updated.`,
         tone: "success",
       });
 
@@ -148,35 +190,48 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     }
   };
 
-  const handleViewDocument = async (docKey: string) => {
-    const docPath = documentPaths[docKey];
-
-    if (!docPath) {
-      showToast({
-        title: "No Document",
-        description: "This document has not been uploaded yet.",
-        tone: "warning",
-      });
-      return;
-    }
-
+  const handleViewDocument = async (path: string) => {
+    if (!path) return;
     try {
-      // If docPath is already a full URL, open it directly
-      if (docPath.startsWith("http")) {
-        window.open(docPath, "_blank");
+      if (path.startsWith("http")) {
+        window.open(path, "_blank");
         return;
       }
-
-      const { signedUrl } = await getSignedViewUrl(docPath);
-      if (signedUrl) {
-        window.open(signedUrl, "_blank");
-      } else {
-        throw new Error("Received an empty view URL");
-      }
-    } catch (err: any) {
+      const { signedUrl } = await getSignedViewUrl(path);
+      if (signedUrl) window.open(signedUrl, "_blank");
+    } catch (err) {
       showToast({
         title: "Error",
         description: "Failed to get view URL",
+        tone: "error",
+      });
+    }
+  };
+
+  const handleRemovePhoto = async (photoPath: string) => {
+    try {
+      const existingPhotos = Array.isArray(documentPaths.fieldPhotos)
+        ? documentPaths.fieldPhotos
+        : [];
+      const newPhotos = (existingPhotos as any[])
+        .map((p: any) => (typeof p === "string" ? p : p.path))
+        .filter((p: string) => p !== photoPath && !p.includes(photoPath));
+
+      await uploadTurfDocuments(turf.id, {
+        documents: { fieldPhotos: newPhotos } as any,
+      });
+
+      showToast({
+        title: "Photo Removed",
+        description: "Field photo has been removed successfully.",
+        tone: "success",
+      });
+      setDocumentPaths((prev) => ({ ...prev, fieldPhotos: newPhotos }));
+      onSuccess();
+    } catch (err: any) {
+      showToast({
+        title: "Error",
+        description: "Failed to remove photo",
         tone: "error",
       });
     }
@@ -190,7 +245,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         if (status === "rejected") verification[key] = false;
       });
 
-      await reviewVendorKyc(vendor.id, {
+      await reviewTurfDocuments(turf.id, {
         status: "in_review",
         reviewerNotes: "Review progress saved by admin.",
         verification,
@@ -215,11 +270,11 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
   const applyKycVerify = async () => {
     try {
       const verification: Record<string, boolean> = {};
-      KYC_DOCS.forEach((d) => {
+      KYC_DOCS_FIELD.forEach((d) => {
         verification[d.key] = true;
       });
 
-      await reviewVendorKyc(vendor.id, {
+      await reviewTurfDocuments(turf.id, {
         status: "verified",
         reviewerNotes: "All documents verified by admin.",
         verification,
@@ -227,7 +282,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
 
       showToast({
         title: "KYC Verified",
-        description: "Vendor has been successfully verified.",
+        description: "Field has been successfully verified.",
         tone: "success",
       });
       await Promise.resolve(onSuccess());
@@ -249,7 +304,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         if (status === "rejected") verification[key] = false;
       });
 
-      await reviewVendorKyc(vendor.id, {
+      await reviewTurfDocuments(turf.id, {
         status: "rejected",
         reviewerNotes: "KYC rejected due to invalid or missing documents.",
         verification,
@@ -257,7 +312,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
 
       showToast({
         title: "KYC Rejected",
-        description: "Vendor KYC status set to rejected.",
+        description: "Field KYC status set to rejected.",
         tone: "success",
       });
       await Promise.resolve(onSuccess());
@@ -271,41 +326,13 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     }
   };
 
-  const applyKycResubmit = async () => {
-    try {
-      const verification: Record<string, boolean> = {};
-      Object.entries(kycDocs).forEach(([key, status]) => {
-        if (status === "verified") verification[key] = true;
-        if (status === "rejected") verification[key] = false;
-      });
-
-      await reviewVendorKyc(vendor.id, {
-        status: "pending",
-        reviewerNotes: "Some documents need correction. Please re-upload.",
-        verification,
-      });
-
-      showToast({
-        title: "Resubmission Requested",
-        description: "Vendor notified to re-upload documents.",
-        tone: "success",
-      });
-      await Promise.resolve(onSuccess());
-      onClose();
-    } catch (err: any) {
-      showToast({
-        title: "Error",
-        description: err.message || "Failed to request resubmission",
-        tone: "error",
-      });
-    }
+  const avatar = (name: string) => {
+    if (!name) return "FT";
+    return name.slice(0, 2).toUpperCase();
   };
 
-  const avatar = (name: string) => {
-    if (!name) return "??";
-    const parts = name.split(" ");
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
+  const getDocPath = (key: string) => {
+    return documentPaths[key];
   };
 
   return (
@@ -316,7 +343,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         backdropFilter: "blur(4px)",
       }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden max-h-[90vh]">
         <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -324,12 +351,12 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0"
                 style={{ backgroundColor: "#8a9e60" }}
               >
-                {avatar(vendor.businessName)}
+                {avatar(turf.name)}
               </div>
               <div>
-                <h2 className="font-bold text-gray-900">KYC Review</h2>
+                <h2 className="font-bold text-gray-900">Turf KYC Review</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {vendor.businessName} · {vendor.id}
+                  {turf.name} · {turf.id}
                 </p>
               </div>
             </div>
@@ -341,31 +368,44 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
             </button>
           </div>
         </div>
-        <div className="px-6 py-5 space-y-3 flex-1 overflow-y-auto">
+
+        <div className="px-6 py-5 space-y-4 flex-1 overflow-y-auto">
           <p className="text-xs text-gray-500">
             Review each document individually, then approve or reject the
-            vendor's KYC.
+            field's KYC.
           </p>
           <input
             type="file"
             ref={fileInputRef}
             className="hidden"
             onChange={handleFileUpload}
-            accept=".pdf,.jpg,.jpeg,.png"
+            accept={uploadingDoc === "fieldPhotos" ? "image/*" : ".pdf,image/*"}
           />
-          {KYC_DOCS.map(({ key, label, hint }) => {
+
+          {KYC_DOCS_FIELD.map(({ key, label, hint }) => {
             const s = kycDocs[key] ?? "pending";
+            const docData = getDocPath(key);
+            const isPhotoField = key === "fieldPhotos";
+            const photoList = isPhotoField && Array.isArray(docData) ? docData : [];
+
             return (
               <div
                 key={key}
                 className={`rounded-xl border p-4 transition-colors ${s === "verified" ? "border-green-200 bg-green-50/40" : s === "rejected" ? "border-red-200 bg-red-50/30" : "border-gray-200"}`}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-start gap-3">
-                    <FileText
-                      size={16}
-                      className={`mt-0.5 shrink-0 ${s === "verified" ? "text-green-500" : s === "rejected" ? "text-red-400" : "text-gray-400"}`}
-                    />
+                    {isPhotoField ? (
+                      <Image
+                        size={16}
+                        className={`mt-0.5 shrink-0 ${s === "verified" ? "text-green-500" : s === "rejected" ? "text-red-400" : "text-gray-400"}`}
+                      />
+                    ) : (
+                      <FileText
+                        size={16}
+                        className={`mt-0.5 shrink-0 ${s === "verified" ? "text-green-500" : s === "rejected" ? "text-red-400" : "text-gray-400"}`}
+                      />
+                    )}
                     <div>
                       <p className="text-xs font-semibold text-gray-800">
                         {label}
@@ -377,54 +417,93 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
                     <span
                       className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${s === "verified" ? "bg-green-100 text-green-700" : s === "rejected" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}
                     >
-                      {s === "verified"
-                        ? "Verified"
-                        : s === "rejected"
-                          ? "Rejected"
-                          : "Pending"}
+                      {s === "verified" ? "Verified" : s === "rejected" ? "Rejected" : "Pending"}
                     </span>
                     <button
                       onClick={() => setDocStatus(key, "verified")}
                       className={`w-7 h-7 rounded-lg flex items-center justify-center border text-xs font-medium transition-colors ${s === "verified" ? "border-green-400 bg-green-500 text-white" : "border-gray-200 text-gray-400 hover:border-green-400 hover:text-green-500"}`}
-                      title="Approve"
                     >
                       <CheckCircle size={13} weight="fill" />
                     </button>
                     <button
                       onClick={() => setDocStatus(key, "rejected")}
                       className={`w-7 h-7 rounded-lg flex items-center justify-center border text-xs font-medium transition-colors ${s === "rejected" ? "border-red-400 bg-red-500 text-white" : "border-gray-200 text-gray-400 hover:border-red-400 hover:text-red-500"}`}
-                      title="Reject"
                     >
                       <XCircle size={13} weight="fill" />
                     </button>
-
-                    <button
-                      onClick={() => {
-                        setUploadingDoc(key);
-                        fileInputRef.current?.click();
-                      }}
-                      disabled={uploadingDoc === key}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center border border-gray-200 transition-colors ${uploadingDoc === key ? "bg-gray-50 text-gray-300" : "text-gray-400 hover:border-[#8a9e60] hover:text-[#8a9e60]"}`}
-                      title="Upload Document"
-                    >
-                      {uploadingDoc === key ? (
-                        <div className="w-3 h-3 border-2 border-[#8a9e60] border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <UploadSimple size={13} weight="bold" />
-                      )}
-                    </button>
-                    <KycFileActions
-                      url={documentPaths[key]}
-                      onView={() => handleViewDocument(key)}
-                      onRemove={() => {}}
-                      showBadge={false}
-                    />
                   </div>
+                </div>
+
+                {/* Document Display / Actions */}
+                <div className="flex flex-col gap-2">
+                  {isPhotoField ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {photoList.map((photo: any, index: number) => {
+                        const path = typeof photo === "string" ? photo : photo.path;
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100 group"
+                          >
+                            <span className="text-[10px] text-gray-600 truncate max-w-[100px]">
+                              Photo {index + 1}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleViewDocument(path)}
+                                className="text-gray-500 hover:text-[#8a9e60] transition-colors"
+                              >
+                                <Eye size={12} weight="bold" />
+                              </button>
+                              <button
+                                onClick={() => handleRemovePhoto(path)}
+                                className="text-red-400 hover:text-red-600 transition-colors"
+                              >
+                                <X size={12} weight="bold" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {photoList.length < 5 && (
+                        <button
+                          onClick={() => {
+                            setUploadingDoc(key);
+                            fileInputRef.current?.click();
+                          }}
+                          className="flex items-center justify-center gap-1.5 p-2 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-[#8a9e60] hover:text-[#8a9e60] transition-all text-[10px] font-medium h-[33px]"
+                        >
+                          <UploadSimple size={12} />
+                          Add Photo ({photoList.length}/5)
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleViewDocument(docData)}
+                        disabled={!docData}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${docData ? "border-gray-200 text-gray-600 hover:bg-gray-50" : "border-gray-100 text-gray-300 pointer-events-none"}`}
+                      >
+                        <Eye size={12} /> View Document
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUploadingDoc(key);
+                          fileInputRef.current?.click();
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-[#8a9e60] text-[#8a9e60] text-[10px] font-medium hover:bg-[#8a9e60]/5 transition-colors"
+                      >
+                        <UploadSimple size={12} /> Replace
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
+
         <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap gap-2 shrink-0 bg-gray-50/50">
           <button
             onClick={saveKycReview}
@@ -441,7 +520,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
             Reject KYC
           </button>
           <button
-            onClick={applyKycResubmit}
+            onClick={() => {}} // Could add resubmit logic if API supports it
             className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-amber-200 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5"
           >
             <WarningCircle size={13} />
@@ -449,7 +528,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
           </button>
           <button
             onClick={applyKycVerify}
-            className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 ${!KYC_DOCS.every((d) => kycDocs[d.key] === "verified") ? "opacity-50 pointer-events-none" : ""}`}
+            className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 ${!KYC_DOCS_FIELD.every((d) => kycDocs[d.key] === "verified") ? "opacity-50 pointer-events-none" : ""}`}
             style={{ backgroundColor: "#8a9e60" }}
           >
             <CheckCircle size={13} />

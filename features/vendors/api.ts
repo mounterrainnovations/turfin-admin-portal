@@ -142,7 +142,30 @@ export async function getVendorById(vendorId: string): Promise<Vendor> {
       cache: "no-store",
     },
   );
-  return handleResponse(response);
+  const v = await handleResponse(response);
+  // Normalize to same shape as listVendors so components always see consistent data
+  return {
+    ...v,
+    status: (v.status || "pending").toLowerCase(),
+    businessName: v.businessName || "-",
+    ownerFullName: v.ownerFullName || "-",
+    email: v.email || "-",
+    phone: v.phone || "-",
+    address: v.address || {},
+    bankingDetails: v.bankingDetails || {},
+    kyc: v.kyc
+      ? {
+          ...v.kyc,
+          status: (v.kyc.status || "not_started").toLowerCase(),
+          verification: v.kyc.verification || {},
+          documents: v.kyc.documents || {},
+        }
+      : undefined,
+    verification: v.kyc?.verification || v.verification || {},
+    kycStatus: (v.kyc?.status || v.kycStatus || "not_started").toLowerCase(),
+    joinedAt: v.joinedAt || v.createdAt || new Date().toISOString(),
+    createdAt: v.createdAt || v.joinedAt || new Date().toISOString(),
+  };
 }
 
 export async function onboardVendor(

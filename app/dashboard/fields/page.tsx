@@ -33,12 +33,12 @@ import {
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import {
-  listTurfs,
-  updateTurfStatus,
-  reviewTurfDocuments,
   banTurf,
   unbanTurf,
+  listTurfs,
   updateTurf,
+  updateTurfStatus,
+  reviewTurfDocuments,
   STATUS_CONFIG as TURF_STATUS_CONFIG,
   TurfReviewDto,
   UpdateTurfDto,
@@ -46,6 +46,8 @@ import {
   FieldStatus,
   createTurfForVendor,
   CreateTurfDto,
+  getTurfById,
+  uploadTurfDocuments,
 } from "@/features/turfs";
 import { DashboardPagination } from "@/components/DashboardPagination";
 import {
@@ -54,8 +56,11 @@ import {
   KYC_CFG,
   SPORT_COLOR,
   STATUS_CFG as VENDOR_STATUS_CFG,
+  KycFileActions,
 } from "@/features/vendors";
+import { performSequentialUploads } from "@/features/vendors/utils";
 import { useToast } from "@/features/toast/toast-context";
+import { TurfKycUpload } from "@/features/turfs/components/TurfKycUpload";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const STATUS_CONFIG = TURF_STATUS_CONFIG;
@@ -1238,6 +1243,13 @@ export default function FieldsPage() {
   const [showOnboard, setShowOnboard] = useState(false);
   const [onboardStep, setOnboardStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({ ...INIT_FORM });
+  const [onboardKycFiles, setOnboardKycFiles] = useState<
+    Record<string, File | File[]>
+  >({});
+  const [uploadingDocKey, setUploadingDocKey] = useState<
+    FieldKycDocKey | null
+  >(null);
+  const onboardingFileInputRef = useRef<HTMLInputElement>(null);
 
   // KYC review modal
   const [kycField, setKycField] = useState<Turf | null>(null);
@@ -1259,6 +1271,35 @@ export default function FieldsPage() {
     setShowOnboard(false);
     setOnboardStep(1);
     setFormData({ ...INIT_FORM });
+    setOnboardKycFiles({});
+  };
+
+  const handleOnboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const key = uploadingDocKey;
+    if (!key) return;
+
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (key === "fieldPhotos") {
+      setOnboardKycFiles((prev) => {
+        const existing = (prev[key] as File[]) || [];
+        // Support up to 5 photos
+        const combined = [...existing, ...files].slice(0, 5);
+        return { ...prev, [key]: combined };
+      });
+      // Also update formData for the visual checkmark (though we'll use onboardKycFiles mainly)
+      setField(key, "selected");
+    } else {
+      // Single file for other documents
+      setOnboardKycFiles((prev) => ({ ...prev, [key]: files[0] }));
+      setField(key, files[0].name);
+    }
+
+    setUploadingDocKey(null);
+    if (onboardingFileInputRef.current) {
+      onboardingFileInputRef.current.value = "";
+    }
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1298,14 +1339,43 @@ export default function FieldsPage() {
         weekendClose: formData.weekendTo.slice(0, 5),
       };
 
-      await createTurfForVendor(formData.vendorId, payload);
+      const turf = await createTurfForVendor(formData.vendorId, payload);
+
+      // 2. Sequential Uploads for KYC (if any)
+      if (Object.keys(onboardKycFiles).length > 0) {
+        try {
+          const s3Paths = await performSequentialUploads(
+            turf.id,
+            onboardKycFiles,
+            "turf",
+          );
+
+          // 3. Finalize KYC with backend
+          await uploadTurfDocuments(turf.id, {
+            documents: {
+              propertyDocument: s3Paths.propertyDocument as string,
+              municipalNoc: s3Paths.municipalNoc as string,
+              liabilityInsurance: s3Paths.liabilityInsurance as string,
+              fieldPhotos: s3Paths.fieldPhotos as string[],
+            },
+          });
+        } catch (uploadError: any) {
+          console.error("KYC upload error:", uploadError);
+          showToast({
+            title: "Partial Success",
+            description: "Field created but document upload failed. You can upload them later.",
+            tone: "warning",
+          });
+        }
+      }
+
       showToast({
-        title: "Success",
-        description: "Field onboarded successfully",
+        title: "Field Onboarded",
+        description: "New turf field has been successfully created.",
         tone: "success",
       });
-      refreshData();
       closeOnboard();
+      refreshData();
     } catch (err: any) {
       showToast({
         title: "Onboarding Failed",
@@ -2592,32 +2662,118 @@ export default function FieldsPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    {KYC_DOCS_FIELD.map((doc) => (
-                      <div key={doc.key} className="space-y-1.5">
-                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                          {doc.label}
-                        </label>
-                        <div className="relative group cursor-pointer border-2 border-dashed border-gray-200 rounded-xl p-3 hover:border-[#8a9e60] transition-all bg-gray-50/50">
-                          <input
-                            type="file"
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                          />
-                          <div className="flex flex-col items-center justify-center gap-1.5 text-center">
-                            <UploadSimple
-                              size={20}
-                              className="text-gray-300 group-hover:text-[#8a9e60]"
-                            />
-                            <p className="text-[10px] text-gray-400 group-hover:text-gray-600 font-medium">
-                              Click to upload
-                            </p>
+                    {KYC_DOCS_FIELD.map((doc) => {
+                      const files = onboardKycFiles[doc.key];
+                      const hasFiles =
+                        Array.isArray(files) ? files.length > 0 : !!files;
+                      const isPhotoField = doc.key === "fieldPhotos";
+
+                      return (
+                        <div key={doc.key} className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                              {doc.label}
+                            </label>
+                            {isPhotoField && Array.isArray(files) && (
+                              <span className="text-[9px] font-bold text-[#8a9e60]">
+                                {files.length}/5
+                              </span>
+                            )}
                           </div>
+
+                          {/* List of uploaded files */}
+                          {hasFiles && (
+                            <div className="space-y-1 mb-2">
+                              {Array.isArray(files) ? (
+                                files.map((f, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100 group/item"
+                                  >
+                                    <span className="text-[10px] text-gray-600 font-medium truncate max-w-[120px]">
+                                      {f.name}
+                                    </span>
+                                    <KycFileActions
+                                      file={f}
+                                      showBadge={false}
+                                      onRemove={() => {
+                                        setOnboardKycFiles((prev) => {
+                                          const next = { ...prev };
+                                          const arr = (next[doc.key] as File[]).filter(
+                                            (_, i) => i !== idx
+                                          );
+                                          if (arr.length === 0) delete next[doc.key];
+                                          else next[doc.key] = arr;
+                                          return next;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100 group/item">
+                                  <span className="text-[10px] text-gray-600 font-medium truncate max-w-[120px]">
+                                    {(files as File).name}
+                                  </span>
+                                  <KycFileActions
+                                    file={files as File}
+                                    showBadge={false}
+                                    onRemove={() => {
+                                      setOnboardKycFiles((prev) => {
+                                        const next = { ...prev };
+                                        delete next[doc.key];
+                                        return next;
+                                      });
+                                      setField(doc.key as any, "");
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Upload trigger */}
+                          {(!hasFiles || (isPhotoField && Array.isArray(files) && files.length < 5)) && (
+                            <div
+                              onClick={() => {
+                                setUploadingDocKey(doc.key);
+                                onboardingFileInputRef.current?.click();
+                              }}
+                              className="relative group cursor-pointer border-2 border-dashed border-gray-200 rounded-xl p-3 hover:border-[#8a9e60] transition-all bg-gray-50/50"
+                            >
+                              <div className="flex flex-col items-center justify-center gap-1.5 text-center">
+                                <UploadSimple
+                                  size={20}
+                                  className="text-gray-300 group-hover:text-[#8a9e60]"
+                                />
+                                <p className="text-[10px] text-gray-400 group-hover:text-gray-600 font-medium">
+                                  {isPhotoField ? "Add Photo" : "Click to upload"}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          <p className="text-[9px] text-gray-400 leading-tight italic">
+                            {doc.hint}
+                          </p>
                         </div>
-                        <p className="text-[9px] text-gray-400 leading-tight italic">
-                          {doc.hint}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
+
+                  {/* Hidden Global Input */}
+                  <input
+                    type="file"
+                    ref={onboardingFileInputRef}
+                    onChange={handleOnboardFileSelect}
+                    className="hidden"
+                    multiple={uploadingDocKey === "fieldPhotos"}
+                    accept={
+                      uploadingDocKey === "fieldPhotos"
+                        ? "image/*"
+                        : ".pdf,image/*"
+                    }
+                  />
                 </div>
               )}
             </div>
@@ -2677,127 +2833,21 @@ export default function FieldsPage() {
           KYC REVIEW MODAL
       ═══════════════════════════════════════════════════════════════════════ */}
       {kycField && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{
-            backgroundColor: "rgba(0,0,0,0.55)",
-            backdropFilter: "blur(4px)",
+        <TurfKycUpload
+          turf={kycField}
+          onClose={() => setKycField(null)}
+          onSuccess={async () => {
+            await refreshData();
+            // Also refresh the specific field to avoid stale state in the modal
+            try {
+              const updated = await getTurfById(kycField.id);
+              setKycField(updated);
+              if (selected?.id === updated.id) {
+                setSelected(updated);
+              }
+            } catch {}
           }}
-        >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
-            <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0"
-                    style={{ backgroundColor: "#8a9e60" }}
-                  >
-                    {(kycField.vendorBusinessName || kycField.name)
-                      ?.slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-gray-900">KYC Review</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {kycField.name} · {kycField.id}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setKycField(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-            <div className="px-6 py-5 space-y-3 flex-1 overflow-y-auto">
-              <p className="text-xs text-gray-500">
-                Review each field document individually, then approve or reject.
-              </p>
-              {KYC_DOCS_FIELD.map(({ key, label, hint }) => {
-                const s = kycDocs[key] ?? "pending";
-                return (
-                  <div
-                    key={key}
-                    className={`rounded-xl border p-4 transition-colors ${s === "verified" ? "border-green-200 bg-green-50/40" : s === "rejected" ? "border-red-200 bg-red-50/30" : "border-gray-200"}`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <FileText
-                          size={16}
-                          className={`mt-0.5 shrink-0 ${s === "verified" ? "text-green-500" : s === "rejected" ? "text-red-400" : "text-gray-400"}`}
-                        />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800">
-                            {label}
-                          </p>
-                          <p className="text-[10px] text-gray-400">{hint}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${s === "verified" ? "bg-green-100 text-green-700" : s === "rejected" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}
-                        >
-                          {s === "verified"
-                            ? "Verified"
-                            : s === "rejected"
-                              ? "Rejected"
-                              : "Pending"}
-                        </span>
-                        <button
-                          onClick={() => setDocStatus(key, "verified")}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center border text-xs font-medium transition-colors ${s === "verified" ? "border-green-400 bg-green-500 text-white" : "border-gray-200 text-gray-400 hover:border-green-400 hover:text-green-500"}`}
-                          title="Approve"
-                        >
-                          <CheckCircle size={13} weight="fill" />
-                        </button>
-                        <button
-                          onClick={() => setDocStatus(key, "rejected")}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center border text-xs font-medium transition-colors ${s === "rejected" ? "border-red-400 bg-red-500 text-white" : "border-gray-200 text-gray-400 hover:border-red-400 hover:text-red-500"}`}
-                          title="Reject"
-                        >
-                          <XCircle size={13} weight="fill" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap gap-2 shrink-0 bg-gray-50/50">
-              <button
-                onClick={saveKycReview}
-                className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <FileText size={13} />
-                Save Review
-              </button>
-              <button
-                onClick={applyKycReject}
-                className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <XCircle size={13} />
-                Reject KYC
-              </button>
-              <button
-                onClick={applyKycResubmit}
-                className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-amber-200 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <WarningCircle size={13} />
-                Request Resubmit
-              </button>
-              <button
-                onClick={applyKycVerify}
-                className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 ${!KYC_DOCS_FIELD.every((d) => kycDocs[d.key] === "verified") ? "opacity-50 pointer-events-none" : ""}`}
-                style={{ backgroundColor: "#8a9e60" }}
-              >
-                <CheckCircle size={13} />
-                Verify KYC
-              </button>
-            </div>
-          </div>
-        </div>
+        />
       )}
 
       {/* Detail panel overlay */}
