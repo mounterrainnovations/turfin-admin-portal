@@ -19,6 +19,28 @@ export interface TurfAddress {
   googleMapsLink?: string;
 }
 
+export interface TurfRatingSummary {
+  avgScore: number;
+  totalReviews: number;
+}
+
+export interface ReviewUser {
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string | null;
+}
+
+export interface TurfReview {
+  id: string;
+  userId: string;
+  fieldId: string;
+  bookingId: string;
+  score: number;
+  comment?: string;
+  user?: ReviewUser;
+  createdAt: string;
+}
+
 export interface Turf {
   id: string;
   name: string;
@@ -59,6 +81,7 @@ export interface Turf {
   // UI helper fields (calculated or from analytics)
   rating?: number;
   totalReviews?: number;
+  ratingSummary?: TurfRatingSummary;
   todayBookings?: number;
   totalBookings?: number;
   totalRevenue?: number;

@@ -1,6 +1,7 @@
 import { authenticatedFetch } from "@/features/auth/request";
 import {
   Turf,
+  TurfReview,
   TurfListResult,
   CreateTurfDto,
   UpdateTurfDto,
@@ -62,6 +63,79 @@ function extractTotal(payload: any, itemsLength: number): number {
   return itemsLength;
 }
 
+function extractObject(payload: any): any {
+  if (!isRecord(payload)) return payload;
+  const candidates = ["item", "data", "result", "turf"];
+  for (const key of candidates) {
+    if (isRecord(payload[key])) return payload[key];
+  }
+  return payload;
+}
+
+function normalizeTurf(t: any): Turf {
+  const ratingSummary = isRecord(t.rating)
+    ? {
+        avgScore:
+          typeof t.rating.avgScore === "number" ? t.rating.avgScore : 0,
+        totalReviews:
+          typeof t.rating.totalReviews === "number"
+            ? t.rating.totalReviews
+            : 0,
+      }
+    : undefined;
+
+  const avgScore =
+    typeof t.rating === "number"
+      ? t.rating
+      : ratingSummary?.avgScore || 0;
+  const totalReviews =
+    typeof t.totalReviews === "number"
+      ? t.totalReviews
+      : ratingSummary?.totalReviews || 0;
+
+  return {
+    ...t,
+    status: (t.status || "pending").toLowerCase(),
+    kycStatus: (t.kyc?.status || t.kycStatus || "not_started").toLowerCase(),
+    verification: t.kyc?.verification || t.verification || {},
+    address: t.address || {},
+    vendor: t.vendor || {},
+    rating: avgScore,
+    totalReviews,
+    ratingSummary,
+    kyc: t.kyc
+      ? {
+          ...t.kyc,
+          status: (t.kyc.status || "not_started").toLowerCase(),
+          verification: t.kyc.verification || {},
+          documents: t.kyc.documents || {},
+        }
+      : undefined,
+    listedAt: t.createdAt || t.listedAt || new Date().toISOString(),
+  };
+}
+
+function normalizeReview(review: any): TurfReview {
+  return {
+    id: String(review?.id || ""),
+    userId: String(review?.userId || ""),
+    fieldId: String(review?.fieldId || ""),
+    bookingId: String(review?.bookingId || ""),
+    score:
+      typeof review?.score === "number" ? review.score : Number(review?.score || 0),
+    comment:
+      typeof review?.comment === "string" ? review.comment : undefined,
+    user: review?.user
+      ? {
+          firstName: review.user.firstName || undefined,
+          lastName: review.user.lastName || undefined,
+          avatarUrl: review.user.avatarUrl ?? null,
+        }
+      : undefined,
+    createdAt: review?.createdAt || new Date().toISOString(),
+  };
+}
+
 export async function listTurfs(
   params: {
     page?: number;
@@ -87,23 +161,7 @@ export async function listTurfs(
 
   const data = await handleResponse(response);
   const rawItems = extractItems(data);
-  const items = rawItems.map((t: any) => ({
-    ...t,
-    status: (t.status || "pending").toLowerCase(),
-    kycStatus: (t.kyc?.status || t.kycStatus || "not_started").toLowerCase(),
-    verification: t.kyc?.verification || t.verification || {},
-    address: t.address || {},
-    vendor: t.vendor || {},
-    kyc: t.kyc
-      ? {
-          ...t.kyc,
-          status: (t.kyc.status || "not_started").toLowerCase(),
-          verification: t.kyc.verification || {},
-          documents: t.kyc.documents || {},
-        }
-      : undefined,
-    listedAt: t.createdAt || t.listedAt || new Date().toISOString(),
-  }));
+  const items = rawItems.map(normalizeTurf);
 
   return {
     items,
@@ -115,25 +173,8 @@ export async function getTurfById(turfId: string): Promise<Turf> {
   const response = await authenticatedFetch(`${getApiUrl()}/admin/turfs/${turfId}`, {
     cache: "no-store",
   });
-  const t = await handleResponse(response);
-  // Normalize to same shape as listTurfs so components always see consistent data
-  return {
-    ...t,
-    status: (t.status || "pending").toLowerCase(),
-    kycStatus: (t.kyc?.status || t.kycStatus || "not_started").toLowerCase(),
-    verification: t.kyc?.verification || t.verification || {},
-    address: t.address || {},
-    vendor: t.vendor || {},
-    kyc: t.kyc
-      ? {
-          ...t.kyc,
-          status: (t.kyc.status || "not_started").toLowerCase(),
-          verification: t.kyc.verification || {},
-          documents: t.kyc.documents || {},
-        }
-      : undefined,
-    listedAt: t.createdAt || t.listedAt || new Date().toISOString(),
-  };
+  const payload = await handleResponse(response);
+  return normalizeTurf(extractObject(payload));
 }
 
 export async function createTurfForVendor(
@@ -227,4 +268,35 @@ export async function uploadTurfDocuments(
     },
   );
   return handleResponse(response);
+}
+
+export async function getTurfReviews(turfId: string): Promise<TurfReview[]> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/turfs/${turfId}/reviews`,
+    {
+      cache: "no-store",
+    },
+  );
+  const payload = await handleResponse(response);
+  return extractItems(payload).map(normalizeReview);
+}
+
+export async function deleteTurfReview(
+  turfId: string,
+  reviewId: string,
+): Promise<void> {
+  let response = await authenticatedFetch(
+    `${getApiUrl()}/admin/turfs/${turfId}/reviews/${reviewId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  if (response.status === 404) {
+    response = await authenticatedFetch(`${getApiUrl()}/admin/reviews/${reviewId}`, {
+      method: "DELETE",
+    });
+  }
+
+  await handleResponse(response);
 }

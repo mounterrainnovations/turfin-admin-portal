@@ -39,10 +39,13 @@ import {
   updateTurf,
   updateTurfStatus,
   reviewTurfDocuments,
+  getTurfReviews,
+  deleteTurfReview,
   STATUS_CONFIG as TURF_STATUS_CONFIG,
   TurfReviewDto,
   UpdateTurfDto,
   Turf,
+  TurfReview,
   FieldStatus,
   createTurfForVendor,
   CreateTurfDto,
@@ -192,6 +195,18 @@ function avatar(name: string) {
     : "??";
 }
 
+function formatRating(score?: number) {
+  if (!score || score <= 0) return "—";
+  return score.toFixed(1);
+}
+
+function getReviewerName(review: TurfReview) {
+  const first = review.user?.firstName?.trim() || "";
+  const last = review.user?.lastName?.trim() || "";
+  const fullName = `${first} ${last}`.trim();
+  return fullName || "Anonymous User";
+}
+
 // ... actions menu remains similar but unified ...
 
 // ─── Actions Menu ─────────────────────────────────────────────────────────────
@@ -249,10 +264,14 @@ function FieldDetailPanel({
   onEdit: (field: Turf) => void;
 }) {
   const { showToast } = useToast();
-  const [tab, setTab] = useState<"overview" | "schedule" | "analytics">(
+  const [tab, setTab] = useState<"overview" | "reviews" | "schedule" | "analytics">(
     "overview",
   );
   const [statusOpen, setStatusOpen] = useState(false);
+  const [reviews, setReviews] = useState<TurfReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsLoadedFor, setReviewsLoadedFor] = useState<string | null>(null);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
   const sc = STATUS_CONFIG[field.status] || STATUS_CONFIG.pending;
 
   // Schedule state
@@ -264,6 +283,14 @@ function FieldDetailPanel({
   const [blockedMap, setBlockedMap] = useState<Record<string, Set<number>>>({});
 
   const calRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setTab("overview");
+    setStatusOpen(false);
+    setReviews([]);
+    setReviewsLoadedFor(null);
+    setDeletingReviewId(null);
+  }, [field.id]);
+
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (calRef.current && !calRef.current.contains(e.target as Node))
@@ -348,6 +375,57 @@ function FieldDetailPanel({
   for (let d = 1; d <= daysInMonth; d++)
     calDays.push(new Date(calYear, calMonth, d));
 
+  async function loadReviews(force = false) {
+    if (!force && reviewsLoadedFor === field.id) return;
+    setReviewsLoading(true);
+    try {
+      const data = await getTurfReviews(field.id);
+      setReviews(data);
+      setReviewsLoadedFor(field.id);
+    } catch (err: any) {
+      showToast({
+        title: "Could not load reviews",
+        description: err.message || "Failed to fetch reviews",
+        tone: "error",
+      });
+    } finally {
+      setReviewsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab === "reviews") {
+      loadReviews();
+    }
+  }, [tab, field.id]);
+
+  async function handleDeleteReview(review: TurfReview) {
+    const ok = window.confirm(
+      `Delete the review from ${getReviewerName(review)}? This cannot be undone.`,
+    );
+    if (!ok) return;
+
+    setDeletingReviewId(review.id);
+    try {
+      await deleteTurfReview(field.id, review.id);
+      setReviews((prev) => prev.filter((item) => item.id !== review.id));
+      await Promise.all([loadReviews(true), Promise.resolve(onRefresh())]);
+      showToast({
+        title: "Review deleted",
+        description: "The rating summary has been refreshed.",
+        tone: "success",
+      });
+    } catch (err: any) {
+      showToast({
+        title: "Delete failed",
+        description: err.message || "Could not delete review",
+        tone: "error",
+      });
+    } finally {
+      setDeletingReviewId(null);
+    }
+  }
+
   return (
     <div className="fixed right-0 top-0 bottom-0 w-[420px] bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-100">
       {/* Header */}
@@ -384,8 +462,8 @@ function FieldDetailPanel({
 
       {/* Tabs */}
       <div className="flex border-b border-gray-100 shrink-0 bg-white">
-        {(["overview", "schedule", "analytics"] as const).map((t) => {
-          const disabled = t !== "overview";
+        {(["overview", "reviews", "schedule", "analytics"] as const).map((t) => {
+          const disabled = t === "schedule" || t === "analytics";
           return (
             <button
               key={t}
@@ -401,7 +479,7 @@ function FieldDetailPanel({
                     : "text-gray-400 hover:text-gray-600"
               }`}
             >
-              {t}
+              {t === "reviews" ? "reviews" : t}
             </button>
           );
         })}
@@ -429,7 +507,7 @@ function FieldDetailPanel({
               <div className="bg-gray-50 rounded-xl p-3 text-center">
                 <div className="flex items-center justify-center gap-0.5">
                   <p className="text-lg font-bold text-gray-800">
-                    {field.rating && field.rating > 0 ? field.rating : "—"}
+                    {formatRating(field.rating)}
                   </p>
                   {field.rating
                     ? field.rating > 0 && (
@@ -598,6 +676,142 @@ function FieldDetailPanel({
                 </div>
               </div>
             </div>
+          </>
+        )}
+
+        {tab === "reviews" && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Average Rating
+                </p>
+                <div className="flex items-center gap-1">
+                  <p className="text-2xl font-bold text-gray-800">
+                    {formatRating(field.rating)}
+                  </p>
+                  {(field.rating || 0) > 0 && (
+                    <Star size={16} weight="fill" className="text-amber-400" />
+                  )}
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Total Reviews
+                </p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {field.totalReviews || 0}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                  User Feedback
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Moderate comments directly from this panel.
+                </p>
+              </div>
+              <button
+                onClick={() => loadReviews(true)}
+                disabled={reviewsLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <ArrowsClockwise
+                  size={13}
+                  className={reviewsLoading ? "animate-spin" : ""}
+                />
+                Refresh
+              </button>
+            </div>
+
+            {reviewsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-2xl border border-gray-100 bg-gray-50 p-4 animate-pulse"
+                  >
+                    <div className="h-3 w-24 rounded bg-gray-200 mb-2" />
+                    <div className="h-3 w-40 rounded bg-gray-200 mb-3" />
+                    <div className="h-3 w-full rounded bg-gray-200" />
+                  </div>
+                ))}
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+                <Star size={24} className="text-gray-300 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-gray-600">
+                  No reviews yet
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Ratings will appear here once players start reviewing this field.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        {review.user?.avatarUrl ? (
+                          <img
+                            src={review.user.avatarUrl}
+                            alt={getReviewerName(review)}
+                            className="w-10 h-10 rounded-full object-cover shrink-0"
+                          />
+                        ) : (
+                          <div
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                            style={{ backgroundColor: "#8a9e60" }}
+                          >
+                            {avatar(getReviewerName(review))}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">
+                            {getReviewerName(review)}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                              <Star size={11} weight="fill" />
+                              {formatRating(review.score)}
+                            </span>
+                            <span className="text-[11px] text-gray-400">
+                              {new Date(review.createdAt).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteReview(review)}
+                        disabled={deletingReviewId === review.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 disabled:opacity-50"
+                      >
+                        <Trash size={13} />
+                        {deletingReviewId === review.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+
+                    <p className="text-sm text-gray-600 leading-relaxed mt-3">
+                      {review.comment?.trim() || "No written comment provided."}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
@@ -987,7 +1201,10 @@ function FieldDetailPanel({
                 },
                 {
                   label: "Avg. Rating",
-                  value: (field.rating || 0) > 0 ? `${field.rating} ★` : "—",
+                  value:
+                    (field.rating || 0) > 0
+                      ? `${formatRating(field.rating)} ★`
+                      : "—",
                   sub: `${field.totalReviews || 0} reviews`,
                 },
                 {
@@ -1934,6 +2151,7 @@ export default function FieldsPage() {
                     "Location",
                     "Sports",
                     "Price",
+                    "Rating",
                     "Status",
                     "KYC",
                     "Bookings",
@@ -2083,6 +2301,26 @@ export default function FieldsPage() {
                         <p className="text-[10px] text-gray-400">per hour</p>
                       </td>
 
+                      {/* Rating */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-bold text-gray-800">
+                            {formatRating(field.rating)}
+                          </span>
+                          {(field.rating || 0) > 0 && (
+                            <Star
+                              size={12}
+                              weight="fill"
+                              className="text-amber-400"
+                            />
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-400">
+                          {field.totalReviews || 0} review
+                          {(field.totalReviews || 0) === 1 ? "" : "s"}
+                        </p>
+                      </td>
+
                       {/* Status */}
                       <td className="px-4 py-3">
                         <span
@@ -2152,7 +2390,7 @@ export default function FieldsPage() {
 
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-20 text-center">
+                    <td colSpan={10} className="py-20 text-center">
                       <Buildings
                         size={32}
                         className="text-gray-200 mx-auto mb-3"

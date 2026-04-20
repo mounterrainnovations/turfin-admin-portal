@@ -1,21 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getAdminSession } from "../session";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const session = getAdminSession();
   const isAuthorized = Boolean(session);
 
   useEffect(() => {
-    if (!session) {
+    if (mounted && !isAuthorized) {
       router.replace("/");
     }
-  }, [router, session]);
+  }, [router, isAuthorized, mounted]);
 
-  if (!isAuthorized) {
+  if (!mounted || !isAuthorized) {
     return null; // Or a loading spinner that matches the UI
   }
 
