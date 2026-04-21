@@ -64,6 +64,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
   const [documentPaths, setDocumentPaths] = useState<
     Partial<Record<string, string>>
   >({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const verification = vendor.kyc?.verification || vendor.verification || {};
@@ -182,7 +183,8 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     }
   };
 
-  const saveKycReview = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       const verification: Record<string, boolean> = {};
       Object.entries(kycDocs).forEach(([key, status]) => {
@@ -201,7 +203,9 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         description: "Document verification states updated.",
         tone: "success",
       });
-      await Promise.resolve(onSuccess());
+      // We don't await onSuccess here because it might trigger a state update in the parent
+      // that conflicts with onClose. Since we are closing, we just want to refresh the background data.
+      onSuccess();
       onClose();
     } catch (err: any) {
       showToast({
@@ -209,10 +213,14 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         description: err.message || "Failed to save progress",
         tone: "error",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const applyKycVerify = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       const verification: Record<string, boolean> = {};
       KYC_DOCS.forEach((d) => {
@@ -230,7 +238,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         description: "Vendor has been successfully verified.",
         tone: "success",
       });
-      await Promise.resolve(onSuccess());
+      onSuccess();
       onClose();
     } catch (err: any) {
       showToast({
@@ -238,10 +246,14 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         description: err.message || "Failed to verify KYC",
         tone: "error",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const applyKycReject = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       const verification: Record<string, boolean> = {};
       Object.entries(kycDocs).forEach(([key, status]) => {
@@ -260,7 +272,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         description: "Vendor KYC status set to rejected.",
         tone: "success",
       });
-      await Promise.resolve(onSuccess());
+      onSuccess();
       onClose();
     } catch (err: any) {
       showToast({
@@ -268,10 +280,14 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         description: err.message || "Failed to reject KYC",
         tone: "error",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const applyKycResubmit = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       const verification: Record<string, boolean> = {};
       Object.entries(kycDocs).forEach(([key, status]) => {
@@ -290,7 +306,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         description: "Vendor notified to re-upload documents.",
         tone: "success",
       });
-      await Promise.resolve(onSuccess());
+      onSuccess();
       onClose();
     } catch (err: any) {
       showToast({
@@ -298,6 +314,8 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         description: err.message || "Failed to request resubmission",
         tone: "error",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -432,28 +450,36 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap gap-2 shrink-0 bg-gray-50/50">
           <button
             onClick={saveKycReview}
-            className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
+            disabled={isSaving}
+            className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            <FileText size={13} />
+            {isSaving ? (
+              <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <FileText size={13} />
+            )}
             Save Review
           </button>
           <button
             onClick={applyKycReject}
-            className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
+            disabled={isSaving}
+            className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <XCircle size={13} />
             Reject KYC
           </button>
           <button
             onClick={applyKycResubmit}
-            className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-amber-200 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5"
+            disabled={isSaving}
+            className="flex-1 min-w-[120px] py-2 text-[10px] font-bold border border-amber-200 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <WarningCircle size={13} />
             Request Resubmit
           </button>
           <button
             onClick={applyKycVerify}
-            className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 ${!KYC_DOCS.every((d) => kycDocs[d.key] === "verified") ? "opacity-50 pointer-events-none" : ""}`}
+            disabled={isSaving || !KYC_DOCS.every((d) => kycDocs[d.key] === "verified")}
+            className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 disabled:opacity-50`}
             style={{ backgroundColor: "#8a9e60" }}
           >
             <CheckCircle size={13} />

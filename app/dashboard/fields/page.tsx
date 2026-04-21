@@ -30,6 +30,8 @@ import {
   LockSimpleOpen,
   UploadSimple,
   X,
+  CircleNotch,
+  Check,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import {
@@ -1475,7 +1477,8 @@ export default function FieldsPage() {
   const onboardingFileInputRef = useRef<HTMLInputElement>(null);
 
   // KYC review modal
-  const [kycField, setKycField] = useState<Turf | null>(null);
+  const [kycVendor, setKycVendor] = useState<Vendor | null>(null);
+  const [onboardingStatus, setOnboardingStatus] = useState<"idle" | "creating" | "uploading" | "finalizing" | "success">("idle");
   const [kycDocs, setKycDocs] = useState<
     Record<string, "pending" | "verified" | "rejected">
   >({});
@@ -1528,7 +1531,7 @@ export default function FieldsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onOnboard = async () => {
-    setIsSubmitting(true);
+    setOnboardingStatus("creating");
     try {
       // Convert display values to DTO snake_case enums
       const toSnake = (s: string) => s.toLowerCase().replace(/ /g, "_");
@@ -1562,19 +1565,27 @@ export default function FieldsPage() {
         weekendClose: formData.weekendTo.slice(0, 5),
       };
 
-      const turf = await createTurfForVendor(formData.vendorId, payload);
+      const response = await createTurfForVendor(formData.vendorId, payload);
+      // BUG FIX: API returns { success: true, data: { ... } }
+      const turfId = (response as any).data?.id;
+
+      if (!turfId) {
+        throw new Error("Failed to retrieve Field ID from response.");
+      }
 
       // 2. Sequential Uploads for KYC (if any)
       if (Object.keys(onboardKycFiles).length > 0) {
+        setOnboardingStatus("uploading");
         try {
           const s3Paths = await performSequentialUploads(
-            turf.id,
+            turfId,
             onboardKycFiles,
             "turf",
           );
 
           // 3. Finalize KYC with backend
-          await uploadTurfDocuments(turf.id, {
+          setOnboardingStatus("finalizing");
+          await uploadTurfDocuments(turfId, {
             documents: {
               propertyDocument: s3Paths.propertyDocument as string,
               municipalNoc: s3Paths.municipalNoc as string,
@@ -1592,21 +1603,26 @@ export default function FieldsPage() {
         }
       }
 
+      setOnboardingStatus("success");
       showToast({
         title: "Field Onboarded",
         description: "New turf field has been successfully created.",
         tone: "success",
       });
-      closeOnboard();
-      refreshData();
+
+      // Delay closing to show success state for a moment
+      setTimeout(() => {
+        closeOnboard();
+        refreshData();
+        setOnboardingStatus("idle");
+      }, 1500);
     } catch (err: any) {
+      setOnboardingStatus("idle");
       showToast({
         title: "Onboarding Failed",
         description: err.message || "Could not onboard field",
         tone: "error",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -3082,10 +3098,13 @@ export default function FieldsPage() {
           onClose={() => setKycField(null)}
           onSuccess={async () => {
             await refreshData();
+            if (!kycField) return;
             // Also refresh the specific field to avoid stale state in the modal
             try {
               const updated = await getTurfById(kycField.id);
-              setKycField(updated);
+              if (kycField) {
+                setKycField(updated);
+              }
               if (selected?.id === updated.id) {
                 setSelected(updated);
               }
@@ -3596,6 +3615,71 @@ export default function FieldsPage() {
                 {confirmModal.type.charAt(0).toUpperCase() +
                   confirmModal.type.slice(1)}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ONBOARDING PROGRESS OVERLAY
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {onboardingStatus !== "idle" && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300"
+          style={{
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          <div className="bg-white rounded-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border border-gray-100 p-8 w-full max-w-sm text-center transform animate-in zoom-in-95 duration-300">
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              {onboardingStatus === "success" ? (
+                <div className="w-full h-full bg-[#8a9e60] rounded-full flex items-center justify-center animate-in zoom-in duration-500">
+                  <Check size={40} weight="bold" className="text-white" />
+                </div>
+              ) : (
+                <>
+                  <CircleNotch 
+                    size={80} 
+                    weight="light" 
+                    className="text-[#8a9e60] animate-spin absolute inset-0" 
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-12 h-12 bg-[#8a9e60]/10 rounded-full animate-pulse" />
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              {onboardingStatus === "creating" && "Creating Field"}
+              {onboardingStatus === "uploading" && "Uploading Documents"}
+              {onboardingStatus === "finalizing" && "Finalizing KYC"}
+              {onboardingStatus === "success" && "Success!"}
+            </h2>
+            
+            <p className="text-sm text-gray-500 leading-relaxed min-h-[40px]">
+              {onboardingStatus === "creating" && "Initializing turf field and venue records..."}
+              {onboardingStatus === "uploading" && "Securely storing property and venue documents..."}
+              {onboardingStatus === "finalizing" && "Linking data and activating the field listing..."}
+              {onboardingStatus === "success" && `Field has been onboarded successfully.`}
+            </p>
+
+            <div className="mt-8 flex justify-center gap-1.5">
+              {[ "creating", "uploading", "finalizing", "success" ].map((step) => {
+                const steps = ["creating", "uploading", "finalizing", "success"];
+                const currentIdx = steps.indexOf(onboardingStatus);
+                const isActive = step === onboardingStatus;
+                const isDone = steps.indexOf(step) < currentIdx;
+                
+                return (
+                  <div 
+                    key={step}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      isActive ? "w-8 bg-[#8a9e60]" : isDone ? "w-4 bg-[#8a9e60]/40" : "w-1.5 bg-gray-100"
+                    }`}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>

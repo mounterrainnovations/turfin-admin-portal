@@ -61,6 +61,15 @@ function isRecord(v: any): v is Record<string, any> {
   return typeof v === "object" && v !== null;
 }
 
+function extractObject(payload: any): any {
+  if (!isRecord(payload)) return payload;
+  const candidates = ["item", "data", "result", "vendor"];
+  for (const key of candidates) {
+    if (isRecord(payload[key])) return payload[key];
+  }
+  return payload;
+}
+
 function extractItems(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
   if (!isRecord(payload)) return [];
@@ -142,7 +151,8 @@ export async function getVendorById(vendorId: string): Promise<Vendor> {
       cache: "no-store",
     },
   );
-  const v = await handleResponse(response);
+  const payload = await handleResponse(response);
+  const v = extractObject(payload);
   // Normalize to same shape as listVendors so components always see consistent data
   return {
     ...v,

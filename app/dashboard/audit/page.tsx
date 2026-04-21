@@ -435,23 +435,39 @@ export default function AuditPage() {
 
                     {/* Target */}
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-700 truncate">
-                        {entry.targetType || entry.resource?.type || "-"}
+                      <p className="text-xs font-medium text-gray-900 truncate">
+                        {entry.resource?.label !== "-"
+                          ? entry.resource?.label
+                          : entry.targetType || "-"}
                       </p>
-                      <p className="text-[10px] text-gray-400 truncate mt-0.5">
-                        {entry.targetId || entry.resource?.id || "-"}
-                      </p>
-                      <p className="text-[10px] text-gray-400 truncate mt-0.5">
-                        {entry.resource?.label || "-"}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-[10px] text-gray-500 font-medium capitalize">
+                          {entry.targetType.toLowerCase()}
+                        </p>
+                        <span className="text-[10px] text-gray-300">|</span>
+                        <p className="text-[9px] text-gray-400 truncate font-mono">
+                          {entry.targetId || "-"}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Actor */}
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-600 truncate">{entry.actor.email || "-"}</p>
-                      <p className="text-[10px] text-gray-400 truncate mt-0.5">
-                        {entry.actor.role || "-"} · {entry.ipAddress || "-"}
+                      <p className="text-xs font-medium text-gray-900 truncate">
+                        {entry.actor.email !== "-"
+                          ? entry.actor.email
+                          : entry.actorId}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 uppercase tracking-tight leading-none shrink-0 border border-blue-100">
+                          {entry.actor.role.replace(/_/g, " ") || "-"}
+                        </span>
+                        {entry.actor.email !== "-" && (
+                          <p className="text-[10px] text-gray-400 truncate font-mono">
+                            {entry.actorId.slice(0, 8)}...
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Status */}
