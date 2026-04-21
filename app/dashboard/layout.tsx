@@ -3,7 +3,7 @@
 import {
   House, CalendarBlank, Users, ChartLineUp, Gear,
   MapPin, Handshake, SignOut, List, X, Bell, MagnifyingGlass, Key, BellRinging,
-  DeviceMobile, Scroll, ShieldCheck,
+  DeviceMobile, Scroll, ShieldCheck, Ticket,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,6 +24,7 @@ const navItems: any[] = [
   { label: "App Management", icon: DeviceMobile,  href: "/dashboard/app-management" },
   { label: "Roles",          icon: Key,           href: "/dashboard/roles",  restricted: true },
   { label: "Admins",         icon: ShieldCheck,   href: "/dashboard/roles/identities", restricted: true },
+  { label: "Support",    icon: Ticket,        href: "/dashboard/support"   },
   { label: "Settings",  icon: Gear,          href: "/dashboard/settings"  },
 ];
 
@@ -50,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {open && <span className="text-white font-bold tracking-widest text-sm uppercase">Turfin</span>}
         </div>
 
-        <nav className="flex-1 py-4 flex flex-col gap-1 px-2">
+        <nav className="flex-1 py-4 flex flex-col gap-1 px-2 overflow-y-auto scrollbar-hide min-h-0">
           {navItems.map(({ label, icon: Icon, href, disabled }) => {
             const active = pathname === href;
             return (
@@ -90,19 +91,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <p className="text-xs text-gray-400">Saturday, March 21, 2026</p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-400 w-52">
-              <MagnifyingGlass size={15} />
-              <span>Search...</span>
-            </div>
-            <button
-              onClick={() => router.push("/dashboard/audit")}
-              title="Audit Log"
-              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors
-                ${pathname === "/dashboard/audit" ? "bg-[#8a9e60]/10 text-[#8a9e60]" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"}`}
-            >
-              <Scroll size={15} weight={pathname === "/dashboard/audit" ? "fill" : "regular"} />
-              <span className="text-[10px]">Audit</span>
-            </button>
             <NotificationPanel />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#8a9e60" }}>
