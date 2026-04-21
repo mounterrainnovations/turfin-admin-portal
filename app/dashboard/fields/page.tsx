@@ -1477,7 +1477,7 @@ export default function FieldsPage() {
   const onboardingFileInputRef = useRef<HTMLInputElement>(null);
 
   // KYC review modal
-  const [kycVendor, setKycVendor] = useState<Vendor | null>(null);
+  const [kycField, setKycField] = useState<Turf | null>(null);
   const [onboardingStatus, setOnboardingStatus] = useState<"idle" | "creating" | "uploading" | "finalizing" | "success">("idle");
   const [kycDocs, setKycDocs] = useState<
     Record<string, "pending" | "verified" | "rejected">

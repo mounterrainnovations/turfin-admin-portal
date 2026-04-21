@@ -183,6 +183,7 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     }
   };
 
+  const saveKycReview = async () => {
     if (isSaving) return;
     setIsSaving(true);
     try {
