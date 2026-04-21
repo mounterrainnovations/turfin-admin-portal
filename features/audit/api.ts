@@ -195,25 +195,45 @@ function adaptAuditEntry(item: unknown, index: number): AuditEntry {
         readString(actor.displayName) ??
         readString(actor.fullName) ??
         "-",
-      email: readString(actor.email) ?? "-",
-      role: readString(actor.role) ?? readString(actor.userRole) ?? "-",
+      email:
+        readString(record.actorEmail) ??
+        readString(actor.email) ??
+        readString((payload?.body as any)?.email) ??
+        readString((payload?.body as any)?.vendorProfile?.email) ??
+        "-",
+      role:
+        readString(record.actorRole) ??
+        readString(actor.role) ??
+        readString(actor.userRole) ??
+        "-",
       ip: readString(actor.ip) ?? readString(actor.ipAddress) ?? "-",
       session: readString(actor.session) ?? readString(actor.sessionId) ?? "-",
     },
-    resource: resource
-      ? {
-          type:
-            readString(resource.type) ??
-            readString(resource.resourceType) ??
-            "-",
-          id: readString(resource.id) ?? readString(resource.resourceId) ?? "-",
-          label:
-            readString(resource.label) ??
-            readString(resource.name) ??
-            readString(resource.title) ??
-            "-",
-        }
-      : undefined,
+    resource: {
+      type:
+        readString(record.targetType) ??
+        readString(resource?.type) ??
+        readString(resource?.resourceType) ??
+        "-",
+      id:
+        readString(record.targetId) ??
+        readString(record.target_id) ??
+        readString(resource?.id) ??
+        readString(resource?.resourceId) ??
+        "-",
+      label:
+        readString(record.targetLabel) ??
+        readString(resource?.label) ??
+        readString(resource?.name) ??
+        readString(resource?.title) ??
+        readString(responseMeta?.vendorBusinessName) ??
+        readString(responseMeta?.businessName) ??
+        readString((responseMeta as any)?.vendor?.businessName) ??
+        readString((payload?.body as any)?.businessName) ??
+        readString((payload?.body as any)?.vendorProfile?.businessName) ??
+        readString((payload?.body as any)?.name) ??
+        "-",
+    },
     severity: normalizeSeverity(record.severity),
     status:
       readString(record.status) ??

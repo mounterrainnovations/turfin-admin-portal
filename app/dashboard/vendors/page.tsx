@@ -25,6 +25,8 @@ import {
   CalendarBlank,
   CaretRight,
   CurrencyDollar,
+  CircleNotch,
+  Check,
 } from "@phosphor-icons/react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "@/features/toast/toast-context";
@@ -213,6 +215,7 @@ export default function VendorsPage() {
   >({});
   const [uploadingDocKey, setUploadingDocKey] = useState<KycDocKey | null>(null);
   const onboardingFileInputRef = useRef<HTMLInputElement>(null);
+  const [onboardingStatus, setOnboardingStatus] = useState<"idle" | "creating" | "uploading" | "finalizing" | "success">("idle");
 
   // Edit modal
   const [editVendor, setEditVendor] = useState<Vendor | null>(null);
@@ -345,7 +348,7 @@ export default function VendorsPage() {
   };
 
   const submitOnboard = async () => {
-    setIsLoading(true);
+    setOnboardingStatus("creating");
     try {
       // 1. Create Vendor
       const dto: AdminOnboardVendorDto = {
@@ -376,11 +379,18 @@ export default function VendorsPage() {
         },
       };
 
-      const vendor = await onboardVendor(dto);
-      const vendorId = vendor.id;
+      const response = await onboardVendor(dto);
+      // BUG FIX: Backend returns { success: true, data: { vendor: { id: "..." } } }
+      // The previous code was doing vendor.id directly on the payload.
+      const vendorId = (response as any).data?.vendor?.id;
+
+      if (!vendorId) {
+        throw new Error("Failed to retrieve Vendor ID from response.");
+      }
 
       // 2. Sequential Uploads for KYC (if any)
       if (Object.keys(onboardKycFiles).length > 0) {
+        setOnboardingStatus("uploading");
         try {
           const s3Paths = await performSequentialUploads(
             vendorId,
@@ -389,6 +399,7 @@ export default function VendorsPage() {
           );
 
           // 3. Finalize KYC with backend
+          setOnboardingStatus("finalizing");
           await uploadVendorKycByAdmin(vendorId, {
             documents: s3Paths as any,
           });
@@ -402,21 +413,26 @@ export default function VendorsPage() {
         }
       }
 
+      setOnboardingStatus("success");
       showToast({
         title: "Vendor Onboarded",
         description: `${formData.businessName} onboarded successfully.`,
         tone: "success",
       });
-      closeOnboard();
-      refreshData();
+      
+      // Delay closing to show success state for a moment
+      setTimeout(() => {
+        closeOnboard();
+        refreshData();
+        setOnboardingStatus("idle");
+      }, 1500);
     } catch (err: any) {
+      setOnboardingStatus("idle");
       showToast({
         title: "Error",
         description: err.message || "Failed to onboard vendor",
         tone: "error",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -2051,9 +2067,12 @@ export default function VendorsPage() {
           onClose={() => setKycVendor(null)}
           onSuccess={async () => {
             refreshData();
+            if (!kycVendor) return;
             try {
               const updated = await getVendorById(kycVendor.id);
-              setKycVendor(updated);
+              if (kycVendor) {
+                setKycVendor(updated);
+              }
               if (selectedVendor?.id === updated.id) {
                 setSelected(updated);
               }
@@ -2136,6 +2155,71 @@ export default function VendorsPage() {
                     ? "Ban"
                     : "Unban"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ONBOARDING PROGRESS OVERLAY
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {onboardingStatus !== "idle" && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300"
+          style={{
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          <div className="bg-white rounded-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border border-gray-100 p-8 w-full max-w-sm text-center transform animate-in zoom-in-95 duration-300">
+            <div className="relative w-20 h-20 mx-auto mb-6">
+              {onboardingStatus === "success" ? (
+                <div className="w-full h-full bg-[#8a9e60] rounded-full flex items-center justify-center animate-in zoom-in duration-500">
+                  <Check size={40} weight="bold" className="text-white" />
+                </div>
+              ) : (
+                <>
+                  <CircleNotch 
+                    size={80} 
+                    weight="light" 
+                    className="text-[#8a9e60] animate-spin absolute inset-0" 
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-12 h-12 bg-[#8a9e60]/10 rounded-full animate-pulse" />
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              {onboardingStatus === "creating" && "Creating Profile"}
+              {onboardingStatus === "uploading" && "Uploading Files"}
+              {onboardingStatus === "finalizing" && "Finalizing KYC"}
+              {onboardingStatus === "success" && "Success!"}
+            </h2>
+            
+            <p className="text-sm text-gray-500 leading-relaxed min-h-[40px]">
+              {onboardingStatus === "creating" && "Initializing vendor identity and business records..."}
+              {onboardingStatus === "uploading" && "Securely storing KYC documents in cloud storage..."}
+              {onboardingStatus === "finalizing" && "Linking data and activating the vendor account..."}
+              {onboardingStatus === "success" && `${formData.businessName} has been onboarded successfully.`}
+            </p>
+
+            <div className="mt-8 flex justify-center gap-1.5">
+              {[ "creating", "uploading", "finalizing", "success" ].map((step, idx) => {
+                const steps = ["creating", "uploading", "finalizing", "success"];
+                const currentIdx = steps.indexOf(onboardingStatus);
+                const isActive = step === onboardingStatus;
+                const isDone = steps.indexOf(step) < currentIdx;
+                
+                return (
+                  <div 
+                    key={step}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      isActive ? "w-8 bg-[#8a9e60]" : isDone ? "w-4 bg-[#8a9e60]/40" : "w-1.5 bg-gray-100"
+                    }`}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
