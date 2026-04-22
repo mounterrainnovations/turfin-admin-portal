@@ -5,7 +5,7 @@ import {
   CheckCircle, BellRinging, PaperPlaneTilt, CalendarBlank,
   Eye, Clock
 } from "@phosphor-icons/react";
-import { AudienceKey, NotifStatus, SentNotif, NotifTemplate, InboxNotification } from "./types";
+import { AudienceKey, NotifStatus, SentNotif, NotifTemplate } from "./types";
 
 export const INIT_HISTORY: SentNotif[] = [
   { id: "PN-001", title: "Weekend Warriors Deal",            message: "Book this weekend and get 20% off on all turfs! Use code WEEKEND20 at checkout. Valid for 48 hours only.",                         audience: "Active Users",    reach: 834,  opened: 312, openRate: 37, sentAt: "Mar 20, 2026",          status: "sent"      },
@@ -55,37 +55,3 @@ export const statusCfg: Record<NotifStatus, { cls: string; label: string }> = {
   failed:    { cls: "bg-red-50 text-red-600",     label: "Failed"    },
 };
 
-export const MOCK_INBOX_NOTIFICATIONS: InboxNotification[] = [
-  {
-    id: "1",
-    title: "New Vendor Registration",
-    message: "Arena Sports Hub just signed up and is pending KYC review.",
-    time: "5m ago",
-    read: false,
-    type: "vendor",
-  },
-  {
-    id: "2",
-    title: "High Booking Volume",
-    message: "12 bookings were made in the last hour across Mumbai turfs.",
-    time: "1h ago",
-    read: false,
-    type: "booking",
-  },
-  {
-    id: "3",
-    title: "System Maintenance",
-    message: "Scheduled maintenance will occur tonight at 2:00 AM IST.",
-    time: "3h ago",
-    read: false,
-    type: "system",
-  },
-  {
-    id: "4",
-    title: "KYC Approved",
-    message: "GreenZone FC's documents have been approved.",
-    time: "1d ago",
-    read: true,
-    type: "vendor",
-  },
-];

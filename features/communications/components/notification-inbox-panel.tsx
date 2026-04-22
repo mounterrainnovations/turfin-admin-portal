@@ -4,11 +4,10 @@ import { useState } from "react";
 import { Bell, CheckCircle, Storefront, CalendarCheck, WarningCircle } from "@phosphor-icons/react";
 import Link from "next/link";
 import { InboxNotification } from "../types";
-import { MOCK_INBOX_NOTIFICATIONS } from "../constants";
 
 export function NotificationInboxPanel() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<InboxNotification[]>(MOCK_INBOX_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<InboxNotification[]>([]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

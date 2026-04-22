@@ -7,125 +7,19 @@ import {
   Phone, Envelope, X, Lightning, Lock, ArrowCounterClockwise,
   CurrencyDollar, Gear, Question, SoccerBall,
 } from "@phosphor-icons/react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+
+import {
+  getAllTickets,
+  getTicketMessages,
+  updateTicketStatus,
+  addAgentMessage,
+} from "@/features/support/api";
+import { SupportTicketWithDetails, TicketStatus, TicketCategory } from "@/features/support/types";
+import { useToast } from "@/features/toast/toast-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type TicketStatus   = "open" | "in_progress" | "resolved" | "closed";
-type TicketCategory = "booking" | "payment" | "account" | "technical" | "general";
-type SenderRole     = "user" | "agent";
 
-interface TicketMessage {
-  id: string;
-  senderRole: SenderRole;
-  body: string;
-  createdAt: string;
-}
-
-interface SupportTicket {
-  id: string;
-  ticketNumber: string;
-  user: { name: string; email: string; phone: string; avatar: string };
-  category: TicketCategory;
-  subject: string;
-  description: string;
-  status: TicketStatus;
-  createdAt: string;
-  updatedAt: string;
-  messages: TicketMessage[];
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_TICKETS: SupportTicket[] = [
-  {
-    id: "a1b2c3d4-0001", ticketNumber: "TKT-0001",
-    user: { name: "Marco Rossi", email: "marco@email.com", phone: "+91 98765 43210", avatar: "MR" },
-    category: "payment", subject: "Charged twice for booking on 14 April",
-    description: "I was charged twice on 14 April for a booking at Green Arena. Amount deducted from UPI but only one confirmation received. Please refund the duplicate charge.",
-    status: "open", createdAt: "Apr 19, 2026 — 10:30 AM", updatedAt: "Apr 19, 2026 — 10:30 AM",
-    messages: [
-      { id: "m1", senderRole: "user", body: "I was charged twice on 14 April for a booking at Green Arena. Amount deducted from UPI but only one confirmation received. Please refund the duplicate charge.", createdAt: "Apr 19, 10:30 AM" },
-    ],
-  },
-  {
-    id: "a1b2c3d4-0002", ticketNumber: "TKT-0002",
-    user: { name: "Sara Bianchi", email: "sara@email.com", phone: "+91 91234 56789", avatar: "SB" },
-    category: "booking", subject: "Booking confirmed but field was locked",
-    description: "My booking was confirmed (BK-0041) and I arrived at Turf Arena A at 10:00 AM but the field was locked. I waited 20 minutes and had to leave. I need a full refund and an explanation.",
-    status: "in_progress", createdAt: "Apr 18, 2026 — 9:15 AM", updatedAt: "Apr 19, 2026 — 2:45 PM",
-    messages: [
-      { id: "m2", senderRole: "user",  body: "My booking was confirmed (BK-0041) and I arrived at Turf Arena A at 10:00 AM but the field was locked. I waited 20 minutes and had to leave. I need a full refund and an explanation.", createdAt: "Apr 18, 9:15 AM" },
-      { id: "m3", senderRole: "agent", body: "Hi Sara, we're sorry to hear about this experience. We've contacted the venue owner and are investigating the issue. Can you share any photos of the locked field?", createdAt: "Apr 18, 11:00 AM" },
-      { id: "m4", senderRole: "user",  body: "Yes, I'll share the photos now. The lock was clearly on the main gate the entire time.", createdAt: "Apr 18, 11:30 AM" },
-      { id: "m5", senderRole: "agent", body: "Thank you for the photos. We've escalated this to our operations team and a full refund of ₹800 has been initiated. It will reflect in 5–7 business days.", createdAt: "Apr 19, 2:45 PM" },
-    ],
-  },
-  {
-    id: "a1b2c3d4-0003", ticketNumber: "TKT-0003",
-    user: { name: "Luca Ferretti", email: "luca@email.com", phone: "+91 87654 32109", avatar: "LF" },
-    category: "booking", subject: "Cannot cancel booking within allowed window",
-    description: "I'm trying to cancel my booking #BK-0043 which is 3 days away. The app says I'm outside the cancellation window but according to your policy I should have 24 hours. Please help.",
-    status: "open", createdAt: "Apr 20, 2026 — 3:00 PM", updatedAt: "Apr 20, 2026 — 3:00 PM",
-    messages: [
-      { id: "m6", senderRole: "user", body: "I'm trying to cancel my booking #BK-0043 which is 3 days away. The app says I'm outside the cancellation window but according to your policy I should have 24 hours. Please help.", createdAt: "Apr 20, 3:00 PM" },
-    ],
-  },
-  {
-    id: "a1b2c3d4-0004", ticketNumber: "TKT-0004",
-    user: { name: "Anna Conti", email: "anna@email.com", phone: "+91 76543 21098", avatar: "AC" },
-    category: "account", subject: "Unable to update phone number",
-    description: "I changed my phone number but the OTP is being sent to my old number. I can no longer access my old number. Please update my phone number manually to +91 99999 00001.",
-    status: "resolved", createdAt: "Apr 15, 2026 — 11:00 AM", updatedAt: "Apr 16, 2026 — 4:30 PM",
-    messages: [
-      { id: "m7", senderRole: "user",  body: "I changed my phone number but the OTP is being sent to my old number. I can no longer access my old number. Please update my phone number manually to +91 99999 00001.", createdAt: "Apr 15, 11:00 AM" },
-      { id: "m8", senderRole: "agent", body: "Hi Anna! We've verified your identity and updated your phone number in our system. Please try logging in again with the new number.", createdAt: "Apr 16, 4:30 PM" },
-    ],
-  },
-  {
-    id: "a1b2c3d4-0005", ticketNumber: "TKT-0005",
-    user: { name: "Davide Greco", email: "davide@email.com", phone: "+91 65432 10987", avatar: "DG" },
-    category: "payment", subject: "Refund still pending after 10 days",
-    description: "I cancelled booking #BK-0039 on April 10th and was told the refund would be processed in 5–7 days. It's been 10 days and there's no refund yet.",
-    status: "in_progress", createdAt: "Apr 20, 2026 — 1:00 PM", updatedAt: "Apr 21, 2026 — 9:00 AM",
-    messages: [
-      { id: "m9",  senderRole: "user",  body: "I cancelled booking #BK-0039 on April 10th and was told the refund would be processed in 5–7 days. It's been 10 days and there's no refund yet.", createdAt: "Apr 20, 1:00 PM" },
-      { id: "m10", senderRole: "agent", body: "Hi Davide, we sincerely apologise for the delay. We're escalating this with our payments team and will have a resolution within 24 hours. Thank you for your patience.", createdAt: "Apr 21, 9:00 AM" },
-    ],
-  },
-  {
-    id: "a1b2c3d4-0006", ticketNumber: "TKT-0006",
-    user: { name: "Priya Sharma", email: "priya@email.com", phone: "+91 70000 33445", avatar: "PS" },
-    category: "technical", subject: "App crashes when trying to view booking receipt",
-    description: "Every time I tap on 'View Receipt' for booking #BK-0047 the app crashes. I've tried reinstalling the app but the issue persists.",
-    status: "closed", createdAt: "Apr 10, 2026 — 5:00 PM", updatedAt: "Apr 12, 2026 — 3:00 PM",
-    messages: [
-      { id: "m11", senderRole: "user",  body: "Every time I tap on 'View Receipt' for booking #BK-0047 the app crashes. I've tried reinstalling the app but the issue persists.", createdAt: "Apr 10, 5:00 PM" },
-      { id: "m12", senderRole: "agent", body: "Hi Priya! We've identified a bug in the receipt renderer for bookings with multi-slot durations. A fix has been deployed in app version 1.2.3. Please update the app.", createdAt: "Apr 11, 2:00 PM" },
-      { id: "m13", senderRole: "user",  body: "Updated the app and it's working now. Thank you!", createdAt: "Apr 12, 10:00 AM" },
-      { id: "m14", senderRole: "agent", body: "Glad to hear that! We're closing this ticket. Please feel free to raise a new one if you face any issues.", createdAt: "Apr 12, 3:00 PM" },
-    ],
-  },
-  {
-    id: "a1b2c3d4-0007", ticketNumber: "TKT-0007",
-    user: { name: "Ravi Kumar", email: "ravi@email.com", phone: "+91 80000 11223", avatar: "RK" },
-    category: "general", subject: "How do I share a booking with teammates?",
-    description: "I booked a slot for my team but I want to share the details with my teammates easily. Is there a share feature in the app?",
-    status: "resolved", createdAt: "Apr 17, 2026 — 8:00 AM", updatedAt: "Apr 17, 2026 — 10:30 AM",
-    messages: [
-      { id: "m15", senderRole: "user",  body: "I booked a slot for my team but I want to share the details with my teammates easily. Is there a share feature in the app?", createdAt: "Apr 17, 8:00 AM" },
-      { id: "m16", senderRole: "agent", body: "Hi Ravi! Yes — open the booking in the app, tap the share icon in the top right corner, and you can share a summary via WhatsApp, SMS, or copy the link. Let us know if you need further help!", createdAt: "Apr 17, 10:30 AM" },
-    ],
-  },
-  {
-    id: "a1b2c3d4-0008", ticketNumber: "TKT-0008",
-    user: { name: "Neha Patel", email: "neha@email.com", phone: "+91 50000 77889", avatar: "NP" },
-    category: "payment", subject: "Promo code not applied to booking",
-    description: "I used promo code TURFIN20 during checkout but the discount wasn't applied. I was charged the full amount of ₹650. The code shows as valid in the promo section.",
-    status: "open", createdAt: "Apr 21, 2026 — 7:30 AM", updatedAt: "Apr 21, 2026 — 7:30 AM",
-    messages: [
-      { id: "m17", senderRole: "user", body: "I used promo code TURFIN20 during checkout but the discount wasn't applied. I was charged the full amount of ₹650. The code shows as valid in the promo section.", createdAt: "Apr 21, 7:30 AM" },
-    ],
-  },
-];
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const statusConfig: Record<TicketStatus, { label: string; cls: string; dot: string }> = {
@@ -229,7 +123,7 @@ function TicketModal({
   onStatusChange,
   onReply,
 }: {
-  ticket: SupportTicket;
+  ticket: SupportTicketWithDetails;
   onClose: () => void;
   onStatusChange: (id: string, status: TicketStatus) => void;
   onReply: (id: string, body: string) => void;
@@ -296,32 +190,40 @@ function TicketModal({
 
           {/* Message thread */}
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-            {ticket.messages.map(msg => (
-              <div key={msg.id} className={`flex gap-3 ${msg.senderRole === "agent" ? "flex-row-reverse" : "flex-row"}`}>
-                {msg.senderRole === "user"
-                  ? <Av initials={ticket.user.avatar} size="sm" />
-                  : (
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                      style={{ backgroundColor: "#6e8245" }}>A</div>
-                  )
-                }
-                <div className={`max-w-[72%] flex flex-col ${msg.senderRole === "agent" ? "items-end" : "items-start"}`}>
-                  <div
-                    className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                      msg.senderRole === "agent"
-                        ? "text-white rounded-tr-sm"
-                        : "bg-gray-100 text-gray-700 rounded-tl-sm"
-                    }`}
-                    style={msg.senderRole === "agent" ? { backgroundColor: "#8a9e60" } : {}}
-                  >
-                    {msg.body}
+            {ticket.messages.map(msg => {
+              const agentInitials = msg.senderName
+                ? msg.senderName.split("@")[0].slice(0, 2).toUpperCase()
+                : "AG";
+              const agentLabel = msg.senderName
+                ? msg.senderName.split("@")[0]
+                : "Agent";
+              return (
+                <div key={msg.id} className={`flex gap-3 ${msg.senderRole === "agent" ? "flex-row-reverse" : "flex-row"}`}>
+                  {msg.senderRole === "user"
+                    ? <Av initials={ticket.user.avatar} size="sm" />
+                    : (
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                        style={{ backgroundColor: "#6e8245" }}>{agentInitials}</div>
+                    )
+                  }
+                  <div className={`max-w-[72%] flex flex-col ${msg.senderRole === "agent" ? "items-end" : "items-start"}`}>
+                    <div
+                      className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                        msg.senderRole === "agent"
+                          ? "text-white rounded-tr-sm"
+                          : "bg-gray-100 text-gray-700 rounded-tl-sm"
+                      }`}
+                      style={msg.senderRole === "agent" ? { backgroundColor: "#8a9e60" } : {}}
+                    >
+                      {msg.body}
+                    </div>
+                    <p className={`text-[10px] text-gray-400 mt-1.5 ${msg.senderRole === "agent" ? "text-right" : ""}`}>
+                      {msg.senderRole === "agent" ? agentLabel : ticket.user.name} · {msg.createdAt}
+                    </p>
                   </div>
-                  <p className={`text-[10px] text-gray-400 mt-1.5 ${msg.senderRole === "agent" ? "text-right" : ""}`}>
-                    {msg.senderRole === "agent" ? "Support Agent" : ticket.user.name} · {msg.createdAt}
-                  </p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
 
@@ -502,13 +404,76 @@ function TicketModal({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function SupportPage() {
-  const [tickets, setTickets]         = useState<SupportTicket[]>(MOCK_TICKETS);
+  const [tickets, setTickets]         = useState<SupportTicketWithDetails[]>([]);
   const [selectedId, setSelectedId]   = useState<string | null>(null);
   const [search, setSearch]           = useState("");
   const [statusFilter, setStatusFilter]     = useState<TicketStatus | "all">("all");
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | "all">("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const { showToast } = useToast();
 
   const selectedTicket = tickets.find(t => t.id === selectedId) ?? null;
+
+  const loadData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await getAllTickets();
+      setTickets(data);
+    } catch (err: any) {
+      showToast({ title: "Error", description: err.message || "Failed to load tickets", tone: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Poll ticket list every 30 s — detects new tickets and status changes
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        const data = await getAllTickets();
+        setTickets(prev => data.map(incoming => {
+          const existing = prev.find(t => t.id === incoming.id);
+          // Preserve already-loaded messages so the open modal doesn't lose them
+          return existing && existing.messages.length > 0
+            ? { ...incoming, messages: existing.messages }
+            : incoming;
+        }));
+      } catch {} // silent — next tick will retry
+    }, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Load messages when a ticket is first opened, then poll every 5 s
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const mergeMessages = (msgs: any[]) => {
+      setTickets(prev => prev.map(t => {
+        if (t.id !== selectedId) return t;
+        if (msgs.length > t.messages.length) return { ...t, messages: msgs };
+        return t;
+      }));
+    };
+
+    // Initial load
+    getTicketMessages(selectedId)
+      .then(mergeMessages)
+      .catch(() => showToast({ title: "Error", description: "Could not load messages", tone: "error" }));
+
+    // Background poll
+    const id = setInterval(async () => {
+      try {
+        const msgs = await getTicketMessages(selectedId);
+        mergeMessages(msgs);
+      } catch {} // silent
+    }, 5_000);
+
+    return () => clearInterval(id);
+  }, [selectedId, showToast]);
 
   const filtered = tickets.filter(t => {
     const q = search.toLowerCase();
@@ -526,19 +491,31 @@ export default function SupportPage() {
     closed:      tickets.filter(t => t.status === "closed").length,
   };
 
-  const handleStatusChange = (id: string, status: TicketStatus) => {
-    setTickets(prev => prev.map(t => t.id === id ? { ...t, status, updatedAt: "Apr 21, 2026 — just now" } : t));
+  const handleStatusChange = async (id: string, status: TicketStatus) => {
+    try {
+      await updateTicketStatus(id, status);
+      setTickets(prev => prev.map(t => t.id === id ? { ...t, status, updatedAt: new Date().toLocaleString("en-IN", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).replace(",", " —") } : t));
+      showToast({ title: "Success", description: "Ticket status updated", tone: "success" });
+    } catch (err: any) {
+      showToast({ title: "Error", description: err.message || "Failed to update status", tone: "error" });
+    }
   };
 
-  const handleReply = (id: string, body: string) => {
-    setTickets(prev => prev.map(t =>
-      t.id === id ? {
-        ...t,
-        status: t.status === "open" ? "in_progress" : t.status,
-        updatedAt: "Apr 21, 2026 — just now",
-        messages: [...t.messages, { id: `m${Date.now()}`, senderRole: "agent", body, createdAt: "Apr 21, just now" }],
-      } : t
-    ));
+  const handleReply = async (id: string, body: string) => {
+    try {
+      const newMsg = await addAgentMessage(id, body);
+      setTickets(prev => prev.map(t =>
+        t.id === id ? {
+          ...t,
+          status: t.status === "open" ? "in_progress" : t.status,
+          updatedAt: new Date().toLocaleString("en-IN", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).replace(",", " —"),
+          messages: [...t.messages, newMsg],
+        } : t
+      ));
+      showToast({ title: "Success", description: "Reply sent successfully", tone: "success" });
+    } catch (err: any) {
+      showToast({ title: "Error", description: err.message || "Failed to send reply", tone: "error" });
+    }
   };
 
   return (
@@ -579,8 +556,8 @@ export default function SupportPage() {
             className="flex-1 text-xs bg-transparent focus:outline-none text-gray-700 placeholder-gray-400" />
         </div>
         <CategoryDropdown value={categoryFilter} onChange={setCategoryFilter} />
-        <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors shrink-0">
-          <ArrowsClockwise size={13} />Refresh
+        <button onClick={loadData} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors shrink-0">
+          <ArrowsClockwise size={13} className={isLoading ? "animate-spin" : ""} />Refresh
         </button>
       </div>
 
