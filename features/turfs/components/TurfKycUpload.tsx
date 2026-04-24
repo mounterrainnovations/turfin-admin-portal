@@ -48,7 +48,9 @@ interface TurfKycUploadProps {
 
 type DocStatus = "verified" | "rejected" | "pending";
 
-function resolveTurfDocuments(turf: Turf): Partial<SubmitTurfDocumentsDto["documents"]> {
+function resolveTurfDocuments(
+  turf: Turf,
+): Partial<SubmitTurfDocumentsDto["documents"]> {
   const legacyDocuments =
     turf.documents &&
     "documents" in turf.documents &&
@@ -91,6 +93,7 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
   const [kycDocs, setKycDocs] = useState<Record<string, DocStatus>>({});
   const [documentPaths, setDocumentPaths] = useState<Record<string, any>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [localFiles, setLocalFiles] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const verification = turf.kyc?.verification || turf.verification;
@@ -113,9 +116,23 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
 
     setDocumentPaths((prev) => {
       const next = { ...prev };
-      Object.entries(docs).forEach(([key, path]) => {
-        if (path && ((typeof path === "string" && path.trim()) || Array.isArray(path))) {
-          next[key] = path;
+      Object.entries(docs).forEach(([key, val]) => {
+        if (!val) return;
+
+        if (Array.isArray(val)) {
+          next[key] = val
+            .map((v) =>
+              typeof v === "string" ? v : (v as any)?.path || (v as any)?.url,
+            )
+            .filter(Boolean);
+        } else {
+          const path =
+            typeof val === "string"
+              ? val
+              : (val as any)?.path || (val as any)?.url;
+          if (path && typeof path === "string" && path.trim()) {
+            next[key] = path;
+          }
         }
       });
       return next;
@@ -132,10 +149,22 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
     const file = event.target.files?.[0];
     if (!file || !uploadingDoc) return;
 
-    try {
-      const docKey = uploadingDoc;
-      const isPhoto = docKey === "fieldPhotos";
+    const docKey = uploadingDoc;
+    const isPhoto = docKey === "fieldPhotos";
 
+    // Store locally for immediate preview
+    if (isPhoto) {
+      setLocalFiles((prev) => {
+        const existing = Array.isArray(prev.fieldPhotos)
+          ? prev.fieldPhotos
+          : [];
+        return { ...prev, fieldPhotos: [...existing, file].slice(-5) };
+      });
+    } else {
+      setLocalFiles((prev) => ({ ...prev, [docKey]: file }));
+    }
+
+    try {
       // 1. & 2. Get signed URL & Upload to Storage
       const path = await uploadToStorage(turf.id, docKey, file, "turf");
 
@@ -160,9 +189,11 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
 
       setDocumentPaths((prev) => ({
         ...prev,
-        ...((documentsResponse as any)?.documents || {}),
-        ...(isPhoto ? { fieldPhotos: updatedDocuments.fieldPhotos } : { [docKey]: path }),
+        ...(isPhoto
+          ? { fieldPhotos: updatedDocuments.fieldPhotos }
+          : { [docKey]: path }),
       }));
+
       setKycDocs((prev) => {
         const next = applyVerificationToStatuses(
           prev,
@@ -191,14 +222,36 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
     }
   };
 
-  const handleViewDocument = async (path: string) => {
+  const handleViewDocument = async (path: any) => {
     if (!path) return;
+
+    if (path instanceof File) {
+      const previewUrl = URL.createObjectURL(path);
+      window.open(previewUrl, "_blank");
+      return;
+    }
+
+    // path could be an object if passed directly from some source, though documentPaths now has strings
+    const actualPath =
+      typeof path === "string"
+        ? path
+        : (path as any)?.path || (path as any)?.url;
+
+    if (!actualPath || typeof actualPath !== "string") {
+      showToast({
+        title: "Error",
+        description: "Invalid document path",
+        tone: "error",
+      });
+      return;
+    }
+
     try {
-      if (path.startsWith("http")) {
-        window.open(path, "_blank");
+      if (actualPath.startsWith("http")) {
+        window.open(actualPath, "_blank");
         return;
       }
-      const { signedUrl } = await getSignedViewUrl(path);
+      const { signedUrl } = await getSignedViewUrl(actualPath);
       if (signedUrl) window.open(signedUrl, "_blank");
     } catch (err) {
       showToast({
@@ -401,7 +454,8 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
             const s = kycDocs[key] ?? "pending";
             const docData = getDocPath(key);
             const isPhotoField = key === "fieldPhotos";
-            const photoList = isPhotoField && Array.isArray(docData) ? docData : [];
+            const photoList =
+              isPhotoField && Array.isArray(docData) ? docData : [];
 
             return (
               <div
@@ -432,7 +486,11 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
                     <span
                       className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${s === "verified" ? "bg-green-100 text-green-700" : s === "rejected" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}
                     >
-                      {s === "verified" ? "Verified" : s === "rejected" ? "Rejected" : "Pending"}
+                      {s === "verified"
+                        ? "Verified"
+                        : s === "rejected"
+                          ? "Rejected"
+                          : "Pending"}
                     </span>
                     <button
                       onClick={() => setDocStatus(key, "verified")}
@@ -454,7 +512,8 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
                   {isPhotoField ? (
                     <div className="grid grid-cols-2 gap-2">
                       {photoList.map((photo: any, index: number) => {
-                        const path = typeof photo === "string" ? photo : photo.path;
+                        const path =
+                          typeof photo === "string" ? photo : photo.path;
                         return (
                           <div
                             key={index}
@@ -465,7 +524,11 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
                             </span>
                             <div className="flex items-center gap-1.5">
                               <button
-                                onClick={() => handleViewDocument(path)}
+                                onClick={() =>
+                                  handleViewDocument(
+                                    localFiles.fieldPhotos?.[index] || path,
+                                  )
+                                }
                                 className="text-gray-500 hover:text-[#8a9e60] transition-colors"
                               >
                                 <Eye size={12} weight="bold" />
@@ -496,9 +559,11 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
                   ) : (
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleViewDocument(docData)}
-                        disabled={!docData}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${docData ? "border-gray-200 text-gray-600 hover:bg-gray-50" : "border-gray-100 text-gray-300 pointer-events-none"}`}
+                        onClick={() =>
+                          handleViewDocument(localFiles[key] || docData)
+                        }
+                        disabled={!docData && !localFiles[key]}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${docData || localFiles[key] ? "border-gray-200 text-gray-600 hover:bg-gray-50" : "border-gray-100 text-gray-300 pointer-events-none"}`}
                       >
                         <Eye size={12} /> View Document
                       </button>
@@ -542,7 +607,10 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
           </button>
           <button
             onClick={applyKycVerify}
-            disabled={isSaving || !KYC_DOCS_FIELD.every((d) => kycDocs[d.key] === "verified")}
+            disabled={
+              isSaving ||
+              !KYC_DOCS_FIELD.every((d) => kycDocs[d.key] === "verified")
+            }
             className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 disabled:opacity-50`}
             style={{ backgroundColor: "#8a9e60" }}
           >

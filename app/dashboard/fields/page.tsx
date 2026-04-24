@@ -99,6 +99,49 @@ const FACILITIES_LIST = [
   "WiFi",
   "CCTV",
   "Drinking Water",
+  "Indoor Facility",
+  "Outdoor Facility",
+  "Covered Turf",
+  "Ground Size",
+  "Sport Type Supported",
+  "Proper Markings",
+  "Multi-sport Facility",
+  "Practice Nets",
+  "Court Quality",
+  "Floodlights / Night Play",
+  "Power Backup",
+  "Day & Night Availability",
+  "Washrooms",
+  "Changing Rooms",
+  "Showers",
+  "Seating / Dugout",
+  "Locker Facility",
+  "Clean Environment",
+  "Easy Location Access",
+  "Nearby Public Transport",
+  "Security Presence",
+  "Verified / Safe Turf",
+  "Equipment Available",
+  "Referee / Umpire",
+  "Scoreboard",
+  "Warm-up Area",
+  "Coaching Available",
+  "Tournament Hosting",
+  "Event Hosting",
+  "Music System",
+  "Night Ambiance Lighting",
+  "Snacks / Cafe",
+  "Energy Drinks",
+  "Online Booking",
+  "Real-time Availability",
+  "Digital Payments (UPI/card)",
+  "Booking Confirmation & Reminders",
+  "Ratings & Reviews",
+  "Open Matches",
+  "Player Matching",
+  "Team Bookings",
+  "Membership Plans",
+  "Corporate Bookings",
 ];
 const SURFACE_LIST = [
   "Natural Grass",
@@ -108,14 +151,43 @@ const SURFACE_LIST = [
   "Synthetic",
 ];
 const STATES_LIST = [
-  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
-  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
-  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", 
-  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", 
-  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
-  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+  "Andaman and Nicobar Islands",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chandigarh",
+  "Chhattisgarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jammu and Kashmir",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Ladakh",
+  "Lakshadweep",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Puducherry",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
 ];
-
 
 const ONBOARD_STEPS = [
   "Vendor Info",
@@ -262,9 +334,9 @@ function FieldDetailPanel({
   onEdit: (field: Turf) => void;
 }) {
   const { showToast } = useToast();
-  const [tab, setTab] = useState<"overview" | "reviews" | "schedule" | "analytics">(
-    "overview",
-  );
+  const [tab, setTab] = useState<
+    "overview" | "reviews" | "schedule" | "analytics"
+  >("overview");
   const [statusOpen, setStatusOpen] = useState(false);
   const [reviews, setReviews] = useState<TurfReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -460,27 +532,29 @@ function FieldDetailPanel({
 
       {/* Tabs */}
       <div className="flex border-b border-gray-100 shrink-0 bg-white">
-        {(["overview", "reviews", "schedule", "analytics"] as const).map((t) => {
-          const disabled = t === "schedule" || t === "analytics";
-          return (
-            <button
-              key={t}
-              onClick={() => {
-                if (!disabled) setTab(t);
-              }}
-              disabled={disabled}
-              className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors ${
-                tab === t
-                  ? "border-b-2 border-[#8a9e60] text-[#8a9e60]"
-                  : disabled
-                    ? "text-gray-300 cursor-not-allowed"
-                    : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              {t === "reviews" ? "reviews" : t}
-            </button>
-          );
-        })}
+        {(["overview", "reviews", "schedule", "analytics"] as const).map(
+          (t) => {
+            const disabled = t === "schedule" || t === "analytics";
+            return (
+              <button
+                key={t}
+                onClick={() => {
+                  if (!disabled) setTab(t);
+                }}
+                disabled={disabled}
+                className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors ${
+                  tab === t
+                    ? "border-b-2 border-[#8a9e60] text-[#8a9e60]"
+                    : disabled
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                {t === "reviews" ? "reviews" : t}
+              </button>
+            );
+          },
+        )}
       </div>
 
       {/* Content */}
@@ -745,7 +819,8 @@ function FieldDetailPanel({
                   No reviews yet
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Ratings will appear here once players start reviewing this field.
+                  Ratings will appear here once players start reviewing this
+                  field.
                 </p>
               </div>
             ) : (
@@ -799,7 +874,9 @@ function FieldDetailPanel({
                         className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 disabled:opacity-50"
                       >
                         <Trash size={13} />
-                        {deletingReviewId === review.id ? "Deleting..." : "Delete"}
+                        {deletingReviewId === review.id
+                          ? "Deleting..."
+                          : "Delete"}
                       </button>
                     </div>
 
@@ -1429,6 +1506,7 @@ function FieldDetailPanel({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function FieldsPage() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusTab, setStatusTab] = useState("all");
   const [sportFilter, setSportFilter] = useState("All");
   const [cityFilter, setCityFilter] = useState("All");
@@ -1440,7 +1518,14 @@ export default function FieldsPage() {
 
   // Confirm modal
   const [confirmModal, setConfirmModal] = useState<{
-    type: "ban" | "unban" | "remove" | "suspend" | "unsuspend" | "maintenance" | "activate";
+    type:
+      | "ban"
+      | "unban"
+      | "remove"
+      | "suspend"
+      | "unsuspend"
+      | "maintenance"
+      | "activate";
     field: Turf;
   } | null>(null);
 
@@ -1468,16 +1553,17 @@ export default function FieldsPage() {
   const [onboardKycFiles, setOnboardKycFiles] = useState<
     Record<string, File | File[]>
   >({});
-  const [uploadingDocKey, setUploadingDocKey] = useState<
-    FieldKycDocKey | null
-  >(null);
+  const [uploadingDocKey, setUploadingDocKey] = useState<FieldKycDocKey | null>(
+    null,
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const onboardingFileInputRef = useRef<HTMLInputElement>(null);
 
-
   // KYC review modal
   const [kycField, setKycField] = useState<Turf | null>(null);
-  const [onboardingStatus, setOnboardingStatus] = useState<"idle" | "creating" | "uploading" | "finalizing" | "success">("idle");
+  const [onboardingStatus, setOnboardingStatus] = useState<
+    "idle" | "creating" | "uploading" | "finalizing" | "success"
+  >("idle");
   const [kycDocs, setKycDocs] = useState<
     Record<string, "pending" | "verified" | "rejected">
   >({});
@@ -1509,15 +1595,17 @@ export default function FieldsPage() {
 
     if (step === 2) {
       if (!formData.name.trim()) newErrors.name = "Field name is required";
-      if (formData.sports.length === 0) newErrors.sports = "Select at least one sport";
+      if (formData.sports.length === 0)
+        newErrors.sports = "Select at least one sport";
       if (!formData.surface) newErrors.surface = "Surface type is required";
     }
 
     if (step === 3) {
       if (!formData.address.city.trim()) newErrors.city = "City is required";
       if (!formData.address.state) newErrors.state = "State is required";
-      if (!formData.address.country.trim()) newErrors.country = "Country is required";
-      
+      if (!formData.address.country.trim())
+        newErrors.country = "Country is required";
+
       if (!formData.address.pinCode.trim()) {
         newErrors.pinCode = "PIN code is required";
       } else if (!/^\d{6}$/.test(formData.address.pinCode)) {
@@ -1543,7 +1631,6 @@ export default function FieldsPage() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
 
   const handleOnboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const key = uploadingDocKey;
@@ -1579,7 +1666,12 @@ export default function FieldsPage() {
     setOnboardingStatus("creating");
     try {
       // Convert display values to DTO snake_case enums
-      const toSnake = (s: string) => s.toLowerCase().replace(/ /g, "_");
+      const toSnake = (s: string) =>
+        s
+          .toLowerCase()
+          .trim()
+          .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, "")
+          .replace(/\s+/g, "_");
 
       const payload: CreateTurfDto = {
         name: formData.name,
@@ -1642,7 +1734,8 @@ export default function FieldsPage() {
           console.error("KYC upload error:", uploadError);
           showToast({
             title: "Partial Success",
-            description: "Field created but document upload failed. You can upload them later.",
+            description:
+              "Field created but document upload failed. You can upload them later.",
             tone: "warning",
           });
         }
@@ -1977,7 +2070,7 @@ export default function FieldsPage() {
           sportType:
             sportFilter === "All" ? undefined : sportFilter.toLowerCase(),
           city: cityFilter === "All" ? undefined : cityFilter,
-          search: search.trim() || undefined,
+          search: debouncedSearch.trim() || undefined,
           startDate,
           endDate,
         }),
@@ -2017,11 +2110,26 @@ export default function FieldsPage() {
 
   useEffect(() => {
     refreshData();
-  }, [page, limit, statusTab, sportFilter, cityFilter, search, timeFilter]);
+  }, [
+    page,
+    limit,
+    statusTab,
+    sportFilter,
+    cityFilter,
+    debouncedSearch,
+    timeFilter,
+  ]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   useEffect(() => {
     setPage(1);
-  }, [statusTab, sportFilter, cityFilter, search, timeFilter]);
+  }, [statusTab, sportFilter, cityFilter, debouncedSearch, timeFilter]);
 
   const allSports = ["All", ...SPORTS_LIST];
   const allCities = [
@@ -2145,9 +2253,10 @@ export default function FieldsPage() {
                 onChange={(e) => setTimeFilter(e.target.value)}
                 className="bg-transparent text-gray-700 text-xs font-medium outline-none cursor-pointer appearance-none pr-4"
                 style={{
-                  backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
+                  backgroundImage:
+                    "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
                   backgroundRepeat: "no-repeat",
-                  backgroundPosition: "right center"
+                  backgroundPosition: "right center",
                 }}
               >
                 <option value="all">All Time</option>
@@ -2243,7 +2352,8 @@ export default function FieldsPage() {
           <div className="flex gap-1.5 mt-3 flex-wrap">
             {STATUS_TABS.map((tab) => {
               const isActive = statusTab === tab;
-              const sc = tab === "all" ? null : STATUS_CONFIG[tab as FieldStatus];
+              const sc =
+                tab === "all" ? null : STATUS_CONFIG[tab as FieldStatus];
               const count =
                 tab === "all"
                   ? total
@@ -2324,249 +2434,367 @@ export default function FieldsPage() {
                       No fields found.
                     </td>
                   </tr>
-                ) : filtered.map((field, i) => {
-                  const sc =
-                    STATUS_CONFIG[field.status] || STATUS_CONFIG.pending;
-                  const kycStatusValue =
-                    (field as any).kyc?.status ||
-                    field.kycStatus ||
-                    "not_started";
-                  const kyc =
-                    KYC_CFG[kycStatusValue as keyof typeof KYC_CFG] ||
-                    KYC_CFG.not_started;
-                  const KycIcon = kyc.icon;
+                ) : (
+                  filtered.map((field, i) => {
+                    const sc =
+                      STATUS_CONFIG[field.status] || STATUS_CONFIG.pending;
+                    const kycStatusValue =
+                      (field as any).kyc?.status ||
+                      field.kycStatus ||
+                      "not_started";
+                    const kyc =
+                      KYC_CFG[kycStatusValue as keyof typeof KYC_CFG] ||
+                      KYC_CFG.not_started;
+                    const KycIcon = kyc.icon;
 
-                  return (
-                    <tr
-                      key={field.id}
-                      onClick={() => setSelected(field)}
-                      className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
-                        selected?.id === field.id ? "bg-[#8a9e60]/5" : ""
-                      } ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
-                    >
-                      {/* Field */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
-                            style={{ backgroundColor: "#8a9e60" }}
-                          >
-                            {avatar(field.name)}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-800">
-                              {field.name}
-                            </p>
-                            <p className="text-[9px] text-gray-400 font-mono break-all max-w-[120px]">
-                              {field.id}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Vendor */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                            style={{ backgroundColor: "#8a9e60" }}
-                          >
-                            {(
-                              field.vendorBusinessName ||
-                              field.vendor?.businessName ||
-                              "U"
-                            )
-                              .slice(0, 2)
-                              .toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-gray-700 whitespace-nowrap">
-                              {field.vendorBusinessName ||
-                                field.vendor?.businessName ||
-                                "Unknown"}
-                            </p>
-                            <p className="text-[10px] text-gray-400">
-                              {field.vendorPhone || field.vendor?.phone || "-"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Location */}
-                      <td className="px-4 py-3">
-                        <p className="text-xs text-gray-700 font-medium">
-                          {field.address?.city || "-"}
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          {field.address?.state || "-"}
-                        </p>
-                      </td>
-
-                      {/* Sports */}
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1 items-center">
-                          {(field.sports || []).slice(0, 2).map((s) => (
-                            <span
-                              key={s}
-                              className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${SPORT_COLOR[s.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
+                    return (
+                      <tr
+                        key={field.id}
+                        onClick={() => setSelected(field)}
+                        className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
+                          selected?.id === field.id ? "bg-[#8a9e60]/5" : ""
+                        } ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
+                      >
+                        {/* Field */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+                              style={{ backgroundColor: "#8a9e60" }}
                             >
-                              {s.replace(/_/g, " ")}
-                            </span>
-                          ))}
-                          {(field.sports || []).length > 2 && (
-                            <div className="relative group">
-                              <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 cursor-help hover:bg-gray-100 transition-colors">
-                                +{(field.sports || []).length - 2}
-                              </span>
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
-                                <div className="bg-white border border-gray-100 shadow-2xl rounded-xl p-3 min-w-[200px] max-w-[320px]">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                      All Sports Listed
-                                    </p>
-                                    <span className="text-[10px] font-bold text-[#8a9e60]">
-                                      {(field.sports || []).length} Total
-                                    </span>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {(field.sports || []).map((s) => (
-                                      <span
-                                        key={s}
-                                        className={`text-[10px] font-medium px-2 py-0.5 rounded ${SPORT_COLOR[s.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
-                                      >
-                                        {s.replace(/_/g, " ")}
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-gray-100 rotate-45 -mt-1.5" />
-                                </div>
-                              </div>
+                              {avatar(field.name)}
                             </div>
-                          )}
-                        </div>
-                      </td>
+                            <div>
+                              <p className="text-xs font-semibold text-gray-800">
+                                {field.name}
+                              </p>
+                              <p className="text-[9px] text-gray-400 font-mono break-all max-w-[120px]">
+                                {field.id}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
 
-                      {/* Price */}
-                      <td className="px-4 py-3">
-                        <p className="text-xs font-bold text-gray-800">
-                          ₹
-                          {(
-                            (field.standardPricePaise || 0) / 100
-                          ).toLocaleString()}
-                        </p>
-                        <p className="text-[10px] text-gray-400">per hour</p>
-                      </td>
+                        {/* Vendor */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                              style={{ backgroundColor: "#8a9e60" }}
+                            >
+                              {(
+                                field.vendorBusinessName ||
+                                field.vendor?.businessName ||
+                                "U"
+                              )
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                                {field.vendorBusinessName ||
+                                  field.vendor?.businessName ||
+                                  "Unknown"}
+                              </p>
+                              <p className="text-[10px] text-gray-400">
+                                {field.vendorPhone ||
+                                  field.vendor?.phone ||
+                                  "-"}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
 
-                      {/* Rating */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-bold text-gray-800">
-                            {formatRating(field.rating)}
-                          </span>
-                          {(field.rating || 0) > 0 && (
-                            <Star
-                              size={12}
-                              weight="fill"
-                              className="text-amber-400"
-                            />
-                          )}
-                        </div>
-                        <p className="text-[10px] text-gray-400">
-                          {field.totalReviews || 0} review
-                          {(field.totalReviews || 0) === 1 ? "" : "s"}
-                        </p>
-                      </td>
+                        {/* Location */}
+                        <td className="px-4 py-3">
+                          <p className="text-xs text-gray-700 font-medium">
+                            {field.address?.city || "-"}
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            {field.address?.state || "-"}
+                          </p>
+                        </td>
 
-                      {/* Status */}
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${sc.cls}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`}
-                          />
-                          {sc.label}
-                        </span>
-                      </td>
-
-                      {/* KYC */}
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${kyc.cls}`}
-                        >
-                          {KycIcon && <KycIcon size={10} weight="fill" />}
-                          {kyc.label}
-                        </span>
-                      </td>
-
-                      {/* Bookings */}
-                      <td className="px-4 py-3 text-center text-xs font-semibold text-gray-700">
-                        {field.totalBookings || 0}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => setSelected(field)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="View">
-                            <Eye size={14} />
-                          </button>
-                          <button onClick={() => onEdit(field)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Edit">
-                            <PencilSimple size={14} />
-                          </button>
-                          <div className="relative">
-                            <button onClick={() => setActionMenu(actionMenu === field.id ? null : field.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-                              <DotsThreeVertical size={14} />
-                            </button>
-                            {actionMenu === field.id && (
-                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[148px]">
-                                {field.status === "banned" ? (
-                                  <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "unban", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                    <CheckCircle size={13} className="text-green-500" />Unban
-                                  </button>
-                                ) : (
-                                  <>
-                                    <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "ban", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                      <XCircle size={13} className="text-amber-500" />Ban
-                                    </button>
-                                    
-                                    {field.status === "suspended" ? (
-                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "unsuspend", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                        <Check size={13} className="text-blue-500" />Unsuspend
-                                      </button>
-                                    ) : (
-                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "suspend", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                        <Prohibit size={13} className="text-slate-500" />Suspend
-                                      </button>
-                                    )}
-
-                                    {field.status === "maintenance" ? (
-                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "activate", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                        <ArrowsClockwise size={13} className="text-green-500" />End Maintenance
-                                      </button>
-                                    ) : (
-                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "maintenance", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                        <Wrench size={13} className="text-blue-500" />Set Maintenance
-                                      </button>
-                                    )}
-                                  </>
-                                )}
-                                <button onClick={() => { setActionMenu(null); openKycReview(field); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                  <ShieldCheck size={13} className="text-blue-500" />Review KYC
-                                </button>
-                                <div className="border-t border-gray-100 my-1" />
-                                <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "remove", field }); }} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2">
-                                  <Trash size={13} />Remove
-                                </button>
+                        {/* Sports */}
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1 items-center">
+                            {(field.sports || []).slice(0, 2).map((s) => (
+                              <span
+                                key={s}
+                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${SPORT_COLOR[s.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
+                              >
+                                {s.replace(/_/g, " ")}
+                              </span>
+                            ))}
+                            {(field.sports || []).length > 2 && (
+                              <div className="relative group">
+                                <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 cursor-help hover:bg-gray-100 transition-colors">
+                                  +{(field.sports || []).length - 2}
+                                </span>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                                  <div className="bg-white border border-gray-100 shadow-2xl rounded-xl p-3 min-w-[200px] max-w-[320px]">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                        All Sports Listed
+                                      </p>
+                                      <span className="text-[10px] font-bold text-[#8a9e60]">
+                                        {(field.sports || []).length} Total
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {(field.sports || []).map((s) => (
+                                        <span
+                                          key={s}
+                                          className={`text-[10px] font-medium px-2 py-0.5 rounded ${SPORT_COLOR[s.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
+                                        >
+                                          {s.replace(/_/g, " ")}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-gray-100 rotate-45 -mt-1.5" />
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
 
+                        {/* Price */}
+                        <td className="px-4 py-3">
+                          <p className="text-xs font-bold text-gray-800">
+                            ₹
+                            {(
+                              (field.standardPricePaise || 0) / 100
+                            ).toLocaleString()}
+                          </p>
+                          <p className="text-[10px] text-gray-400">per hour</p>
+                        </td>
 
+                        {/* Rating */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-gray-800">
+                              {formatRating(field.rating)}
+                            </span>
+                            {(field.rating || 0) > 0 && (
+                              <Star
+                                size={12}
+                                weight="fill"
+                                className="text-amber-400"
+                              />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-400">
+                            {field.totalReviews || 0} review
+                            {(field.totalReviews || 0) === 1 ? "" : "s"}
+                          </p>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${sc.cls}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`}
+                            />
+                            {sc.label}
+                          </span>
+                        </td>
+
+                        {/* KYC */}
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${kyc.cls}`}
+                          >
+                            {KycIcon && <KycIcon size={10} weight="fill" />}
+                            {kyc.label}
+                          </span>
+                        </td>
+
+                        {/* Bookings */}
+                        <td className="px-4 py-3 text-center text-xs font-semibold text-gray-700">
+                          {field.totalBookings || 0}
+                        </td>
+
+                        {/* Actions */}
+                        <td
+                          className="px-4 py-3"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setSelected(field)}
+                              className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                              title="View"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              onClick={() => onEdit(field)}
+                              className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                              title="Edit"
+                            >
+                              <PencilSimple size={14} />
+                            </button>
+                            <div className="relative">
+                              <button
+                                onClick={() =>
+                                  setActionMenu(
+                                    actionMenu === field.id ? null : field.id,
+                                  )
+                                }
+                                className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                              >
+                                <DotsThreeVertical size={14} />
+                              </button>
+                              {actionMenu === field.id && (
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[148px]">
+                                  {field.status === "banned" ? (
+                                    <button
+                                      onClick={() => {
+                                        setActionMenu(null);
+                                        setConfirmModal({
+                                          type: "unban",
+                                          field,
+                                        });
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                      <CheckCircle
+                                        size={13}
+                                        className="text-green-500"
+                                      />
+                                      Unban
+                                    </button>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setActionMenu(null);
+                                          setConfirmModal({
+                                            type: "ban",
+                                            field,
+                                          });
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                      >
+                                        <XCircle
+                                          size={13}
+                                          className="text-amber-500"
+                                        />
+                                        Ban
+                                      </button>
+
+                                      {field.status === "suspended" ? (
+                                        <button
+                                          onClick={() => {
+                                            setActionMenu(null);
+                                            setConfirmModal({
+                                              type: "unsuspend",
+                                              field,
+                                            });
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                        >
+                                          <Check
+                                            size={13}
+                                            className="text-blue-500"
+                                          />
+                                          Unsuspend
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setActionMenu(null);
+                                            setConfirmModal({
+                                              type: "suspend",
+                                              field,
+                                            });
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                        >
+                                          <Prohibit
+                                            size={13}
+                                            className="text-slate-500"
+                                          />
+                                          Suspend
+                                        </button>
+                                      )}
+
+                                      {field.status === "maintenance" ? (
+                                        <button
+                                          onClick={() => {
+                                            setActionMenu(null);
+                                            setConfirmModal({
+                                              type: "activate",
+                                              field,
+                                            });
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                        >
+                                          <ArrowsClockwise
+                                            size={13}
+                                            className="text-green-500"
+                                          />
+                                          End Maintenance
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setActionMenu(null);
+                                            setConfirmModal({
+                                              type: "maintenance",
+                                              field,
+                                            });
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                        >
+                                          <Wrench
+                                            size={13}
+                                            className="text-blue-500"
+                                          />
+                                          Set Maintenance
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      openKycReview(field);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                  >
+                                    <ShieldCheck
+                                      size={13}
+                                      className="text-blue-500"
+                                    />
+                                    Review KYC
+                                  </button>
+                                  <div className="border-t border-gray-100 my-1" />
+                                  <button
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      setConfirmModal({
+                                        type: "remove",
+                                        field,
+                                      });
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2"
+                                  >
+                                    <Trash size={13} />
+                                    Remove
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -2675,17 +2903,20 @@ export default function FieldsPage() {
                         className={`w-full border ${errors.vendorId ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
                       >
                         <option value="">Select a vendor...</option>
-                        {vendorsList.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.businessName}
-                          </option>
-                        ))}
+                        {vendorsList
+                          .filter((v) => v.status === "active")
+                          .map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.businessName}
+                            </option>
+                          ))}
                       </select>
                       {errors.vendorId && (
-                        <p className="text-[10px] text-red-500 font-medium">{errors.vendorId}</p>
+                        <p className="text-[10px] text-red-500 font-medium">
+                          {errors.vendorId}
+                        </p>
                       )}
                     </div>
-
                   </div>
                 </div>
               )}
@@ -2704,10 +2935,11 @@ export default function FieldsPage() {
                         placeholder="e.g. Turf Arena A"
                       />
                       {errors.name && (
-                        <p className="text-[10px] text-red-500 font-medium">{errors.name}</p>
+                        <p className="text-[10px] text-red-500 font-medium">
+                          {errors.name}
+                        </p>
                       )}
                     </div>
-
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -2738,10 +2970,11 @@ export default function FieldsPage() {
                         })}
                       </div>
                       {errors.sports && (
-                        <p className="text-[10px] text-red-500 font-medium">{errors.sports}</p>
+                        <p className="text-[10px] text-red-500 font-medium">
+                          {errors.sports}
+                        </p>
                       )}
                     </div>
-
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
@@ -2782,10 +3015,11 @@ export default function FieldsPage() {
                           ))}
                         </select>
                         {errors.surface && (
-                          <p className="text-[10px] text-red-500 font-medium">{errors.surface}</p>
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.surface}
+                          </p>
                         )}
                       </div>
-
                     </div>
                   </div>
                 </div>
@@ -2878,10 +3112,11 @@ export default function FieldsPage() {
                           placeholder="Mumbai"
                         />
                         {errors.city && (
-                          <p className="text-[10px] text-red-500 font-medium">{errors.city}</p>
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.city}
+                          </p>
                         )}
                       </div>
-
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
@@ -2904,10 +3139,11 @@ export default function FieldsPage() {
                           ))}
                         </select>
                         {errors.state && (
-                          <p className="text-[10px] text-red-500 font-medium">{errors.state}</p>
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.state}
+                          </p>
                         )}
                       </div>
-
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
@@ -2919,7 +3155,10 @@ export default function FieldsPage() {
                           onChange={(e) =>
                             setFormData((p) => ({
                               ...p,
-                              address: { ...p.address, pinCode: e.target.value },
+                              address: {
+                                ...p.address,
+                                pinCode: e.target.value,
+                              },
                             }))
                           }
                           className={`w-full border ${errors.pinCode ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
@@ -2927,10 +3166,11 @@ export default function FieldsPage() {
                           maxLength={6}
                         />
                         {errors.pinCode && (
-                          <p className="text-[10px] text-red-500 font-medium">{errors.pinCode}</p>
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.pinCode}
+                          </p>
                         )}
                       </div>
-
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
@@ -2942,17 +3182,21 @@ export default function FieldsPage() {
                           onChange={(e) =>
                             setFormData((p) => ({
                               ...p,
-                              address: { ...p.address, country: e.target.value },
+                              address: {
+                                ...p.address,
+                                country: e.target.value,
+                              },
                             }))
                           }
                           className={`w-full border ${errors.country ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
                           placeholder="India"
                         />
                         {errors.country && (
-                          <p className="text-[10px] text-red-500 font-medium">{errors.country}</p>
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.country}
+                          </p>
                         )}
                       </div>
-
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
@@ -2974,10 +3218,11 @@ export default function FieldsPage() {
                           placeholder="Paste maps URL"
                         />
                         {errors.googleMapsLink && (
-                          <p className="text-[10px] text-red-500 font-medium">{errors.googleMapsLink}</p>
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.googleMapsLink}
+                          </p>
                         )}
                       </div>
-
                     </div>
                   </div>
                 </div>
@@ -3003,9 +3248,10 @@ export default function FieldsPage() {
                           className={`w-full border ${errors.pricePerHour ? "border-red-400" : "border-gray-200"} rounded-lg pl-7 pr-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
                         />
                         {errors.pricePerHour && (
-                          <p className="text-[10px] text-red-500 font-medium mt-1">{errors.pricePerHour}</p>
+                          <p className="text-[10px] text-red-500 font-medium mt-1">
+                            {errors.pricePerHour}
+                          </p>
                         )}
-
                       </div>
                     </div>
                     <div>
@@ -3133,8 +3379,9 @@ export default function FieldsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     {KYC_DOCS_FIELD.map((doc) => {
                       const files = onboardKycFiles[doc.key];
-                      const hasFiles =
-                        Array.isArray(files) ? files.length > 0 : !!files;
+                      const hasFiles = Array.isArray(files)
+                        ? files.length > 0
+                        : !!files;
                       const isPhotoField = doc.key === "fieldPhotos";
 
                       return (
@@ -3168,10 +3415,11 @@ export default function FieldsPage() {
                                       onRemove={() => {
                                         setOnboardKycFiles((prev) => {
                                           const next = { ...prev };
-                                          const arr = (next[doc.key] as File[]).filter(
-                                            (_, i) => i !== idx
-                                          );
-                                          if (arr.length === 0) delete next[doc.key];
+                                          const arr = (
+                                            next[doc.key] as File[]
+                                          ).filter((_, i) => i !== idx);
+                                          if (arr.length === 0)
+                                            delete next[doc.key];
                                           else next[doc.key] = arr;
                                           return next;
                                         });
@@ -3202,7 +3450,10 @@ export default function FieldsPage() {
                           )}
 
                           {/* Upload trigger */}
-                          {(!hasFiles || (isPhotoField && Array.isArray(files) && files.length < 5)) && (
+                          {(!hasFiles ||
+                            (isPhotoField &&
+                              Array.isArray(files) &&
+                              files.length < 5)) && (
                             <div
                               onClick={() => {
                                 setUploadingDocKey(doc.key);
@@ -3216,7 +3467,9 @@ export default function FieldsPage() {
                                   className="text-gray-300 group-hover:text-[#8a9e60]"
                                 />
                                 <p className="text-[10px] text-gray-400 group-hover:text-gray-600 font-medium">
-                                  {isPhotoField ? "Add Photo" : "Click to upload"}
+                                  {isPhotoField
+                                    ? "Add Photo"
+                                    : "Click to upload"}
                                 </p>
                               </div>
                             </div>
@@ -3272,7 +3525,6 @@ export default function FieldsPage() {
                     }
                   }
                 }}
-
                 className="flex items-center gap-2 px-6 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: "#8a9e60" }}
               >
@@ -3306,9 +3558,6 @@ export default function FieldsPage() {
             // Also refresh the specific field to avoid stale state in the modal
             try {
               const updated = await getTurfById(kycField.id);
-              if (kycField) {
-                setKycField(updated);
-              }
               if (selected?.id === updated.id) {
                 setSelected(updated);
               }
@@ -3451,83 +3700,83 @@ export default function FieldsPage() {
                       Location / Address
                     </label>
                     <div className="grid grid-cols-2 gap-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                          Address Type *
-                        </label>
-                        <select
-                          value={editForm.address?.type || "other"}
-                          onChange={(e) =>
-                            setEditForm((p) =>
-                              p
-                                ? {
-                                    ...p,
-                                    address: {
-                                      ...p.address!,
-                                      type: e.target.value as any,
-                                    },
-                                  }
-                                : p
-                            )
-                          }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                        >
-                          <option value="home">Home</option>
-                          <option value="work">Work</option>
-                          <option value="other">Other</option>
-                        </select>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            Address Type *
+                          </label>
+                          <select
+                            value={editForm.address?.type || "other"}
+                            onChange={(e) =>
+                              setEditForm((p) =>
+                                p
+                                  ? {
+                                      ...p,
+                                      address: {
+                                        ...p.address!,
+                                        type: e.target.value as any,
+                                      },
+                                    }
+                                  : p,
+                              )
+                            }
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
+                          >
+                            <option value="home">Home</option>
+                            <option value="work">Work</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            House/Plot Number
+                          </label>
+                          <input
+                            value={
+                              editForm.address?.houseNumber ||
+                              (editForm.address as any).plotNumber ||
+                              ""
+                            }
+                            onChange={(e) =>
+                              setEditForm((p) =>
+                                p
+                                  ? {
+                                      ...p,
+                                      address: {
+                                        ...p.address!,
+                                        houseNumber: e.target.value,
+                                      },
+                                    }
+                                  : p,
+                              )
+                            }
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                            placeholder="e.g. Plot 12"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            City *
+                          </label>
+                          <input
+                            value={editForm.address?.city || ""}
+                            onChange={(e) =>
+                              setEditForm((p) =>
+                                p
+                                  ? {
+                                      ...p,
+                                      address: {
+                                        ...p.address!,
+                                        city: e.target.value,
+                                      },
+                                    }
+                                  : p,
+                              )
+                            }
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                          House/Plot Number
-                        </label>
-                        <input
-                          value={
-                            editForm.address?.houseNumber ||
-                            (editForm.address as any).plotNumber ||
-                            ""
-                          }
-                          onChange={(e) =>
-                            setEditForm((p) =>
-                              p
-                                ? {
-                                    ...p,
-                                    address: {
-                                      ...p.address!,
-                                      houseNumber: e.target.value,
-                                    },
-                                  }
-                                : p
-                            )
-                          }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                          placeholder="e.g. Plot 12"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                          City *
-                        </label>
-                        <input
-                          value={editForm.address?.city || ""}
-                          onChange={(e) =>
-                            setEditForm((p) =>
-                              p
-                                ? {
-                                    ...p,
-                                    address: {
-                                      ...p.address!,
-                                      city: e.target.value,
-                                    },
-                                  }
-                                : p
-                            )
-                          }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        />
-                      </div>
-                    </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                           State *
@@ -3615,7 +3864,7 @@ export default function FieldsPage() {
                     </label>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
                           Weekday Open
                         </label>
                         <input
@@ -3626,11 +3875,11 @@ export default function FieldsPage() {
                               p ? { ...p, weekdayOpen: e.target.value } : p,
                             )
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
                           Weekday Close
                         </label>
                         <input
@@ -3641,11 +3890,11 @@ export default function FieldsPage() {
                               p ? { ...p, weekdayClose: e.target.value } : p,
                             )
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
                           Weekend Open
                         </label>
                         <input
@@ -3656,11 +3905,11 @@ export default function FieldsPage() {
                               p ? { ...p, weekendOpen: e.target.value } : p,
                             )
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
                           Weekend Close
                         </label>
                         <input
@@ -3671,7 +3920,7 @@ export default function FieldsPage() {
                               p ? { ...p, weekendClose: e.target.value } : p,
                             )
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         />
                       </div>
                     </div>
@@ -3722,7 +3971,11 @@ export default function FieldsPage() {
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {FACILITIES_LIST.map((f) => {
-                        const slug = f.toLowerCase().replace(/ /g, "_") as any;
+                        const slug = f
+                          .toLowerCase()
+                          .trim()
+                          .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, "")
+                          .replace(/\s+/g, "_") as any;
                         const sel = editForm.amenities?.includes(slug);
                         return (
                           <button
@@ -3788,9 +4041,10 @@ export default function FieldsPage() {
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${
                   confirmModal.type === "remove" || confirmModal.type === "ban"
                     ? "bg-red-50 text-red-600"
-                    : confirmModal.type === "suspend" || confirmModal.type === "maintenance"
-                    ? "bg-amber-50 text-amber-600"
-                    : "bg-green-50 text-green-600"
+                    : confirmModal.type === "suspend" ||
+                        confirmModal.type === "maintenance"
+                      ? "bg-amber-50 text-amber-600"
+                      : "bg-green-50 text-green-600"
                 }`}
               >
                 {confirmModal.type === "remove" ? (
@@ -3806,7 +4060,11 @@ export default function FieldsPage() {
                 )}
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2 capitalize">
-                {confirmModal.type === "activate" || confirmModal.type === "unsuspend" ? "Reactivate" : confirmModal.type} Field
+                {confirmModal.type === "activate" ||
+                confirmModal.type === "unsuspend"
+                  ? "Reactivate"
+                  : confirmModal.type}{" "}
+                Field
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed">
                 Are you sure you want to {confirmModal.type}{" "}
@@ -3826,15 +4084,18 @@ export default function FieldsPage() {
                 className={`flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90 ${
                   confirmModal.type === "remove" || confirmModal.type === "ban"
                     ? "bg-red-500"
-                    : confirmModal.type === "suspend" || confirmModal.type === "maintenance"
-                    ? "bg-amber-500"
-                    : "bg-[#8a9e60]"
+                    : confirmModal.type === "suspend" ||
+                        confirmModal.type === "maintenance"
+                      ? "bg-amber-500"
+                      : "bg-[#8a9e60]"
                 }`}
               >
                 Confirm{" "}
-                {confirmModal.type === "activate" || confirmModal.type === "unsuspend"
+                {confirmModal.type === "activate" ||
+                confirmModal.type === "unsuspend"
                   ? "Reactivation"
-                  : confirmModal.type.charAt(0).toUpperCase() + confirmModal.type.slice(1)}
+                  : confirmModal.type.charAt(0).toUpperCase() +
+                    confirmModal.type.slice(1)}
               </button>
             </div>
           </div>
@@ -3844,7 +4105,7 @@ export default function FieldsPage() {
           ONBOARDING PROGRESS OVERLAY
       ═══════════════════════════════════════════════════════════════════════ */}
       {onboardingStatus !== "idle" && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300"
           style={{
             backgroundColor: "rgba(255, 255, 255, 0.7)",
@@ -3859,10 +4120,10 @@ export default function FieldsPage() {
                 </div>
               ) : (
                 <>
-                  <CircleNotch 
-                    size={80} 
-                    weight="light" 
-                    className="text-[#8a9e60] animate-spin absolute inset-0" 
+                  <CircleNotch
+                    size={80}
+                    weight="light"
+                    className="text-[#8a9e60] animate-spin absolute inset-0"
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-12 h-12 bg-[#8a9e60]/10 rounded-full animate-pulse" />
@@ -3870,37 +4131,52 @@ export default function FieldsPage() {
                 </>
               )}
             </div>
-            
+
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               {onboardingStatus === "creating" && "Creating Field"}
               {onboardingStatus === "uploading" && "Uploading Documents"}
               {onboardingStatus === "finalizing" && "Finalizing KYC"}
               {onboardingStatus === "success" && "Success!"}
             </h2>
-            
+
             <p className="text-sm text-gray-500 leading-relaxed min-h-[40px]">
-              {onboardingStatus === "creating" && "Initializing turf field and venue records..."}
-              {onboardingStatus === "uploading" && "Securely storing property and venue documents..."}
-              {onboardingStatus === "finalizing" && "Linking data and activating the field listing..."}
-              {onboardingStatus === "success" && `Field has been onboarded successfully.`}
+              {onboardingStatus === "creating" &&
+                "Initializing turf field and venue records..."}
+              {onboardingStatus === "uploading" &&
+                "Securely storing property and venue documents..."}
+              {onboardingStatus === "finalizing" &&
+                "Linking data and activating the field listing..."}
+              {onboardingStatus === "success" &&
+                `Field has been onboarded successfully.`}
             </p>
 
             <div className="mt-8 flex justify-center gap-1.5">
-              {[ "creating", "uploading", "finalizing", "success" ].map((step) => {
-                const steps = ["creating", "uploading", "finalizing", "success"];
-                const currentIdx = steps.indexOf(onboardingStatus);
-                const isActive = step === onboardingStatus;
-                const isDone = steps.indexOf(step) < currentIdx;
-                
-                return (
-                  <div 
-                    key={step}
-                    className={`h-1.5 rounded-full transition-all duration-500 ${
-                      isActive ? "w-8 bg-[#8a9e60]" : isDone ? "w-4 bg-[#8a9e60]/40" : "w-1.5 bg-gray-100"
-                    }`}
-                  />
-                );
-              })}
+              {["creating", "uploading", "finalizing", "success"].map(
+                (step) => {
+                  const steps = [
+                    "creating",
+                    "uploading",
+                    "finalizing",
+                    "success",
+                  ];
+                  const currentIdx = steps.indexOf(onboardingStatus);
+                  const isActive = step === onboardingStatus;
+                  const isDone = steps.indexOf(step) < currentIdx;
+
+                  return (
+                    <div
+                      key={step}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                        isActive
+                          ? "w-8 bg-[#8a9e60]"
+                          : isDone
+                            ? "w-4 bg-[#8a9e60]/40"
+                            : "w-1.5 bg-gray-100"
+                      }`}
+                    />
+                  );
+                },
+              )}
             </div>
           </div>
         </div>

@@ -205,6 +205,7 @@ export default function VendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | VendorStatus>("all");
   const [timeFilter, setTimeFilter] = useState<string>("all");
 
@@ -283,7 +284,7 @@ export default function VendorsPage() {
           page,
           limit,
           status: activeTab,
-          search,
+          search: debouncedSearch,
           startDate,
           endDate,
         });
@@ -312,11 +313,26 @@ export default function VendorsPage() {
     return () => {
       active = false;
     };
-  }, [page, limit, activeTab, search, timeFilter, showToast, refreshTrigger]);
+  }, [
+    page,
+    limit,
+    activeTab,
+    debouncedSearch,
+    timeFilter,
+    showToast,
+    refreshTrigger,
+  ]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   useEffect(() => {
     setPage(1);
-  }, [activeTab, search, timeFilter]);
+  }, [activeTab, debouncedSearch, timeFilter]);
 
   useEffect(() => {
     if (selectedVendor) {
@@ -335,7 +351,7 @@ export default function VendorsPage() {
       !q ||
       v.businessName.toLowerCase().includes(q) ||
       v.ownerFullName.toLowerCase().includes(q) ||
-      v.address.city.toLowerCase().includes(q) ||
+      (v.address?.city || "").toLowerCase().includes(q) ||
       v.id.toLowerCase().includes(q);
     return matchTab && matchSearch;
   });
@@ -773,9 +789,10 @@ export default function VendorsPage() {
               onChange={(e) => setTimeFilter(e.target.value)}
               className="bg-transparent text-gray-700 text-xs font-medium outline-none cursor-pointer appearance-none pr-4"
               style={{
-                backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
+                backgroundImage:
+                  "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
                 backgroundRepeat: "no-repeat",
-                backgroundPosition: "right center"
+                backgroundPosition: "right center",
               }}
             >
               <option value="all">All Time</option>
@@ -1020,10 +1037,7 @@ export default function VendorsPage() {
                                   }}
                                   className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                 >
-                                  <XCircle
-                                    size={13}
-                                    className="text-amber-500"
-                                  />
+                                  <XCircle size={13} className="text-red-500" />
                                   Ban
                                 </button>
                               )}
@@ -1055,7 +1069,7 @@ export default function VendorsPage() {
                                   >
                                     <Trash
                                       size={13}
-                                      className="text-gray-400"
+                                      className="text-slate-500"
                                     />
                                     Suspend
                                   </button>
@@ -1286,7 +1300,6 @@ export default function VendorsPage() {
                 </div>
               </div>
 
-
               <div>
                 <p
                   className={`text-[10px] font-bold uppercase tracking-widest mb-3 px-2 py-1 rounded-md inline-block ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-50 text-gray-400"}`}
@@ -1389,7 +1402,7 @@ export default function VendorsPage() {
                     onClick={() =>
                       setConfirmModal({ type: "ban", vendor: selectedVendor })
                     }
-                    className="flex-1 py-2 text-xs font-semibold rounded-lg text-white bg-amber-500 flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 text-xs font-semibold rounded-lg text-white bg-red-600 flex items-center justify-center gap-1.5"
                   >
                     <XCircle size={13} />
                     Ban
@@ -1417,9 +1430,9 @@ export default function VendorsPage() {
                           vendor: selectedVendor,
                         })
                       }
-                      className="flex-1 py-2 text-xs font-semibold border border-gray-200 rounded-lg text-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+                      className="flex-1 py-2 text-xs font-semibold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <Trash size={13} />
+                      <Trash size={13} className="text-slate-500" />
                       Suspend
                     </button>
                   )
@@ -2365,9 +2378,6 @@ export default function VendorsPage() {
             if (!kycVendor) return;
             try {
               const updated = await getVendorById(kycVendor.id);
-              if (kycVendor) {
-                setKycVendor(updated);
-              }
               if (selectedVendor?.id === updated.id) {
                 setSelected(updated);
               }
@@ -2390,18 +2400,14 @@ export default function VendorsPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="p-6 text-center">
               <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${confirmModal.type === "remove" ? "bg-red-50" : confirmModal.type === "suspend" ? "bg-gray-100" : "bg-blue-50"}`}
+                className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${confirmModal.type === "remove" || confirmModal.type === "ban" ? "bg-red-50" : confirmModal.type === "suspend" ? "bg-slate-50" : "bg-blue-50"}`}
               >
-                {confirmModal.type === "remove" ||
-                confirmModal.type === "suspend" ? (
-                  <Trash
-                    size={24}
-                    className={
-                      confirmModal.type === "remove"
-                        ? "text-red-500"
-                        : "text-gray-500"
-                    }
-                  />
+                {confirmModal.type === "remove" ? (
+                  <Trash size={24} className="text-red-500" />
+                ) : confirmModal.type === "suspend" ? (
+                  <Trash size={24} className="text-slate-500" />
+                ) : confirmModal.type === "ban" ? (
+                  <XCircle size={24} className="text-red-500" />
                 ) : confirmModal.type === "unsuspend" ? (
                   <Check size={24} className="text-blue-500" />
                 ) : (
@@ -2461,12 +2467,17 @@ export default function VendorsPage() {
               <button
                 onClick={handleConfirm}
                 className={`flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 ${
-                  confirmModal.type === "remove" ? "bg-red-500" : 
-                  confirmModal.type === "ban" ? "bg-amber-500" : 
-                  confirmModal.type === "suspend" ? "bg-gray-500" : ""
+                  confirmModal.type === "remove"
+                    ? "bg-red-500"
+                    : confirmModal.type === "ban"
+                      ? "bg-red-600"
+                      : confirmModal.type === "suspend"
+                        ? "bg-slate-600"
+                        : ""
                 }`}
                 style={
-                  confirmModal.type === "unban" || confirmModal.type === "unsuspend"
+                  confirmModal.type === "unban" ||
+                  confirmModal.type === "unsuspend"
                     ? { backgroundColor: "#8a9e60" }
                     : {}
                 }
