@@ -30,18 +30,29 @@ export async function openStorageDocument(
     throw new Error("Missing document path");
   }
 
+  const openedWindow = window.open("about:blank", "_blank");
+  if (!openedWindow) {
+    throw new Error("Browser blocked the document tab from opening");
+  }
+  openedWindow.opener = null;
+
   const storagePath = pathOrUrl.startsWith("http")
     ? extractStoragePathFromSupabaseUrl(pathOrUrl)
     : pathOrUrl;
 
-  if (storagePath) {
-    const { signedUrl } = await getSignedViewUrl(storagePath);
-    if (!signedUrl) {
-      throw new Error("Received an empty signed URL");
+  try {
+    if (storagePath) {
+      const { signedUrl } = await getSignedViewUrl(storagePath);
+      if (!signedUrl) {
+        throw new Error("Received an empty signed URL");
+      }
+      openedWindow.location.href = signedUrl;
+      return;
     }
-    window.open(signedUrl, "_blank", "noopener,noreferrer");
-    return;
-  }
 
-  window.open(pathOrUrl, "_blank", "noopener,noreferrer");
+    openedWindow.location.href = pathOrUrl;
+  } catch (error) {
+    openedWindow.close();
+    throw error;
+  }
 }
