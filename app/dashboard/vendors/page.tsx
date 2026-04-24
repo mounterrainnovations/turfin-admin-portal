@@ -695,7 +695,7 @@ export default function VendorsPage() {
           {
             label: "Total Vendors",
             value: String(total),
-            sub: "+3 this month",
+            sub: "All registered",
             icon: Handshake,
             color: "#8a9e60",
           },

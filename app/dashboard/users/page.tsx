@@ -25,8 +25,6 @@ import {
   Trash,
   CaretDown,
   ArrowUpRight,
-  ArrowDownRight,
-  ChartLineUp,
   ArrowLeft,
 } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
@@ -41,100 +39,7 @@ import {
 import { DashboardPagination } from "@/components/DashboardPagination";
 import { useToast } from "@/features/toast/toast-context";
 
-// ── Mock Data ──────────────────────────────────────────────────────────────────
-// Removed hardcoded SEED data
 
-interface RecentBooking {
-  id: string;
-  field: string;
-  vendor: string;
-  date: string;
-  sport: string;
-  amount: number;
-  status: "completed" | "cancelled" | "upcoming" | "no-show";
-}
-
-// ── Mock Data ──────────────────────────────────────────────────────────────────
-const SEED: any[] = [];
-
-const RECENT_BOOKINGS: Record<string, RecentBooking[]> = {
-  "USR-001": [
-    {
-      id: "#BK-0041",
-      field: "Turf Arena A",
-      vendor: "Riaz Sports Complex",
-      date: "Mar 20, 2025",
-      sport: "Football",
-      amount: 1800,
-      status: "completed",
-    },
-    {
-      id: "#BK-0031",
-      field: "Green Zone B",
-      vendor: "GreenZone FC",
-      date: "Mar 15, 2025",
-      sport: "Football",
-      amount: 1400,
-      status: "completed",
-    },
-    {
-      id: "#BK-0019",
-      field: "Premier Court",
-      vendor: "Arena Sports Hub",
-      date: "Mar 08, 2025",
-      sport: "Cricket",
-      amount: 2200,
-      status: "cancelled",
-    },
-    {
-      id: "#BK-0008",
-      field: "Turf Arena A",
-      vendor: "Riaz Sports Complex",
-      date: "Mar 01, 2025",
-      sport: "Football",
-      amount: 1800,
-      status: "completed",
-    },
-  ],
-  "USR-007": [
-    {
-      id: "#BK-0055",
-      field: "Sunrise Main",
-      vendor: "Sunrise Turfs",
-      date: "Mar 21, 2025",
-      sport: "Cricket",
-      amount: 2000,
-      status: "upcoming",
-    },
-    {
-      id: "#BK-0048",
-      field: "Sunrise Main",
-      vendor: "Sunrise Turfs",
-      date: "Mar 18, 2025",
-      sport: "Cricket",
-      amount: 2000,
-      status: "completed",
-    },
-    {
-      id: "#BK-0040",
-      field: "Arena C",
-      vendor: "Arena Sports Hub",
-      date: "Mar 12, 2025",
-      sport: "Football",
-      amount: 1600,
-      status: "completed",
-    },
-    {
-      id: "#BK-0033",
-      field: "Sunrise Main",
-      vendor: "Sunrise Turfs",
-      date: "Mar 06, 2025",
-      sport: "Cricket",
-      amount: 2000,
-      status: "no-show",
-    },
-  ],
-};
 
 // ── Config ─────────────────────────────────────────────────────────────────────
 const statusCfg: Record<
@@ -154,23 +59,6 @@ const statusCfg: Record<
   banned: { label: "Banned", cls: "bg-red-50 text-red-600", dot: "bg-red-500" },
 };
 
-const bkStatusCfg: Record<string, { cls: string }> = {
-  completed: { cls: "bg-green-50 text-green-700" },
-  cancelled: { cls: "bg-red-50 text-red-500" },
-  upcoming: { cls: "bg-blue-50 text-blue-600" },
-  "no-show": { cls: "bg-orange-50 text-orange-600" },
-};
-
-const sportColor: Record<string, string> = {
-  Football: "bg-blue-50 text-blue-600",
-  Cricket: "bg-orange-50 text-orange-600",
-  Tennis: "bg-yellow-50 text-yellow-700",
-  Badminton: "bg-purple-50 text-purple-600",
-  Basketball: "bg-red-50 text-red-600",
-  Hockey: "bg-cyan-50 text-cyan-700",
-  Volleyball: "bg-pink-50 text-pink-600",
-  Kabaddi: "bg-lime-50 text-lime-700",
-};
 
 function avatar(name: string) {
   if (!name) return "??";
@@ -1316,74 +1204,12 @@ export default function UsersPage() {
 
               {detailTab === "bookings" && (
                 <section>
-                  <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-                    Recent Bookings
-                  </h3>
-                  {(RECENT_BOOKINGS[selectedUser.id] ?? []).length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-sm text-gray-400">
-                        No booking history available.
-                      </p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                      <CalendarBlank size={22} className="text-gray-300" />
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {(RECENT_BOOKINGS[selectedUser.id] ?? []).map((bk) => (
-                        <div
-                          key={bk.id}
-                          className="border border-gray-100 rounded-xl p-3.5"
-                        >
-                          <div className="flex items-start justify-between mb-1.5">
-                            <div>
-                              <p className="text-xs font-semibold text-gray-800">
-                                {bk.field}
-                              </p>
-                              <p className="text-[10px] text-gray-400">
-                                {bk.vendor}
-                              </p>
-                            </div>
-                            <span
-                              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${bkStatusCfg[bk.status]?.cls}`}
-                            >
-                              {bk.status}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${sportColor[bk.sport] ?? "bg-gray-100 text-gray-600"}`}
-                              >
-                                {bk.sport}
-                              </span>
-                              <span className="text-[10px] text-gray-400">
-                                {bk.date}
-                              </span>
-                            </div>
-                            <span className="text-xs font-semibold text-gray-700">
-                              ₹{bk.amount.toLocaleString("en-IN")}
-                            </span>
-                          </div>
-                          <p className="text-[9px] text-gray-300 font-mono mt-1.5">
-                            {bk.id}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
-                    {[
-                      {
-                        label: "Total Bookings",
-                        val: "—",
-                        cls: "text-gray-800",
-                      },
-                      { label: "Total Spent", val: "—", cls: "text-[#8a9e60]" },
-                      { label: "Cancel Rate", val: "—", cls: "text-gray-800" },
-                    ].map(({ label, val, cls }) => (
-                      <div key={label}>
-                        <p className={`text-sm font-bold ${cls}`}>{val}</p>
-                        <p className="text-[10px] text-gray-400">{label}</p>
-                      </div>
-                    ))}
+                    <p className="text-sm font-semibold text-gray-400">Booking history not available</p>
+                    <p className="text-xs text-gray-300 mt-1">Bookings backend module is not yet implemented.</p>
                   </div>
                 </section>
               )}
