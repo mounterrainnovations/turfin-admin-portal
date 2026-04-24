@@ -2395,8 +2395,8 @@ export default function FieldsPage() {
 
       {/* Table */}
       <div className="pb-6">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/60">
@@ -2531,7 +2531,7 @@ export default function FieldsPage() {
                                 <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 cursor-help hover:bg-gray-100 transition-colors">
                                   +{(field.sports || []).length - 2}
                                 </span>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-[200]">
                                   <div className="bg-white border border-gray-100 shadow-2xl rounded-xl p-3 min-w-[200px] max-w-[320px]">
                                     <div className="flex items-center justify-between mb-2">
                                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -2649,7 +2649,7 @@ export default function FieldsPage() {
                                 <DotsThreeVertical size={14} />
                               </button>
                               {actionMenu === field.id && (
-                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[148px]">
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[148px]">
                                   {field.status === "banned" ? (
                                     <button
                                       onClick={() => {

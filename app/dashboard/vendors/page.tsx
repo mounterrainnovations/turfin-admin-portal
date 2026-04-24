@@ -868,8 +868,9 @@ export default function VendorsPage() {
       </div>
 
       {/* ── Table ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="overflow-x-auto overflow-y-visible">
+          <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/60">
               {[
@@ -1011,7 +1012,7 @@ export default function VendorsPage() {
                             <DotsThreeVertical size={14} />
                           </button>
                           {actionMenu === v.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[148px]">
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[148px]">
                               {v.status === "banned" ? (
                                 <button
                                   onClick={() => {
@@ -1099,6 +1100,7 @@ export default function VendorsPage() {
             )}
           </tbody>
         </table>
+        </div>
         <DashboardPagination
           page={page}
           total={total}
