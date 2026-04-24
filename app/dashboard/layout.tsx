@@ -32,63 +32,53 @@ const navItems: any[] = [
     label: "Audit Log",
     icon: Scroll,
     href: "/dashboard/audit",
-    requiredPermission: "audit:read",
   },
   { label: "Dashboard", icon: House, href: "/dashboard" },
   {
     label: "Bookings",
     icon: CalendarBlank,
     href: "/dashboard/bookings",
-    requiredPermission: "booking:read",
   },
   {
     label: "Vendors",
     icon: Handshake,
     href: "/dashboard/vendors",
-    requiredPermission: "vendor:read",
   },
   {
     label: "Fields",
     icon: MapPin,
     href: "/dashboard/fields",
-    requiredPermission: "turf:read",
   },
   {
     label: "Users",
     icon: Users,
     href: "/dashboard/users",
-    requiredPermission: "user:read",
   },
   {
     label: "Analytics",
     icon: ChartLineUp,
     href: "/dashboard/analytics",
-    requiredPermission: "analytics:read",
   },
   {
     label: "Notifications",
     icon: BellRinging,
     href: "/dashboard/notifications",
-    requiredPermission: "notification:read",
   },
   {
     label: "App Management",
     icon: DeviceMobile,
     href: "/dashboard/app-management",
-    requiredPermission: "app:write",
   },
-  { label: "Roles", icon: Key, href: "/dashboard/roles", restricted: true },
+  { label: "Roles", icon: Key, href: "/dashboard/roles" },
   {
     label: "Admins",
     icon: ShieldCheck,
     href: "/dashboard/roles/identities",
-    restricted: true,
   },
   {
     label: "Support",
     icon: Ticket,
     href: "/dashboard/support",
-    requiredPermission: "support:read",
   },
   {
     label: "Settings",
@@ -135,41 +125,25 @@ export default function DashboardLayout({
             </div>
 
             <nav className="flex-1 py-4 flex flex-col gap-1 px-2 overflow-y-auto scrollbar-hide min-h-0">
-              {navItems
-                .filter((item) => {
-                  // Super admins see everything
-                  if (session?.role === "super_admin") return true;
-
-                  // Restricted items are only for super admins
-                  if (item.restricted) return false;
-
-                  // If no permission is required, show it
-                  if (!item.requiredPermission) return true;
-
-                  // Check if sub-admin has the required permission
-                  const userPermissions =
-                    (session?.raw as any)?.identity?.permissions || [];
-                  return userPermissions.includes(item.requiredPermission);
-                })
-                .map(({ label, icon: Icon, href, disabled }) => {
-                  const active = pathname === href;
-                  return (
-                    <button
-                      key={href}
-                      disabled={disabled}
-                      onClick={() => !disabled && router.push(href)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left
+              {navItems.map(({ label, icon: Icon, href, disabled }) => {
+                const active = pathname === href;
+                return (
+                  <button
+                    key={href}
+                    disabled={disabled}
+                    onClick={() => !disabled && router.push(href)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full text-left
                   ${disabled ? "opacity-40 cursor-not-allowed" : active ? "bg-white/20 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"}`}
-                    >
-                      <Icon
-                        size={18}
-                        weight={active ? "fill" : "regular"}
-                        className="shrink-0"
-                      />
-                      {open && <span className="truncate">{label}</span>}
-                    </button>
-                  );
-                })}
+                  >
+                    <Icon
+                      size={18}
+                      weight={active ? "fill" : "regular"}
+                      className="shrink-0"
+                    />
+                    {open && <span className="truncate">{label}</span>}
+                  </button>
+                );
+              })}
             </nav>
 
             <div className="p-2 border-t border-white/10">
