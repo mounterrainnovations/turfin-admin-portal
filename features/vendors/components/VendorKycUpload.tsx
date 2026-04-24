@@ -17,6 +17,7 @@ import {
   reviewVendorKyc,
   getSignedViewUrl,
 } from "../api";
+import { openStorageDocument } from "../document-url";
 import { useToast } from "@/features/toast/toast-context";
 import { uploadToStorage } from "../utils";
 
@@ -179,22 +180,11 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     }
 
     try {
-      // If docPath is already a full URL, open it directly
-      if (docPath.startsWith("http")) {
-        window.open(docPath, "_blank");
-        return;
-      }
-
-      const { signedUrl } = await getSignedViewUrl(docPath);
-      if (signedUrl) {
-        window.open(signedUrl, "_blank");
-      } else {
-        throw new Error("Received an empty view URL");
-      }
+      await openStorageDocument(docPath, getSignedViewUrl);
     } catch (err: any) {
       showToast({
         title: "Error",
-        description: "Failed to get view URL",
+        description: err.message || "Failed to get view URL",
         tone: "error",
       });
     }

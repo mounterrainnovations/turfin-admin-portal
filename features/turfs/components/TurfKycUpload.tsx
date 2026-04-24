@@ -14,6 +14,7 @@ import {
 import { Turf, SubmitTurfDocumentsDto, TurfReviewDto } from "../types";
 import { uploadTurfDocuments, reviewTurfDocuments } from "../api";
 import { getSignedViewUrl } from "@/features/vendors/api";
+import { openStorageDocument } from "@/features/vendors/document-url";
 import { useToast } from "@/features/toast/toast-context";
 import { uploadToStorage } from "@/features/vendors/utils";
 
@@ -247,16 +248,11 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
     }
 
     try {
-      if (actualPath.startsWith("http")) {
-        window.open(actualPath, "_blank");
-        return;
-      }
-      const { signedUrl } = await getSignedViewUrl(actualPath);
-      if (signedUrl) window.open(signedUrl, "_blank");
-    } catch (err) {
+      await openStorageDocument(actualPath, getSignedViewUrl);
+    } catch (err: any) {
       showToast({
         title: "Error",
-        description: "Failed to get view URL",
+        description: err.message || "Failed to get view URL",
         tone: "error",
       });
     }
