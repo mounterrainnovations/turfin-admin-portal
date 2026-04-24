@@ -66,6 +66,8 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
   >({});
   const [isSaving, setIsSaving] = useState(false);
 
+  const [localFiles, setLocalFiles] = useState<Record<string, File>>({});
+
   useEffect(() => {
     const verification = vendor.kyc?.verification || vendor.verification || {};
     const docs = resolveVendorDocuments(vendor);
@@ -87,8 +89,12 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
 
     setDocumentPaths((prev) => {
       const next = { ...prev };
-      Object.entries(docs).forEach(([key, path]) => {
-        if (typeof path === "string" && path.trim()) {
+      Object.entries(docs).forEach(([key, val]) => {
+        const path =
+          typeof val === "string"
+            ? val
+            : (val as any)?.path || (val as any)?.url;
+        if (path && typeof path === "string" && path.trim()) {
           next[key] = path;
         }
       });
@@ -106,8 +112,11 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     const file = event.target.files?.[0];
     if (!file || !uploadingDoc) return;
 
+    const docKey = uploadingDoc;
+    // Store locally for immediate preview
+    setLocalFiles((prev) => ({ ...prev, [docKey]: file }));
+
     try {
-      const docKey = uploadingDoc;
       // 1. & 2. Get signed URL & Upload to Storage
       const path = await uploadToStorage(vendor.id, docKey, file, "vendor");
 
@@ -116,11 +125,12 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
         documents: { [docKey]: path } as any,
       });
 
+      // Update state with the string path
       setDocumentPaths((prev) => ({
         ...prev,
-        ...((kycResponse as any)?.documents || {}),
         [docKey]: path,
       }));
+
       setKycDocs((prev) => {
         const next = applyVerificationToStatuses(
           prev,
@@ -150,6 +160,13 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
   };
 
   const handleViewDocument = async (docKey: string) => {
+    const localFile = localFiles[docKey];
+    if (localFile) {
+      const previewUrl = URL.createObjectURL(localFile);
+      window.open(previewUrl, "_blank");
+      return;
+    }
+
     const docPath = documentPaths[docKey];
 
     if (!docPath) {
@@ -417,14 +434,13 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
                     >
                       <XCircle size={13} weight="fill" />
                     </button>
-
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleViewDocument(key)}
-                    disabled={!docPath}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${docPath ? "border-gray-200 text-gray-600 hover:bg-gray-50" : "border-gray-100 text-gray-300 pointer-events-none"}`}
+                    disabled={!docPath && !localFiles[key]}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[10px] font-medium transition-colors ${docPath || localFiles[key] ? "border-gray-200 text-gray-600 hover:bg-gray-50" : "border-gray-100 text-gray-300 pointer-events-none"}`}
                   >
                     <Eye size={12} /> View Document
                   </button>
@@ -479,7 +495,9 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
           </button>
           <button
             onClick={applyKycVerify}
-            disabled={isSaving || !KYC_DOCS.every((d) => kycDocs[d.key] === "verified")}
+            disabled={
+              isSaving || !KYC_DOCS.every((d) => kycDocs[d.key] === "verified")
+            }
             className={`flex-1 min-w-[120px] py-2 text-[10px] font-bold rounded-lg text-white transition-opacity hover:opacity-90 flex items-center justify-center gap-1.5 disabled:opacity-50`}
             style={{ backgroundColor: "#8a9e60" }}
           >
