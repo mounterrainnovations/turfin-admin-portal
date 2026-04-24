@@ -61,6 +61,15 @@ function isRecord(v: any): v is Record<string, any> {
   return typeof v === "object" && v !== null;
 }
 
+function extractObject(payload: any): any {
+  if (!isRecord(payload)) return payload;
+  const candidates = ["item", "data", "result", "vendor"];
+  for (const key of candidates) {
+    if (isRecord(payload[key])) return payload[key];
+  }
+  return payload;
+}
+
 function extractItems(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
   if (!isRecord(payload)) return [];
@@ -91,6 +100,8 @@ export async function listVendors(
     limit?: number;
     status?: string;
     search?: string;
+    startDate?: string;
+    endDate?: string;
   } = {},
 ): Promise<VendorListResult> {
   const url = new URL(`${getApiUrl()}/admin/vendors`);
@@ -99,6 +110,8 @@ export async function listVendors(
   if (params.status && params.status !== "all")
     url.searchParams.set("status", params.status);
   if (params.search) url.searchParams.set("search", params.search);
+  if (params.startDate) url.searchParams.set("startDate", params.startDate);
+  if (params.endDate) url.searchParams.set("endDate", params.endDate);
 
   const response = await authenticatedFetch(url.toString(), {
     cache: "no-store",
@@ -142,7 +155,8 @@ export async function getVendorById(vendorId: string): Promise<Vendor> {
       cache: "no-store",
     },
   );
-  const v = await handleResponse(response);
+  const payload = await handleResponse(response);
+  const v = extractObject(payload);
   // Normalize to same shape as listVendors so components always see consistent data
   return {
     ...v,
@@ -214,6 +228,26 @@ export async function banVendor(vendorId: string): Promise<void> {
 export async function unbanVendor(vendorId: string): Promise<void> {
   const response = await authenticatedFetch(
     `${getApiUrl()}/admin/vendors/${vendorId}/unban`,
+    {
+      method: "POST",
+    },
+  );
+  await handleResponse(response);
+}
+
+export async function suspendVendor(vendorId: string): Promise<void> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}/suspend`,
+    {
+      method: "POST",
+    },
+  );
+  await handleResponse(response);
+}
+
+export async function unsuspendVendor(vendorId: string): Promise<void> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}/unsuspend`,
     {
       method: "POST",
     },
