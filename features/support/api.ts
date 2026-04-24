@@ -56,7 +56,7 @@ const formatDate = (dateStr: string) => {
 
 export async function getAllTickets(): Promise<SupportTicketWithDetails[]> {
   const response = await authenticatedFetch(
-    `${getApiUrl()}/admin/support/tickets`,
+    `${getApiUrl()}/admin/support/tickets?limit=1000`,
     { cache: "no-store" },
   );
   const payload = await handleResponse(response);
