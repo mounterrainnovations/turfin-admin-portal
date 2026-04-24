@@ -206,6 +206,7 @@ export default function VendorsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | VendorStatus>("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
 
   const [selectedVendor, setSelected] = useState<Vendor | null>(null);
   const [actionMenu, setActionMenu] = useState<string | null>(null);
@@ -262,11 +263,29 @@ export default function VendorsPage() {
     async function load() {
       setIsLoading(true);
       try {
+        let startDate: string | undefined;
+        let endDate: string | undefined;
+        if (timeFilter !== "all") {
+          const end = new Date();
+          const start = new Date();
+          if (timeFilter === "today") {
+            start.setHours(0, 0, 0, 0);
+          } else if (timeFilter === "last7") {
+            start.setDate(end.getDate() - 7);
+          } else if (timeFilter === "last30") {
+            start.setDate(end.getDate() - 30);
+          }
+          startDate = start.toISOString();
+          endDate = end.toISOString();
+        }
+
         const res = await listVendors({
           page,
           limit,
           status: activeTab,
           search,
+          startDate,
+          endDate,
         });
 
         if (!active) return;
@@ -293,11 +312,11 @@ export default function VendorsPage() {
     return () => {
       active = false;
     };
-  }, [page, limit, activeTab, search, showToast, refreshTrigger]);
+  }, [page, limit, activeTab, search, timeFilter, showToast, refreshTrigger]);
 
   useEffect(() => {
     setPage(1);
-  }, [activeTab, search]);
+  }, [activeTab, search, timeFilter]);
 
   useEffect(() => {
     if (selectedVendor) {
@@ -740,6 +759,26 @@ export default function VendorsPage() {
               placeholder="Search vendors, owners, cities…"
               className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
             />
+          </div>
+
+          {/* Time Filter */}
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+            <CalendarBlank size={14} className="text-gray-400 shrink-0" />
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="bg-transparent text-gray-700 text-xs font-medium outline-none cursor-pointer appearance-none pr-4"
+              style={{
+                backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right center"
+              }}
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="last7">Last 7 Days</option>
+              <option value="last30">Last 30 Days</option>
+            </select>
           </div>
 
           {/* Pending KYC badge */}

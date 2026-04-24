@@ -18,6 +18,7 @@ import {
   Eye,
   ArrowsClockwise,
   Buildings,
+  CalendarBlank,
   Phone,
   Envelope,
   CaretDown,
@@ -1431,6 +1432,7 @@ export default function FieldsPage() {
   const [statusTab, setStatusTab] = useState("all");
   const [sportFilter, setSportFilter] = useState("All");
   const [cityFilter, setCityFilter] = useState("All");
+  const [timeFilter, setTimeFilter] = useState("all");
   const [sportOpen, setSportOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [selected, setSelected] = useState<Turf | null>(null);
@@ -1950,6 +1952,22 @@ export default function FieldsPage() {
   const refreshData = async () => {
     setLoading(true);
     try {
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      if (timeFilter !== "all") {
+        const end = new Date();
+        const start = new Date();
+        if (timeFilter === "today") {
+          start.setHours(0, 0, 0, 0);
+        } else if (timeFilter === "last7") {
+          start.setDate(end.getDate() - 7);
+        } else if (timeFilter === "last30") {
+          start.setDate(end.getDate() - 30);
+        }
+        startDate = start.toISOString();
+        endDate = end.toISOString();
+      }
+
       const [res, vRes] = await Promise.all([
         listTurfs({
           page,
@@ -1959,6 +1977,8 @@ export default function FieldsPage() {
             sportFilter === "All" ? undefined : sportFilter.toLowerCase(),
           city: cityFilter === "All" ? undefined : cityFilter,
           search: search.trim() || undefined,
+          startDate,
+          endDate,
         }),
         listVendors({ limit: 100 }),
       ]);
@@ -1996,11 +2016,11 @@ export default function FieldsPage() {
 
   useEffect(() => {
     refreshData();
-  }, [page, limit, statusTab, sportFilter, cityFilter, search]);
+  }, [page, limit, statusTab, sportFilter, cityFilter, search, timeFilter]);
 
   useEffect(() => {
     setPage(1);
-  }, [statusTab, sportFilter, cityFilter, search]);
+  }, [statusTab, sportFilter, cityFilter, search, timeFilter]);
 
   const allSports = ["All", ...SPORTS_LIST];
   const allCities = [
@@ -2114,6 +2134,26 @@ export default function FieldsPage() {
                 placeholder="Search fields, vendors, cities..."
                 className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
               />
+            </div>
+
+            {/* Time Filter */}
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+              <CalendarBlank size={14} className="text-gray-400 shrink-0" />
+              <select
+                value={timeFilter}
+                onChange={(e) => setTimeFilter(e.target.value)}
+                className="bg-transparent text-gray-700 text-xs font-medium outline-none cursor-pointer appearance-none pr-4"
+                style={{
+                  backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right center"
+                }}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="last7">Last 7 Days</option>
+                <option value="last30">Last 30 Days</option>
+              </select>
             </div>
 
             {/* Sport filter */}

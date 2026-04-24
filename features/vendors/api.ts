@@ -100,6 +100,8 @@ export async function listVendors(
     limit?: number;
     status?: string;
     search?: string;
+    startDate?: string;
+    endDate?: string;
   } = {},
 ): Promise<VendorListResult> {
   const url = new URL(`${getApiUrl()}/admin/vendors`);
@@ -108,6 +110,8 @@ export async function listVendors(
   if (params.status && params.status !== "all")
     url.searchParams.set("status", params.status);
   if (params.search) url.searchParams.set("search", params.search);
+  if (params.startDate) url.searchParams.set("startDate", params.startDate);
+  if (params.endDate) url.searchParams.set("endDate", params.endDate);
 
   const response = await authenticatedFetch(url.toString(), {
     cache: "no-store",
