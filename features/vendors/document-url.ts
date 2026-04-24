@@ -22,7 +22,14 @@ function extractStoragePathFromSupabaseUrl(urlValue: string): string | null {
   }
 }
 
-export async function openStorageDocument(
+export function isPreviewableImageUrl(url: string) {
+  const cleanUrl = url.split("?")[0].toLowerCase();
+  return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"].some((ext) =>
+    cleanUrl.endsWith(ext),
+  );
+}
+
+export async function resolveStorageDocumentUrl(
   pathOrUrl: string,
   getSignedViewUrl: (path: string) => Promise<{ signedUrl: string }>,
 ) {
@@ -30,29 +37,18 @@ export async function openStorageDocument(
     throw new Error("Missing document path");
   }
 
-  const openedWindow = window.open("about:blank", "_blank");
-  if (!openedWindow) {
-    throw new Error("Browser blocked the document tab from opening");
-  }
-  openedWindow.opener = null;
-
   const storagePath = pathOrUrl.startsWith("http")
     ? extractStoragePathFromSupabaseUrl(pathOrUrl)
     : pathOrUrl;
 
-  try {
-    if (storagePath) {
-      const { signedUrl } = await getSignedViewUrl(storagePath);
-      if (!signedUrl) {
-        throw new Error("Received an empty signed URL");
-      }
-      openedWindow.location.href = signedUrl;
-      return;
-    }
-
-    openedWindow.location.href = pathOrUrl;
-  } catch (error) {
-    openedWindow.close();
-    throw error;
+  if (!storagePath) {
+    return pathOrUrl;
   }
+
+  const { signedUrl } = await getSignedViewUrl(storagePath);
+  if (!signedUrl) {
+    throw new Error("Received an empty signed URL");
+  }
+
+  return signedUrl;
 }

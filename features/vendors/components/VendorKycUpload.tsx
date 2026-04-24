@@ -17,9 +17,10 @@ import {
   reviewVendorKyc,
   getSignedViewUrl,
 } from "../api";
-import { openStorageDocument } from "../document-url";
+import { resolveStorageDocumentUrl } from "../document-url";
 import { useToast } from "@/features/toast/toast-context";
 import { uploadToStorage } from "../utils";
+import { DocumentPreviewModal } from "./DocumentPreviewModal";
 
 interface VendorKycUploadProps {
   vendor: Vendor;
@@ -66,6 +67,10 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     Partial<Record<string, string>>
   >({});
   const [isSaving, setIsSaving] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<{
+    title: string;
+    url: string;
+  } | null>(null);
 
   const [localFiles, setLocalFiles] = useState<Record<string, File>>({});
 
@@ -163,8 +168,10 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
   const handleViewDocument = async (docKey: string) => {
     const localFile = localFiles[docKey];
     if (localFile) {
-      const previewUrl = URL.createObjectURL(localFile);
-      window.open(previewUrl, "_blank");
+      setPreviewDoc({
+        title: KYC_DOCS.find((doc) => doc.key === docKey)?.label || "Document",
+        url: URL.createObjectURL(localFile),
+      });
       return;
     }
 
@@ -180,7 +187,14 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
     }
 
     try {
-      await openStorageDocument(docPath, getSignedViewUrl);
+      const resolvedUrl = await resolveStorageDocumentUrl(
+        docPath,
+        getSignedViewUrl,
+      );
+      setPreviewDoc({
+        title: KYC_DOCS.find((doc) => doc.key === docKey)?.label || "Document",
+        url: resolvedUrl,
+      });
     } catch (err: any) {
       showToast({
         title: "Error",
@@ -335,14 +349,15 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        backgroundColor: "rgba(0,0,0,0.55)",
-        backdropFilter: "blur(4px)",
-      }}
-    >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{
+          backgroundColor: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -495,7 +510,20 @@ export const VendorKycUpload: React.FC<VendorKycUploadProps> = ({
             Verify KYC
           </button>
         </div>
+        </div>
       </div>
-    </div>
+      {previewDoc ? (
+        <DocumentPreviewModal
+          title={previewDoc.title}
+          url={previewDoc.url}
+          onClose={() => {
+            if (previewDoc.url.startsWith("blob:")) {
+              URL.revokeObjectURL(previewDoc.url);
+            }
+            setPreviewDoc(null);
+          }}
+        />
+      ) : null}
+    </>
   );
 };

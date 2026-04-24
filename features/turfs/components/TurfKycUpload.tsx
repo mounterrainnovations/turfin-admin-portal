@@ -14,9 +14,10 @@ import {
 import { Turf, SubmitTurfDocumentsDto, TurfReviewDto } from "../types";
 import { uploadTurfDocuments, reviewTurfDocuments } from "../api";
 import { getSignedViewUrl } from "@/features/vendors/api";
-import { openStorageDocument } from "@/features/vendors/document-url";
+import { resolveStorageDocumentUrl } from "@/features/vendors/document-url";
 import { useToast } from "@/features/toast/toast-context";
 import { uploadToStorage } from "@/features/vendors/utils";
+import { DocumentPreviewModal } from "@/features/vendors/components/DocumentPreviewModal";
 
 const KYC_DOCS_FIELD = [
   {
@@ -95,6 +96,10 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
   const [documentPaths, setDocumentPaths] = useState<Record<string, any>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [localFiles, setLocalFiles] = useState<Record<string, any>>({});
+  const [previewDoc, setPreviewDoc] = useState<{
+    title: string;
+    url: string;
+  } | null>(null);
 
   useEffect(() => {
     const verification = turf.kyc?.verification || turf.verification;
@@ -227,8 +232,10 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
     if (!path) return;
 
     if (path instanceof File) {
-      const previewUrl = URL.createObjectURL(path);
-      window.open(previewUrl, "_blank");
+      setPreviewDoc({
+        title: "Document Preview",
+        url: URL.createObjectURL(path),
+      });
       return;
     }
 
@@ -248,7 +255,14 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
     }
 
     try {
-      await openStorageDocument(actualPath, getSignedViewUrl);
+      const resolvedUrl = await resolveStorageDocumentUrl(
+        actualPath,
+        getSignedViewUrl,
+      );
+      setPreviewDoc({
+        title: "Document Preview",
+        url: resolvedUrl,
+      });
     } catch (err: any) {
       showToast({
         title: "Error",
@@ -400,14 +414,15 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        backgroundColor: "rgba(0,0,0,0.55)",
-        backdropFilter: "blur(4px)",
-      }}
-    >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden max-h-[90vh]">
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{
+          backgroundColor: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden max-h-[90vh]">
         <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -614,7 +629,20 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
             Verify KYC
           </button>
         </div>
+        </div>
       </div>
-    </div>
+      {previewDoc ? (
+        <DocumentPreviewModal
+          title={previewDoc.title}
+          url={previewDoc.url}
+          onClose={() => {
+            if (previewDoc.url.startsWith("blob:")) {
+              URL.revokeObjectURL(previewDoc.url);
+            }
+            setPreviewDoc(null);
+          }}
+        />
+      ) : null}
+    </>
   );
 };
