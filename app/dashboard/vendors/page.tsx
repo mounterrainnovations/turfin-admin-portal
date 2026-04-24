@@ -40,6 +40,8 @@ import {
   banVendor,
   unbanVendor,
   deleteVendor,
+  suspendVendor,
+  unsuspendVendor,
   reviewVendorKyc,
   uploadVendorKycByAdmin,
   getUploadUrl,
@@ -59,8 +61,12 @@ import {
   KYC_DOCS,
   KycFileActions,
 } from "@/features/vendors";
-import { uploadToStorage, performSequentialUploads } from "@/features/vendors/utils";
+import {
+  uploadToStorage,
+  performSequentialUploads,
+} from "@/features/vendors/utils";
 import { DashboardPagination } from "@/components/DashboardPagination";
+import { TableRowsSkeleton } from "@/components/LoadingSkeleton";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -170,6 +176,8 @@ const INIT_FORM = {
   },
   payoutCycle: "weekly" as PayoutCycle,
   commissionPct: "10",
+  phonePrefix: "+91",
+  whatsappPrefix: "+91",
   identityProof: "",
   addressProof: "",
   businessRegistration: "",
@@ -198,6 +206,8 @@ export default function VendorsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | VendorStatus>("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
+
   const [selectedVendor, setSelected] = useState<Vendor | null>(null);
   const [actionMenu, setActionMenu] = useState<string | null>(null);
 
@@ -213,9 +223,13 @@ export default function VendorsPage() {
   const [onboardKycFiles, setOnboardKycFiles] = useState<
     Partial<Record<KycDocKey, File>>
   >({});
-  const [uploadingDocKey, setUploadingDocKey] = useState<KycDocKey | null>(null);
+  const [uploadingDocKey, setUploadingDocKey] = useState<KycDocKey | null>(
+    null,
+  );
   const onboardingFileInputRef = useRef<HTMLInputElement>(null);
-  const [onboardingStatus, setOnboardingStatus] = useState<"idle" | "creating" | "uploading" | "finalizing" | "success">("idle");
+  const [onboardingStatus, setOnboardingStatus] = useState<
+    "idle" | "creating" | "uploading" | "finalizing" | "success"
+  >("idle");
 
   // Edit modal
   const [editVendor, setEditVendor] = useState<Vendor | null>(null);
@@ -227,11 +241,15 @@ export default function VendorsPage() {
   // KYC review modal
   const [kycVendor, setKycVendor] = useState<Vendor | null>(null);
 
+  // Validation
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   // Confirm modal
   const [confirmModal, setConfirmModal] = useState<{
-    type: "ban" | "unban" | "remove";
+    type: "ban" | "unban" | "suspend" | "unsuspend" | "remove";
     vendor: Vendor;
   } | null>(null);
+
   const [banReason, setBanReason] = useState("");
 
   const { showToast } = useToast();
@@ -245,11 +263,29 @@ export default function VendorsPage() {
     async function load() {
       setIsLoading(true);
       try {
+        let startDate: string | undefined;
+        let endDate: string | undefined;
+        if (timeFilter !== "all") {
+          const end = new Date();
+          const start = new Date();
+          if (timeFilter === "today") {
+            start.setHours(0, 0, 0, 0);
+          } else if (timeFilter === "last7") {
+            start.setDate(end.getDate() - 7);
+          } else if (timeFilter === "last30") {
+            start.setDate(end.getDate() - 30);
+          }
+          startDate = start.toISOString();
+          endDate = end.toISOString();
+        }
+
         const res = await listVendors({
           page,
           limit,
           status: activeTab,
           search,
+          startDate,
+          endDate,
         });
 
         if (!active) return;
@@ -276,11 +312,11 @@ export default function VendorsPage() {
     return () => {
       active = false;
     };
-  }, [page, limit, activeTab, search, showToast, refreshTrigger]);
+  }, [page, limit, activeTab, search, timeFilter, showToast, refreshTrigger]);
 
   useEffect(() => {
     setPage(1);
-  }, [activeTab, search]);
+  }, [activeTab, search, timeFilter]);
 
   useEffect(() => {
     if (selectedVendor) {
@@ -335,6 +371,110 @@ export default function VendorsPage() {
     setOnboardKycFiles({});
     setUploadingDocKey(null);
     setBanReason("");
+    setErrors({});
+  };
+
+  const validateVendorStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (step === 1) {
+      if (!formData.businessName.trim())
+        newErrors.businessName = "Business name is required";
+      if (!formData.ownerFullName.trim())
+        newErrors.ownerFullName = "Owner name is required";
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!formData.email.trim()) {
+        newErrors.email = "Email is required";
+      } else if (!emailRegex.test(formData.email)) {
+        newErrors.email = "Invalid email format";
+      }
+
+      // Phone validation
+      if (!formData.phone.trim()) {
+        newErrors.phone = "Phone number is required";
+      } else if (!/^\d{10}$/.test(formData.phone)) {
+        newErrors.phone = "Must be exactly 10 digits";
+      }
+
+      // WhatsApp validation
+      if (formData.whatsapp && !/^\d{10}$/.test(formData.whatsapp)) {
+        newErrors.whatsapp = "Must be exactly 10 digits";
+      }
+
+      // GST validation
+      if (formData.gstNumber && !/^[0-9A-Z]{15}$/i.test(formData.gstNumber)) {
+        newErrors.gstNumber = "Must be 15 alphanumeric characters";
+      }
+
+      // Registration Number
+      if (
+        formData.businessRegistrationNumber &&
+        !/^[0-9A-Z]+$/i.test(formData.businessRegistrationNumber)
+      ) {
+        newErrors.businessRegistrationNumber = "Must be alphanumeric";
+      }
+
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+      } else if (formData.password.length < 8) {
+        newErrors.password = "Minimum 8 characters required";
+      }
+    }
+
+    if (step === 2) {
+      if (!formData.address.city.trim()) newErrors.city = "City is required";
+      if (!formData.address.state) newErrors.state = "State is required";
+
+      if (!formData.address.pinCode.trim()) {
+        newErrors.pinCode = "PIN code is required";
+      } else if (!/^\d{6}$/.test(formData.address.pinCode)) {
+        newErrors.pinCode = "Must be 6 digits";
+      }
+
+      if (formData.address.googleMapsLink) {
+        try {
+          new URL(formData.address.googleMapsLink);
+        } catch {
+          newErrors.googleMapsLink = "Invalid URL";
+        }
+      }
+    }
+
+    if (step === 3) {
+      if (!formData.bankingDetails.bankName.trim())
+        newErrors.bankName = "Bank name is required";
+      if (!formData.bankingDetails.accountHolderName.trim())
+        newErrors.accountHolderName = "Account holder is required";
+
+      if (!formData.bankingDetails.accountNumber.trim()) {
+        newErrors.accountNumber = "Account number is required";
+      } else if (!/^\d{9,18}$/.test(formData.bankingDetails.accountNumber)) {
+        newErrors.accountNumber = "Must be 9 to 18 digits";
+      }
+
+      if (!formData.bankingDetails.ifsc.trim()) {
+        newErrors.ifsc = "IFSC code is required";
+      } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.bankingDetails.ifsc)) {
+        newErrors.ifsc = "Invalid IFSC format (e.g. ABCD0123456)";
+      }
+
+      if (
+        formData.bankingDetails.upiId &&
+        !formData.bankingDetails.upiId.includes("@")
+      ) {
+        newErrors.upiId = "Invalid UPI ID";
+      }
+
+      const comm = parseFloat(formData.commissionPct);
+      if (isNaN(comm) || comm < 0 || comm > 100) {
+        newErrors.commissionPct = "Must be between 0 and 100";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleOnboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -344,7 +484,8 @@ export default function VendorsPage() {
       setField(uploadingDocKey, file.name);
     }
     setUploadingDocKey(null);
-    if (onboardingFileInputRef.current) onboardingFileInputRef.current.value = "";
+    if (onboardingFileInputRef.current)
+      onboardingFileInputRef.current.value = "";
   };
 
   const submitOnboard = async () => {
@@ -358,8 +499,10 @@ export default function VendorsPage() {
           businessName: formData.businessName,
           businessType: formData.businessType,
           ownerFullName: formData.ownerFullName,
-          phone: formData.phone,
-          whatsapp: formData.whatsapp || undefined,
+          phone: `${formData.phonePrefix}${formData.phone}`,
+          whatsapp: formData.whatsapp
+            ? `${formData.whatsappPrefix}${formData.whatsapp}`
+            : undefined,
           gstNumber: formData.gstNumber || undefined,
           businessRegistrationNumber:
             formData.businessRegistrationNumber || undefined,
@@ -395,7 +538,7 @@ export default function VendorsPage() {
           const s3Paths = await performSequentialUploads(
             vendorId,
             onboardKycFiles,
-            "vendor"
+            "vendor",
           );
 
           // 3. Finalize KYC with backend
@@ -407,7 +550,8 @@ export default function VendorsPage() {
           console.error("KYC upload error:", uploadError);
           showToast({
             title: "Partial Success",
-            description: "Vendor created but document upload failed. You can upload them later.",
+            description:
+              "Vendor created but document upload failed. You can upload them later.",
             tone: "warning",
           });
         }
@@ -419,7 +563,7 @@ export default function VendorsPage() {
         description: `${formData.businessName} onboarded successfully.`,
         tone: "success",
       });
-      
+
       // Delay closing to show success state for a moment
       setTimeout(() => {
         closeOnboard();
@@ -514,7 +658,22 @@ export default function VendorsPage() {
           description: `${vendor.businessName} has been unbanned.`,
           tone: "success",
         });
+      } else if (type === "suspend") {
+        await suspendVendor(vendor.id);
+        showToast({
+          title: "Suspended",
+          description: `${vendor.businessName} has been suspended.`,
+          tone: "warning",
+        });
+      } else if (type === "unsuspend") {
+        await unsuspendVendor(vendor.id);
+        showToast({
+          title: "Reactivated",
+          description: `${vendor.businessName} has been unsuspended.`,
+          tone: "success",
+        });
       }
+
       setConfirmModal(null);
       setBanReason("");
       refreshData();
@@ -545,23 +704,28 @@ export default function VendorsPage() {
             value: String(activeCount),
             sub: `${total ? Math.round((activeCount / total) * 100) : 0}% of total`,
             icon: CheckCircle,
-            color: "#6e8245",
+            color: "#15803d", // green-700
+            bgColor: "#f0fdf4", // green-50
           },
+
           {
             label: "Pending KYC",
             value: String(pendingKyc),
             sub: "Needs attention",
             icon: ShieldCheck,
-            color: "#c4953a",
+            color: "#b45309", // amber-700
+            bgColor: "#fffbeb", // amber-50
           },
+
           {
             label: "Platform Revenue",
             value: `₹${totalRevenue.toLocaleString("en-IN")}`,
             sub: "This month",
             icon: CurrencyDollar,
             color: "#8a9e60",
+            bgColor: "#f4f7ed",
           },
-        ].map(({ label, value, sub, icon: Icon, color }) => (
+        ].map(({ label, value, sub, icon: Icon, color, bgColor }) => (
           <div
             key={label}
             className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100"
@@ -572,7 +736,7 @@ export default function VendorsPage() {
               </span>
               <div
                 className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                style={{ backgroundColor: color + "18" }}
+                style={{ backgroundColor: bgColor || color + "18" }}
               >
                 <Icon size={16} weight="fill" style={{ color }} />
               </div>
@@ -597,6 +761,26 @@ export default function VendorsPage() {
             />
           </div>
 
+          {/* Time Filter */}
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+            <CalendarBlank size={14} className="text-gray-400 shrink-0" />
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="bg-transparent text-gray-700 text-xs font-medium outline-none cursor-pointer appearance-none pr-4"
+              style={{
+                backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right center"
+              }}
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="last7">Last 7 Days</option>
+              <option value="last30">Last 30 Days</option>
+            </select>
+          </div>
+
           {/* Pending KYC badge */}
           {pendingKyc > 0 && (
             <div className="ml-auto flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs font-semibold text-amber-700">
@@ -618,42 +802,47 @@ export default function VendorsPage() {
 
         {/* Status tabs — pill style */}
         <div className="flex gap-1.5 mt-3 flex-wrap">
-          {(["all", "active", "pending", "banned"] as const).map((tab) => {
-            const count =
-              tab === "all"
-                ? total
-                : vendors.filter((v) => (v.status as any) === tab).length;
-            // Note: Local count is only for items in current page. In a full system,
-            // we'd use metadata from the API for each status.
-            return (
-              <button
-                key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  setPage(1);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  activeTab === tab
-                    ? "text-white"
-                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                }`}
-                style={activeTab === tab ? { backgroundColor: "#8a9e60" } : {}}
-              >
-                {tab === "all"
-                  ? "All Vendors"
-                  : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                    activeTab === tab
-                      ? "bg-white/20 text-white"
-                      : "bg-gray-200 text-gray-500"
+          {(["all", "active", "pending", "suspended", "banned"] as const).map(
+            (tab) => {
+              const count =
+                tab === "all"
+                  ? total
+                  : vendors.filter((v) => (v.status as any) === tab).length;
+
+              const isActive = activeTab === tab;
+              const sc = tab === "all" ? null : STATUS_CFG[tab as VendorStatus];
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                    isActive
+                      ? tab === "all"
+                        ? "bg-[#8a9e60] text-white"
+                        : `${sc?.cls}`
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100"
                   }`}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                  {tab === "all"
+                    ? "All Vendors"
+                    : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {isActive && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold animate-in fade-in zoom-in duration-200 ${
+                        tab === "all" ? "bg-white/20 text-white" : "bg-black/5"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            },
+          )}
         </div>
       </div>
 
@@ -666,8 +855,7 @@ export default function VendorsPage() {
                 "Vendor",
                 "Contact",
                 "Location",
-                "Fields",
-                "Sports",
+                // "Fields",
                 "Status",
                 "KYC",
                 "Revenue",
@@ -683,10 +871,12 @@ export default function VendorsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <TableRowsSkeleton rows={limit} cols={7} />
+            ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={7}
                   className="px-4 py-12 text-center text-sm text-gray-400"
                 >
                   No vendors found.
@@ -709,7 +899,10 @@ export default function VendorsPage() {
                       selectedVendor?.id === v.id ? "bg-[#8a9e60]/5" : ""
                     } ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
                   >
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      className="px-4 py-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex items-center gap-3">
                         <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
@@ -739,26 +932,13 @@ export default function VendorsPage() {
                         {v.address?.state || "—"}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-xs font-semibold text-gray-700 text-center">
-                      {v.fields?.length || 0}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {(v.sports || []).slice(0, 2).map((s) => (
-                          <span
-                            key={s}
-                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${SPORT_COLOR[s] ?? "bg-gray-100 text-gray-600"}`}
-                          >
-                            {s}
-                          </span>
-                        ))}
-                        {(v.sports || []).length > 2 && (
-                          <span className="text-[10px] text-gray-400">
-                            +{(v.sports || []).length - 2}
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                    {/* <td className="px-4 py-3 text-center">
+                      <span
+                        className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-[10px] font-bold transition-colors ${sc?.cls || "bg-gray-50 text-gray-400"}`}
+                      >
+                        {v.fields?.length || 0}
+                      </span>
+                    </td> */}
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${sc.cls}`}
@@ -843,6 +1023,40 @@ export default function VendorsPage() {
                                   Ban
                                 </button>
                               )}
+                              {v.status === "suspended" ? (
+                                <button
+                                  onClick={() => {
+                                    setActionMenu(null);
+                                    setConfirmModal({
+                                      type: "unsuspend",
+                                      vendor: v,
+                                    });
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Check size={13} className="text-blue-500" />
+                                  Unsuspend
+                                </button>
+                              ) : (
+                                v.status !== "banned" && (
+                                  <button
+                                    onClick={() => {
+                                      setActionMenu(null);
+                                      setConfirmModal({
+                                        type: "suspend",
+                                        vendor: v,
+                                      });
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                  >
+                                    <Trash
+                                      size={13}
+                                      className="text-gray-400"
+                                    />
+                                    Suspend
+                                  </button>
+                                )
+                              )}
                               <button
                                 onClick={() => {
                                   setActionMenu(null);
@@ -855,20 +1069,6 @@ export default function VendorsPage() {
                                   className="text-blue-500"
                                 />
                                 Review KYC
-                              </button>
-                              <div className="border-t border-gray-100 my-1" />
-                              <button
-                                onClick={() => {
-                                  setActionMenu(null);
-                                  setConfirmModal({
-                                    type: "remove",
-                                    vendor: v,
-                                  });
-                                }}
-                                className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2"
-                              >
-                                <Trash size={13} />
-                                Remove
                               </button>
                             </div>
                           )}
@@ -909,8 +1109,17 @@ export default function VendorsPage() {
           />
           <div className="w-[420px] bg-white h-full flex flex-col shadow-2xl overflow-hidden border-l border-gray-100">
             <div
-              className="shrink-0 px-5 py-4 flex items-start justify-between"
-              style={{ background: "linear-gradient(135deg,#8a9e60,#6e8245)" }}
+              className="shrink-0 px-5 py-4 flex items-start justify-between transition-colors duration-500"
+              style={{
+                background:
+                  selectedVendor.status === "active"
+                    ? "linear-gradient(135deg,#8a9e60,#6e8245)"
+                    : selectedVendor.status === "pending"
+                      ? "linear-gradient(135deg,#fbbf24,#d97706)"
+                      : selectedVendor.status === "suspended"
+                        ? "linear-gradient(135deg,#64748b,#475569)"
+                        : "linear-gradient(135deg,#ef4444,#b91c1c)",
+              }}
             >
               <div className="flex-1 min-w-0 pr-3">
                 <p className="text-white/60 text-[11px] font-medium mb-0.5">
@@ -925,19 +1134,18 @@ export default function VendorsPage() {
                       {selectedVendor.businessName}
                     </h2>
                     <p className="text-white/60 text-[11px] mt-0.5 flex items-center gap-1 leading-relaxed">
-                      <MapPin size={10} /> {selectedVendor.address?.city || "—"},{" "}
-                      {selectedVendor.address?.state || "—"}
+                      <MapPin size={10} /> {selectedVendor.address?.city || "—"}
+                      , {selectedVendor.address?.state || "—"}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-white/10 text-white border-white/20"
-                  >
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-white/10 text-white border-white/20">
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${STATUS_CFG[selectedVendor.status]?.dot || "bg-white/70"}`}
                     />
-                    {(STATUS_CFG[selectedVendor.status]?.label ||
+                    {(
+                      STATUS_CFG[selectedVendor.status]?.label ||
                       selectedVendor.status
                     ).toUpperCase()}
                   </span>
@@ -959,12 +1167,12 @@ export default function VendorsPage() {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                {/* <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className="text-lg font-bold text-gray-800">
                     {selectedVendor.fields?.length || 0}
                   </p>
                   <p className="text-[10px] text-gray-400">fields</p>
-                </div>
+                </div> */}
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className="text-lg font-bold text-gray-800">
                     {selectedVendor.commissionPct}%
@@ -982,9 +1190,12 @@ export default function VendorsPage() {
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                <p
+                  className={`text-[10px] font-bold uppercase tracking-widest mb-3 px-2 py-1 rounded-md inline-block ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-50 text-gray-400"}`}
+                >
                   Contact
                 </p>
+
                 <div className="space-y-2.5">
                   {[
                     {
@@ -1023,9 +1234,12 @@ export default function VendorsPage() {
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                <p
+                  className={`text-[10px] font-bold uppercase tracking-widest mb-3 px-2 py-1 rounded-md inline-block ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-50 text-gray-400"}`}
+                >
                   Location
                 </p>
+
                 <div className="bg-gray-50 rounded-xl p-3.5">
                   <p className="text-sm font-semibold text-gray-800">
                     {selectedVendor.address?.houseNumber || "—"}{" "}
@@ -1042,14 +1256,17 @@ export default function VendorsPage() {
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                <p
+                  className={`text-[10px] font-bold uppercase tracking-widest mb-3 px-2 py-1 rounded-md inline-block ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-50 text-gray-400"}`}
+                >
                   Business
                 </p>
+
                 <div className="space-y-2.5">
                   {[
                     ["Business Type", selectedVendor.businessType || "—"],
                     ["Payout Cycle", selectedVendor.payoutCycle || "—"],
-                    ["Surface", selectedVendor.fields?.[0]?.surfaceType || "—"],
+                    // ["Surface", selectedVendor.fields?.[0]?.surfaceType || "—"],
                     ["GST Number", selectedVendor.gstNumber || "—"],
                   ].map(([label, value]) => (
                     <div
@@ -1065,32 +1282,14 @@ export default function VendorsPage() {
                 </div>
               </div>
 
-              <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Sports
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(selectedVendor.sports || []).length > 0 ? (
-                    (selectedVendor.sports || []).map((s) => (
-                      <span
-                        key={s}
-                        className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${SPORT_COLOR[s] ?? "bg-gray-100 text-gray-600"}`}
-                      >
-                        {s}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[11px] text-gray-300 italic">
-                      No sports listed
-                    </span>
-                  )}
-                </div>
-              </div>
 
               <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                <p
+                  className={`text-[10px] font-bold uppercase tracking-widest mb-3 px-2 py-1 rounded-md inline-block ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-50 text-gray-400"}`}
+                >
                   Facilities
                 </p>
+
                 <div className="flex flex-wrap gap-1.5">
                   {(selectedVendor.facilities || []).length > 0 ? (
                     (selectedVendor.facilities || []).map((f) => (
@@ -1110,9 +1309,12 @@ export default function VendorsPage() {
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                <p
+                  className={`text-[10px] font-bold uppercase tracking-widest mb-3 px-2 py-1 rounded-md inline-block ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-50 text-gray-400"}`}
+                >
                   KYC Documents
                 </p>
+
                 <div className="space-y-2">
                   {KYC_DOCS.map((doc) => {
                     const vVal = selectedVendor.verification?.[doc.key];
@@ -1189,15 +1391,35 @@ export default function VendorsPage() {
                     Ban
                   </button>
                 )}
-                <button
-                  onClick={() =>
-                    setConfirmModal({ type: "remove", vendor: selectedVendor })
-                  }
-                  className="flex-1 py-2 text-xs font-semibold border border-red-200 rounded-lg text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Trash size={13} />
-                  Remove
-                </button>
+                {selectedVendor.status === "suspended" ? (
+                  <button
+                    onClick={() =>
+                      setConfirmModal({
+                        type: "unsuspend",
+                        vendor: selectedVendor,
+                      })
+                    }
+                    className="flex-1 py-2 text-xs font-semibold border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Check size={13} />
+                    Unsuspend
+                  </button>
+                ) : (
+                  selectedVendor.status !== "banned" && (
+                    <button
+                      onClick={() =>
+                        setConfirmModal({
+                          type: "suspend",
+                          vendor: selectedVendor,
+                        })
+                      }
+                      className="flex-1 py-2 text-xs font-semibold border border-gray-200 rounded-lg text-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Trash size={13} />
+                      Suspend
+                    </button>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -1320,20 +1542,50 @@ export default function VendorsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {BUSINESS_FIELDS.map(
-                      ({ key, label, placeholder, type }) => (
-                        <div key={key}>
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            {label}
-                          </label>
-                          <input
-                            type={type}
-                            value={formData[key]}
-                            onChange={(e) => setField(key, e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                            placeholder={placeholder}
-                          />
-                        </div>
-                      ),
+                      ({ key, label, placeholder, type }) => {
+                        const isPhone = key === "phone" || key === "whatsapp";
+                        const prefixKey =
+                          key === "phone" ? "phonePrefix" : "whatsappPrefix";
+                        return (
+                          <div key={key}>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                              {label}
+                            </label>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex gap-2">
+                                {isPhone && (
+                                  <input
+                                    value={
+                                      formData[
+                                        prefixKey as keyof FormData
+                                      ] as string
+                                    }
+                                    onChange={(e) =>
+                                      setField(prefixKey as any, e.target.value)
+                                    }
+                                    className="w-16 border border-gray-200 rounded-lg px-2 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-gray-50"
+                                    placeholder="+91"
+                                  />
+                                )}
+                                <input
+                                  type={type}
+                                  value={formData[key] as string}
+                                  onChange={(e) =>
+                                    setField(key, e.target.value)
+                                  }
+                                  className={`flex-1 border ${errors[key] ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                                  placeholder={placeholder}
+                                />
+                              </div>
+                              {errors[key] && (
+                                <p className="text-[10px] text-red-500 font-medium">
+                                  {errors[key]}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      },
                     )}
                   </div>
                   <div className="border-t border-gray-100 pt-4">
@@ -1345,13 +1597,22 @@ export default function VendorsPage() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                           Login Password *
                         </label>
-                        <input
-                          type="password"
-                          value={formData.password}
-                          onChange={(e) => setField("password", e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                          placeholder="Min. 8 characters"
-                        />
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="password"
+                            value={formData.password}
+                            onChange={(e) =>
+                              setField("password", e.target.value)
+                            }
+                            className={`w-full border ${errors.password ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                            placeholder="Min. 8 characters"
+                          />
+                          {errors.password && (
+                            <p className="text-[10px] text-red-500 font-medium">
+                              {errors.password}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1418,58 +1679,86 @@ export default function VendorsPage() {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         City *
                       </label>
-                      <input
-                        value={formData.address.city}
-                        onChange={(e) =>
-                          setAddressField("city", e.target.value)
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="Mumbai"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.city}
+                          onChange={(e) =>
+                            setAddressField("city", e.target.value)
+                          }
+                          className={`w-full border ${errors.city ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="Mumbai"
+                        />
+                        {errors.city && (
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.city}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         State *
                       </label>
-                      <select
-                        value={formData.address.state}
-                        onChange={(e) =>
-                          setAddressField("state", e.target.value)
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                      >
-                        <option value="">Select state</option>
-                        {STATES_LIST.map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={formData.address.state}
+                          onChange={(e) =>
+                            setAddressField("state", e.target.value)
+                          }
+                          className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
+                        >
+                          <option value="">Select state</option>
+                          {STATES_LIST.map((s) => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                        {errors.state && (
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.state}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Pincode *
                       </label>
-                      <input
-                        value={formData.address.pinCode}
-                        onChange={(e) =>
-                          setAddressField("pinCode", e.target.value)
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="400001"
-                        maxLength={6}
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.pinCode}
+                          onChange={(e) =>
+                            setAddressField("pinCode", e.target.value)
+                          }
+                          className={`w-full border ${errors.pinCode ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="400001"
+                          maxLength={6}
+                        />
+                        {errors.pinCode && (
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.pinCode}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Google Maps Link
                       </label>
-                      <input
-                        value={formData.address.googleMapsLink}
-                        onChange={(e) =>
-                          setAddressField("googleMapsLink", e.target.value)
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="Paste maps URL"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.googleMapsLink}
+                          onChange={(e) =>
+                            setAddressField("googleMapsLink", e.target.value)
+                          }
+                          className={`w-full border ${errors.googleMapsLink ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="Paste maps URL"
+                        />
+                        {errors.googleMapsLink && (
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.googleMapsLink}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1489,47 +1778,62 @@ export default function VendorsPage() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                           {label}
                         </label>
-                        <input
-                          value={
-                            formData.bankingDetails[
-                              key as keyof typeof formData.bankingDetails
-                            ]
-                          }
-                          onChange={(e) =>
-                            setBankField(
-                              key as any,
-                              key === "ifsc"
-                                ? e.target.value.toUpperCase()
-                                : e.target.value,
-                            )
-                          }
-                          className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] ${mono ? "font-mono" : ""}`}
-                          placeholder={placeholder}
-                        />
+                        <div className="flex flex-col gap-1">
+                          <input
+                            value={
+                              formData.bankingDetails[
+                                key as keyof typeof formData.bankingDetails
+                              ]
+                            }
+                            onChange={(e) =>
+                              setBankField(
+                                key as any,
+                                key === "ifsc"
+                                  ? e.target.value.toUpperCase()
+                                  : e.target.value,
+                              )
+                            }
+                            className={`w-full border ${errors[key] ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] ${mono ? "font-mono" : ""}`}
+                            placeholder={placeholder}
+                          />
+                          {errors[key] && (
+                            <p className="text-[10px] text-red-500 font-medium">
+                              {errors[key]}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ))}
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Commission % *
                       </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={0}
-                          max={30}
-                          value={formData.commissionPct}
-                          onChange={(e) =>
-                            setField("commissionPct", e.target.value)
-                          }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-8 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        />
-                        <Percent
-                          size={13}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
+                      <div className="flex flex-col gap-1">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={formData.commissionPct}
+                            onChange={(e) =>
+                              setField("commissionPct", e.target.value)
+                            }
+                            className={`w-full border ${errors.commissionPct ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 pr-8 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          />
+                          <Percent
+                            size={13}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          />
+                        </div>
+                        {errors.commissionPct && (
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.commissionPct}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Payout Cycle *
@@ -1670,11 +1974,13 @@ export default function VendorsPage() {
                 {onboardStep === 1 ? "Cancel" : "Back"}
               </button>
               <button
-                onClick={() =>
-                  onboardStep < 4
-                    ? setOnboardStep((s) => s + 1)
-                    : submitOnboard()
-                }
+                onClick={() => {
+                  if (validateVendorStep(onboardStep)) {
+                    onboardStep < 4
+                      ? setOnboardStep((s) => s + 1)
+                      : submitOnboard();
+                  }
+                }}
                 className="flex items-center gap-2 px-6 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: "#8a9e60" }}
               >
@@ -1887,7 +2193,7 @@ export default function VendorsPage() {
 
               {editTab === "turf" && (
                 <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Number of Fields
@@ -1904,22 +2210,7 @@ export default function VendorsPage() {
                         {editForm.fields?.[0]?.surfaceType || "—"}
                       </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                      Sports Offered
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {(editForm.sports || []).map((s) => (
-                        <span
-                          key={s}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  </div> */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Facilities
@@ -2094,27 +2385,50 @@ export default function VendorsPage() {
         >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-                {confirmModal.type === "remove" ? (
-                  <Trash size={24} className="text-red-500" />
+              <div
+                className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${confirmModal.type === "remove" ? "bg-red-50" : confirmModal.type === "suspend" ? "bg-gray-100" : "bg-blue-50"}`}
+              >
+                {confirmModal.type === "remove" ||
+                confirmModal.type === "suspend" ? (
+                  <Trash
+                    size={24}
+                    className={
+                      confirmModal.type === "remove"
+                        ? "text-red-500"
+                        : "text-gray-500"
+                    }
+                  />
+                ) : confirmModal.type === "unsuspend" ? (
+                  <Check size={24} className="text-blue-500" />
                 ) : (
                   <WarningCircle size={24} className="text-amber-500" />
                 )}
               </div>
+
               <h3 className="text-base font-bold text-gray-800 mb-1">
                 {confirmModal.type === "remove"
                   ? "Remove Vendor?"
-                  : confirmModal.type === "ban"
-                    ? "Ban Vendor?"
-                    : "Unban Vendor?"}
+                  : confirmModal.type === "suspend"
+                    ? "Suspend Vendor?"
+                    : confirmModal.type === "unsuspend"
+                      ? "Unsuspend Vendor?"
+                      : confirmModal.type === "ban"
+                        ? "Ban Vendor?"
+                        : "Unban Vendor?"}
               </h3>
+
               <p className="text-sm text-gray-500 mb-4">
                 {confirmModal.type === "remove"
                   ? `${confirmModal.vendor.businessName} will be permanently removed from the platform. This action cannot be undone.`
-                  : confirmModal.type === "ban"
-                    ? `${confirmModal.vendor.businessName} will be banned and their listings will go offline.`
-                    : `${confirmModal.vendor.businessName} will be unbanned and their listings will go live.`}
+                  : confirmModal.type === "suspend"
+                    ? `${confirmModal.vendor.businessName} will be suspended. They won't be able to receive new bookings or manage their turfs until reactivated.`
+                    : confirmModal.type === "unsuspend"
+                      ? `${confirmModal.vendor.businessName} will be reactivated and can resume operations.`
+                      : confirmModal.type === "ban"
+                        ? `${confirmModal.vendor.businessName} will be banned and their listings will go offline.`
+                        : `${confirmModal.vendor.businessName} will be unbanned and their listings will go live.`}
               </p>
+
               {confirmModal.type === "ban" && (
                 <div className="mb-4">
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
@@ -2142,18 +2456,26 @@ export default function VendorsPage() {
               </button>
               <button
                 onClick={handleConfirm}
-                className={`flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 ${confirmModal.type === "remove" ? "bg-red-500" : confirmModal.type === "ban" ? "bg-amber-500" : ""}`}
+                className={`flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 ${
+                  confirmModal.type === "remove" ? "bg-red-500" : 
+                  confirmModal.type === "ban" ? "bg-amber-500" : 
+                  confirmModal.type === "suspend" ? "bg-gray-500" : ""
+                }`}
                 style={
-                  confirmModal.type === "unban"
+                  confirmModal.type === "unban" || confirmModal.type === "unsuspend"
                     ? { backgroundColor: "#8a9e60" }
                     : {}
                 }
               >
                 {confirmModal.type === "remove"
                   ? "Yes, Remove"
-                  : confirmModal.type === "ban"
-                    ? "Ban"
-                    : "Unban"}
+                  : confirmModal.type === "suspend"
+                    ? "Suspend"
+                    : confirmModal.type === "unsuspend"
+                      ? "Unsuspend"
+                      : confirmModal.type === "ban"
+                        ? "Ban"
+                        : "Unban"}
               </button>
             </div>
           </div>
@@ -2163,7 +2485,7 @@ export default function VendorsPage() {
           ONBOARDING PROGRESS OVERLAY
       ═══════════════════════════════════════════════════════════════════════ */}
       {onboardingStatus !== "idle" && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300"
           style={{
             backgroundColor: "rgba(255, 255, 255, 0.7)",
@@ -2178,10 +2500,10 @@ export default function VendorsPage() {
                 </div>
               ) : (
                 <>
-                  <CircleNotch 
-                    size={80} 
-                    weight="light" 
-                    className="text-[#8a9e60] animate-spin absolute inset-0" 
+                  <CircleNotch
+                    size={80}
+                    weight="light"
+                    className="text-[#8a9e60] animate-spin absolute inset-0"
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-12 h-12 bg-[#8a9e60]/10 rounded-full animate-pulse" />
@@ -2189,37 +2511,52 @@ export default function VendorsPage() {
                 </>
               )}
             </div>
-            
+
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               {onboardingStatus === "creating" && "Creating Profile"}
               {onboardingStatus === "uploading" && "Uploading Files"}
               {onboardingStatus === "finalizing" && "Finalizing KYC"}
               {onboardingStatus === "success" && "Success!"}
             </h2>
-            
+
             <p className="text-sm text-gray-500 leading-relaxed min-h-[40px]">
-              {onboardingStatus === "creating" && "Initializing vendor identity and business records..."}
-              {onboardingStatus === "uploading" && "Securely storing KYC documents in cloud storage..."}
-              {onboardingStatus === "finalizing" && "Linking data and activating the vendor account..."}
-              {onboardingStatus === "success" && `${formData.businessName} has been onboarded successfully.`}
+              {onboardingStatus === "creating" &&
+                "Initializing vendor identity and business records..."}
+              {onboardingStatus === "uploading" &&
+                "Securely storing KYC documents in cloud storage..."}
+              {onboardingStatus === "finalizing" &&
+                "Linking data and activating the vendor account..."}
+              {onboardingStatus === "success" &&
+                `${formData.businessName} has been onboarded successfully.`}
             </p>
 
             <div className="mt-8 flex justify-center gap-1.5">
-              {[ "creating", "uploading", "finalizing", "success" ].map((step, idx) => {
-                const steps = ["creating", "uploading", "finalizing", "success"];
-                const currentIdx = steps.indexOf(onboardingStatus);
-                const isActive = step === onboardingStatus;
-                const isDone = steps.indexOf(step) < currentIdx;
-                
-                return (
-                  <div 
-                    key={step}
-                    className={`h-1.5 rounded-full transition-all duration-500 ${
-                      isActive ? "w-8 bg-[#8a9e60]" : isDone ? "w-4 bg-[#8a9e60]/40" : "w-1.5 bg-gray-100"
-                    }`}
-                  />
-                );
-              })}
+              {["creating", "uploading", "finalizing", "success"].map(
+                (step, idx) => {
+                  const steps = [
+                    "creating",
+                    "uploading",
+                    "finalizing",
+                    "success",
+                  ];
+                  const currentIdx = steps.indexOf(onboardingStatus);
+                  const isActive = step === onboardingStatus;
+                  const isDone = steps.indexOf(step) < currentIdx;
+
+                  return (
+                    <div
+                      key={step}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                        isActive
+                          ? "w-8 bg-[#8a9e60]"
+                          : isDone
+                            ? "w-4 bg-[#8a9e60]/40"
+                            : "w-1.5 bg-gray-100"
+                      }`}
+                    />
+                  );
+                },
+              )}
             </div>
           </div>
         </div>

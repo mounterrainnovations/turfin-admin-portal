@@ -18,6 +18,7 @@ import {
   Eye,
   ArrowsClockwise,
   Buildings,
+  CalendarBlank,
   Phone,
   Envelope,
   CaretDown,
@@ -55,6 +56,7 @@ import {
   uploadTurfDocuments,
 } from "@/features/turfs";
 import { DashboardPagination } from "@/components/DashboardPagination";
+import { TableRowsSkeleton } from "@/components/LoadingSkeleton";
 import {
   listVendors,
   Vendor,
@@ -106,20 +108,14 @@ const SURFACE_LIST = [
   "Synthetic",
 ];
 const STATES_LIST = [
-  "Maharashtra",
-  "Karnataka",
-  "Delhi",
-  "Gujarat",
-  "Tamil Nadu",
-  "Telangana",
-  "West Bengal",
-  "Rajasthan",
-  "Uttar Pradesh",
-  "Punjab",
-  "Kerala",
-  "Haryana",
-  "Madhya Pradesh",
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
+  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", 
+  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", 
+  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
 ];
+
 
 const ONBOARD_STEPS = [
   "Vendor Info",
@@ -1436,6 +1432,7 @@ export default function FieldsPage() {
   const [statusTab, setStatusTab] = useState("all");
   const [sportFilter, setSportFilter] = useState("All");
   const [cityFilter, setCityFilter] = useState("All");
+  const [timeFilter, setTimeFilter] = useState("all");
   const [sportOpen, setSportOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [selected, setSelected] = useState<Turf | null>(null);
@@ -1443,7 +1440,7 @@ export default function FieldsPage() {
 
   // Confirm modal
   const [confirmModal, setConfirmModal] = useState<{
-    type: "ban" | "unban" | "remove";
+    type: "ban" | "unban" | "remove" | "suspend" | "unsuspend" | "maintenance" | "activate";
     field: Turf;
   } | null>(null);
 
@@ -1474,7 +1471,9 @@ export default function FieldsPage() {
   const [uploadingDocKey, setUploadingDocKey] = useState<
     FieldKycDocKey | null
   >(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const onboardingFileInputRef = useRef<HTMLInputElement>(null);
+
 
   // KYC review modal
   const [kycField, setKycField] = useState<Turf | null>(null);
@@ -1498,7 +1497,53 @@ export default function FieldsPage() {
     setOnboardStep(1);
     setFormData({ ...INIT_FORM });
     setOnboardKycFiles({});
+    setErrors({});
   };
+
+  const validateTurfStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (step === 1) {
+      if (!formData.vendorId) newErrors.vendorId = "Vendor is required";
+    }
+
+    if (step === 2) {
+      if (!formData.name.trim()) newErrors.name = "Field name is required";
+      if (formData.sports.length === 0) newErrors.sports = "Select at least one sport";
+      if (!formData.surface) newErrors.surface = "Surface type is required";
+    }
+
+    if (step === 3) {
+      if (!formData.address.city.trim()) newErrors.city = "City is required";
+      if (!formData.address.state) newErrors.state = "State is required";
+      if (!formData.address.country.trim()) newErrors.country = "Country is required";
+      
+      if (!formData.address.pinCode.trim()) {
+        newErrors.pinCode = "PIN code is required";
+      } else if (!/^\d{6}$/.test(formData.address.pinCode)) {
+        newErrors.pinCode = "Must be 6 digits";
+      }
+
+      if (formData.address.googleMapsLink) {
+        try {
+          new URL(formData.address.googleMapsLink);
+        } catch {
+          newErrors.googleMapsLink = "Invalid URL";
+        }
+      }
+    }
+
+    if (step === 4) {
+      const price = parseFloat(formData.pricePerHour);
+      if (isNaN(price) || price <= 0) {
+        newErrors.pricePerHour = "Price must be greater than 0";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
 
   const handleOnboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const key = uploadingDocKey;
@@ -1834,6 +1879,34 @@ export default function FieldsPage() {
           description: `${field.name} has been unbanned.`,
           tone: "success",
         });
+      } else if (type === "suspend") {
+        await updateTurfStatus(field.id, "suspended");
+        showToast({
+          title: "Suspended",
+          description: `${field.name} has been suspended.`,
+          tone: "warning",
+        });
+      } else if (type === "unsuspend") {
+        await updateTurfStatus(field.id, "active");
+        showToast({
+          title: "Reactivated",
+          description: `${field.name} is now active.`,
+          tone: "success",
+        });
+      } else if (type === "maintenance") {
+        await updateTurfStatus(field.id, "maintenance");
+        showToast({
+          title: "Maintenance Mode",
+          description: `${field.name} is now under maintenance.`,
+          tone: "warning",
+        });
+      } else if (type === "activate") {
+        await updateTurfStatus(field.id, "active");
+        showToast({
+          title: "Reactivated",
+          description: `${field.name} is now active.`,
+          tone: "success",
+        });
       }
       setConfirmModal(null);
       refreshData();
@@ -1874,10 +1947,27 @@ export default function FieldsPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [maintCount, setMaintCount] = useState(0);
   const [suspendedCount, setSuspendedCount] = useState(0);
+  const [bannedCount, setBannedCount] = useState(0);
 
   const refreshData = async () => {
     setLoading(true);
     try {
+      let startDate: string | undefined;
+      let endDate: string | undefined;
+      if (timeFilter !== "all") {
+        const end = new Date();
+        const start = new Date();
+        if (timeFilter === "today") {
+          start.setHours(0, 0, 0, 0);
+        } else if (timeFilter === "last7") {
+          start.setDate(end.getDate() - 7);
+        } else if (timeFilter === "last30") {
+          start.setDate(end.getDate() - 30);
+        }
+        startDate = start.toISOString();
+        endDate = end.toISOString();
+      }
+
       const [res, vRes] = await Promise.all([
         listTurfs({
           page,
@@ -1887,6 +1977,8 @@ export default function FieldsPage() {
             sportFilter === "All" ? undefined : sportFilter.toLowerCase(),
           city: cityFilter === "All" ? undefined : cityFilter,
           search: search.trim() || undefined,
+          startDate,
+          endDate,
         }),
         listVendors({ limit: 100 }),
       ]);
@@ -1903,6 +1995,7 @@ export default function FieldsPage() {
       setSuspendedCount(
         res.items.filter((f) => f.status === "suspended").length,
       );
+      setBannedCount(res.items.filter((f) => f.status === "banned").length);
     } catch (err: any) {
       const isAuthError =
         err.message === "Unauthorized" ||
@@ -1923,11 +2016,11 @@ export default function FieldsPage() {
 
   useEffect(() => {
     refreshData();
-  }, [page, limit, statusTab, sportFilter, cityFilter, search]);
+  }, [page, limit, statusTab, sportFilter, cityFilter, search, timeFilter]);
 
   useEffect(() => {
     setPage(1);
-  }, [statusTab, sportFilter, cityFilter, search]);
+  }, [statusTab, sportFilter, cityFilter, search, timeFilter]);
 
   const allSports = ["All", ...SPORTS_LIST];
   const allCities = [
@@ -1953,13 +2046,14 @@ export default function FieldsPage() {
   });
 
   const STATUS_TABS = [
-    { key: "all", label: "All", count: total },
-    { key: "active", label: "Active", count: activeCount },
-    { key: "inactive", label: "Inactive", count: inactiveCount },
-    { key: "pending", label: "Pending", count: pendingCount },
-    { key: "maintenance", label: "Maintenance", count: maintCount },
-    { key: "suspended", label: "Suspended", count: suspendedCount },
-  ];
+    "all",
+    "active",
+    "inactive",
+    "pending",
+    "maintenance",
+    "suspended",
+    "banned",
+  ] as const;
 
   const STAT_CARDS = [
     {
@@ -2000,9 +2094,9 @@ export default function FieldsPage() {
   ];
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="px-6 py-5 space-y-5">
       {/* Stat cards + filters */}
-      <div className="p-6 pb-0 shrink-0">
+      <div>
         {/* Stat cards */}
         <div className="grid grid-cols-5 gap-4 mb-5">
           {STAT_CARDS.map(({ label, value, sub, color, Icon }) => (
@@ -2034,11 +2128,32 @@ export default function FieldsPage() {
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-64">
               <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
               <input
+                id="field-search-input"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search fields, vendors, cities..."
                 className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
               />
+            </div>
+
+            {/* Time Filter */}
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+              <CalendarBlank size={14} className="text-gray-400 shrink-0" />
+              <select
+                value={timeFilter}
+                onChange={(e) => setTimeFilter(e.target.value)}
+                className="bg-transparent text-gray-700 text-xs font-medium outline-none cursor-pointer appearance-none pr-4"
+                style={{
+                  backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right center"
+                }}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="last7">Last 7 Days</option>
+                <option value="last30">Last 30 Days</option>
+              </select>
             </div>
 
             {/* Sport filter */}
@@ -2123,39 +2238,52 @@ export default function FieldsPage() {
             </button>
           </div>
 
-          {/* Status tabs */}
+          {/* Status tabs — pill style */}
           <div className="flex gap-1.5 mt-3 flex-wrap">
-            {STATUS_TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setStatusTab(t.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  statusTab === t.key
-                    ? "text-white"
-                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                }`}
-                style={
-                  statusTab === t.key ? { backgroundColor: "#8a9e60" } : {}
-                }
-              >
-                {t.label}
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                    statusTab === t.key
-                      ? "bg-white/20 text-white"
-                      : "bg-gray-200 text-gray-500"
+            {STATUS_TABS.map((tab) => {
+              const isActive = statusTab === tab;
+              const sc = tab === "all" ? null : STATUS_CONFIG[tab as FieldStatus];
+              const count =
+                tab === "all"
+                  ? total
+                  : fields.filter((f) => (f.status as any) === tab).length;
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setStatusTab(tab);
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                    isActive
+                      ? tab === "all"
+                        ? "bg-[#8a9e60] text-white"
+                        : `${sc?.cls}`
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100"
                   }`}
                 >
-                  {t.count}
-                </span>
-              </button>
-            ))}
+                  {tab === "all"
+                    ? "All Fields"
+                    : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {isActive && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold animate-in fade-in zoom-in duration-200 ${
+                        tab === "all" ? "bg-white/20 text-white" : "bg-black/5"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-hidden px-6 pb-6">
+      <div className="pb-6">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -2184,7 +2312,18 @@ export default function FieldsPage() {
               </thead>
 
               <tbody className="divide-y divide-gray-50">
-                {filtered.map((field, i) => {
+                {loading ? (
+                  <TableRowsSkeleton rows={limit} cols={10} />
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      className="px-4 py-12 text-center text-sm text-gray-400"
+                    >
+                      No fields found.
+                    </td>
+                  </tr>
+                ) : filtered.map((field, i) => {
                   const sc =
                     STATUS_CONFIG[field.status] || STATUS_CONFIG.pending;
                   const kycStatusValue =
@@ -2384,9 +2523,31 @@ export default function FieldsPage() {
                                     <CheckCircle size={13} className="text-green-500" />Unban
                                   </button>
                                 ) : (
-                                  <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "ban", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                    <XCircle size={13} className="text-amber-500" />Ban
-                                  </button>
+                                  <>
+                                    <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "ban", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                      <XCircle size={13} className="text-amber-500" />Ban
+                                    </button>
+                                    
+                                    {field.status === "suspended" ? (
+                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "unsuspend", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                        <Check size={13} className="text-blue-500" />Unsuspend
+                                      </button>
+                                    ) : (
+                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "suspend", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                        <Prohibit size={13} className="text-slate-500" />Suspend
+                                      </button>
+                                    )}
+
+                                    {field.status === "maintenance" ? (
+                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "activate", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                        <ArrowsClockwise size={13} className="text-green-500" />End Maintenance
+                                      </button>
+                                    ) : (
+                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "maintenance", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                        <Wrench size={13} className="text-blue-500" />Set Maintenance
+                                      </button>
+                                    )}
+                                  </>
                                 )}
                                 <button onClick={() => { setActionMenu(null); openKycReview(field); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                   <ShieldCheck size={13} className="text-blue-500" />Review KYC
@@ -2404,19 +2565,7 @@ export default function FieldsPage() {
                   );
                 })}
 
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={10} className="py-20 text-center">
-                      <Buildings
-                        size={32}
-                        className="text-gray-200 mx-auto mb-3"
-                      />
-                      <p className="text-sm text-gray-400">
-                        No fields match your filters
-                      </p>
-                    </td>
-                  </tr>
-                )}
+
               </tbody>
             </table>
           </div>
@@ -2518,18 +2667,24 @@ export default function FieldsPage() {
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                       Select Vendor *
                     </label>
-                    <select
-                      value={formData.vendorId}
-                      onChange={(e) => setField("vendorId", e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                    >
-                      <option value="">Select a vendor...</option>
-                      {vendorsList.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.businessName}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex flex-col gap-1">
+                      <select
+                        value={formData.vendorId}
+                        onChange={(e) => setField("vendorId", e.target.value)}
+                        className={`w-full border ${errors.vendorId ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
+                      >
+                        <option value="">Select a vendor...</option>
+                        {vendorsList.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.businessName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.vendorId && (
+                        <p className="text-[10px] text-red-500 font-medium">{errors.vendorId}</p>
+                      )}
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -2540,40 +2695,52 @@ export default function FieldsPage() {
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                       Field Name *
                     </label>
-                    <input
-                      value={formData.name}
-                      onChange={(e) => setField("name", e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                      placeholder="e.g. Turf Arena A"
-                    />
+                    <div className="flex flex-col gap-1">
+                      <input
+                        value={formData.name}
+                        onChange={(e) => setField("name", e.target.value)}
+                        className={`w-full border ${errors.name ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                        placeholder="e.g. Turf Arena A"
+                      />
+                      {errors.name && (
+                        <p className="text-[10px] text-red-500 font-medium">{errors.name}</p>
+                      )}
+                    </div>
+
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Sports Offered *
                     </label>
-                    <div className="flex flex-wrap gap-2">
-                      {SPORTS_LIST.map((s) => {
-                        const sel = formData.sports.includes(s);
-                        return (
-                          <button
-                            key={s}
-                            onClick={() => toggleArr("sports", s)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-                            style={
-                              sel
-                                ? {
-                                    backgroundColor: "#8a9e60",
-                                    color: "white",
-                                    borderColor: "transparent",
-                                  }
-                                : { borderColor: "#e5e7eb", color: "#6b7280" }
-                            }
-                          >
-                            {s}
-                          </button>
-                        );
-                      })}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-wrap gap-2">
+                        {SPORTS_LIST.map((s) => {
+                          const sel = formData.sports.includes(s);
+                          return (
+                            <button
+                              key={s}
+                              onClick={() => toggleArr("sports", s)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                              style={
+                                sel
+                                  ? {
+                                      backgroundColor: "#8a9e60",
+                                      color: "white",
+                                      borderColor: "transparent",
+                                    }
+                                  : { borderColor: "#e5e7eb", color: "#6b7280" }
+                              }
+                            >
+                              {s}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {errors.sports && (
+                        <p className="text-[10px] text-red-500 font-medium">{errors.sports}</p>
+                      )}
                     </div>
+
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
@@ -2602,15 +2769,22 @@ export default function FieldsPage() {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Surface Type
                       </label>
-                      <select
-                        value={formData.surface}
-                        onChange={(e) => setField("surface", e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white"
-                      >
-                        {SURFACE_LIST.map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={formData.surface}
+                          onChange={(e) => setField("surface", e.target.value)}
+                          className={`w-full border ${errors.surface ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white`}
+                        >
+                          <option value="">Select surface...</option>
+                          {SURFACE_LIST.map((s) => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                        {errors.surface && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.surface}</p>
+                        )}
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -2690,89 +2864,119 @@ export default function FieldsPage() {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         City *
                       </label>
-                      <input
-                        value={formData.address.city}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, city: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="Mumbai"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.city}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: { ...p.address, city: e.target.value },
+                            }))
+                          }
+                          className={`w-full border ${errors.city ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="Mumbai"
+                        />
+                        {errors.city && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.city}</p>
+                        )}
+                      </div>
+
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         State *
                       </label>
-                      <select
-                        value={formData.address.state}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, state: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                      >
-                        <option value="">Select state</option>
-                        {STATES_LIST.map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={formData.address.state}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: { ...p.address, state: e.target.value },
+                            }))
+                          }
+                          className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
+                        >
+                          <option value="">Select state</option>
+                          {STATES_LIST.map((s) => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                        {errors.state && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.state}</p>
+                        )}
+                      </div>
+
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Pincode *
                       </label>
-                      <input
-                        value={formData.address.pinCode}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, pinCode: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="400001"
-                        maxLength={6}
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.pinCode}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: { ...p.address, pinCode: e.target.value },
+                            }))
+                          }
+                          className={`w-full border ${errors.pinCode ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="400001"
+                          maxLength={6}
+                        />
+                        {errors.pinCode && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.pinCode}</p>
+                        )}
+                      </div>
+
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Country *
                       </label>
-                      <input
-                        value={formData.address.country}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, country: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="India"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.country}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: { ...p.address, country: e.target.value },
+                            }))
+                          }
+                          className={`w-full border ${errors.country ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="India"
+                        />
+                        {errors.country && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.country}</p>
+                        )}
+                      </div>
+
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Google Maps Link
                       </label>
-                      <input
-                        value={formData.address.googleMapsLink}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: {
-                              ...p.address,
-                              googleMapsLink: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="Paste maps URL"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.googleMapsLink}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: {
+                                ...p.address,
+                                googleMapsLink: e.target.value,
+                              },
+                            }))
+                          }
+                          className={`w-full border ${errors.googleMapsLink ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="Paste maps URL"
+                        />
+                        {errors.googleMapsLink && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.googleMapsLink}</p>
+                        )}
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -2795,8 +2999,12 @@ export default function FieldsPage() {
                           onChange={(e) =>
                             setField("pricePerHour", e.target.value)
                           }
-                          className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                          className={`w-full border ${errors.pricePerHour ? "border-red-400" : "border-gray-200"} rounded-lg pl-7 pr-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
                         />
+                        {errors.pricePerHour && (
+                          <p className="text-[10px] text-red-500 font-medium mt-1">{errors.pricePerHour}</p>
+                        )}
+
                       </div>
                     </div>
                     <div>
@@ -3055,20 +3263,15 @@ export default function FieldsPage() {
               <button
                 disabled={isSubmitting}
                 onClick={async () => {
-                  if (onboardStep === 1 && !formData.vendorId) {
-                    showToast({
-                      title: "Selection Required",
-                      description: "Please select a vendor first",
-                      tone: "error",
-                    });
-                    return;
-                  }
-                  if (onboardStep < ONBOARD_STEPS.length) {
-                    setOnboardStep((s) => s + 1);
-                  } else {
-                    await onOnboard();
+                  if (validateTurfStep(onboardStep)) {
+                    if (onboardStep < ONBOARD_STEPS.length) {
+                      setOnboardStep((s) => s + 1);
+                    } else {
+                      await onOnboard();
+                    }
                   }
                 }}
+
                 className="flex items-center gap-2 px-6 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: "#8a9e60" }}
               >
@@ -3581,18 +3784,28 @@ export default function FieldsPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-6">
               <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${confirmModal.type === "remove" ? "bg-red-50 text-red-600" : confirmModal.type === "ban" ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"}`}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${
+                  confirmModal.type === "remove" || confirmModal.type === "ban"
+                    ? "bg-red-50 text-red-600"
+                    : confirmModal.type === "suspend" || confirmModal.type === "maintenance"
+                    ? "bg-amber-50 text-amber-600"
+                    : "bg-green-50 text-green-600"
+                }`}
               >
                 {confirmModal.type === "remove" ? (
                   <Trash size={24} weight="bold" />
                 ) : confirmModal.type === "ban" ? (
                   <XCircle size={24} weight="bold" />
+                ) : confirmModal.type === "suspend" ? (
+                  <Prohibit size={24} weight="bold" />
+                ) : confirmModal.type === "maintenance" ? (
+                  <Wrench size={24} weight="bold" />
                 ) : (
                   <CheckCircle size={24} weight="bold" />
                 )}
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2 capitalize">
-                {confirmModal.type} Field
+                {confirmModal.type === "activate" || confirmModal.type === "unsuspend" ? "Reactivate" : confirmModal.type} Field
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed">
                 Are you sure you want to {confirmModal.type}{" "}
@@ -3609,11 +3822,18 @@ export default function FieldsPage() {
               </button>
               <button
                 onClick={handleConfirm}
-                className={`flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90 ${confirmModal.type === "remove" ? "bg-red-500" : confirmModal.type === "ban" ? "bg-amber-500" : "bg-[#8a9e60]"}`}
+                className={`flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90 ${
+                  confirmModal.type === "remove" || confirmModal.type === "ban"
+                    ? "bg-red-500"
+                    : confirmModal.type === "suspend" || confirmModal.type === "maintenance"
+                    ? "bg-amber-500"
+                    : "bg-[#8a9e60]"
+                }`}
               >
                 Confirm{" "}
-                {confirmModal.type.charAt(0).toUpperCase() +
-                  confirmModal.type.slice(1)}
+                {confirmModal.type === "activate" || confirmModal.type === "unsuspend"
+                  ? "Reactivation"
+                  : confirmModal.type.charAt(0).toUpperCase() + confirmModal.type.slice(1)}
               </button>
             </div>
           </div>
