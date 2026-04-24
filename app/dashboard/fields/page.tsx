@@ -106,20 +106,14 @@ const SURFACE_LIST = [
   "Synthetic",
 ];
 const STATES_LIST = [
-  "Maharashtra",
-  "Karnataka",
-  "Delhi",
-  "Gujarat",
-  "Tamil Nadu",
-  "Telangana",
-  "West Bengal",
-  "Rajasthan",
-  "Uttar Pradesh",
-  "Punjab",
-  "Kerala",
-  "Haryana",
-  "Madhya Pradesh",
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", 
+  "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", 
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", 
+  "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", 
+  "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
 ];
+
 
 const ONBOARD_STEPS = [
   "Vendor Info",
@@ -1474,7 +1468,9 @@ export default function FieldsPage() {
   const [uploadingDocKey, setUploadingDocKey] = useState<
     FieldKycDocKey | null
   >(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const onboardingFileInputRef = useRef<HTMLInputElement>(null);
+
 
   // KYC review modal
   const [kycField, setKycField] = useState<Turf | null>(null);
@@ -1498,7 +1494,53 @@ export default function FieldsPage() {
     setOnboardStep(1);
     setFormData({ ...INIT_FORM });
     setOnboardKycFiles({});
+    setErrors({});
   };
+
+  const validateTurfStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (step === 1) {
+      if (!formData.vendorId) newErrors.vendorId = "Vendor is required";
+    }
+
+    if (step === 2) {
+      if (!formData.name.trim()) newErrors.name = "Field name is required";
+      if (formData.sports.length === 0) newErrors.sports = "Select at least one sport";
+      if (!formData.surface) newErrors.surface = "Surface type is required";
+    }
+
+    if (step === 3) {
+      if (!formData.address.city.trim()) newErrors.city = "City is required";
+      if (!formData.address.state) newErrors.state = "State is required";
+      if (!formData.address.country.trim()) newErrors.country = "Country is required";
+      
+      if (!formData.address.pinCode.trim()) {
+        newErrors.pinCode = "PIN code is required";
+      } else if (!/^\d{6}$/.test(formData.address.pinCode)) {
+        newErrors.pinCode = "Must be 6 digits";
+      }
+
+      if (formData.address.googleMapsLink) {
+        try {
+          new URL(formData.address.googleMapsLink);
+        } catch {
+          newErrors.googleMapsLink = "Invalid URL";
+        }
+      }
+    }
+
+    if (step === 4) {
+      const price = parseFloat(formData.pricePerHour);
+      if (isNaN(price) || price <= 0) {
+        newErrors.pricePerHour = "Price must be greater than 0";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
 
   const handleOnboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const key = uploadingDocKey;
@@ -2518,18 +2560,24 @@ export default function FieldsPage() {
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                       Select Vendor *
                     </label>
-                    <select
-                      value={formData.vendorId}
-                      onChange={(e) => setField("vendorId", e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                    >
-                      <option value="">Select a vendor...</option>
-                      {vendorsList.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.businessName}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex flex-col gap-1">
+                      <select
+                        value={formData.vendorId}
+                        onChange={(e) => setField("vendorId", e.target.value)}
+                        className={`w-full border ${errors.vendorId ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
+                      >
+                        <option value="">Select a vendor...</option>
+                        {vendorsList.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.businessName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.vendorId && (
+                        <p className="text-[10px] text-red-500 font-medium">{errors.vendorId}</p>
+                      )}
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -2540,40 +2588,52 @@ export default function FieldsPage() {
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                       Field Name *
                     </label>
-                    <input
-                      value={formData.name}
-                      onChange={(e) => setField("name", e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                      placeholder="e.g. Turf Arena A"
-                    />
+                    <div className="flex flex-col gap-1">
+                      <input
+                        value={formData.name}
+                        onChange={(e) => setField("name", e.target.value)}
+                        className={`w-full border ${errors.name ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                        placeholder="e.g. Turf Arena A"
+                      />
+                      {errors.name && (
+                        <p className="text-[10px] text-red-500 font-medium">{errors.name}</p>
+                      )}
+                    </div>
+
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Sports Offered *
                     </label>
-                    <div className="flex flex-wrap gap-2">
-                      {SPORTS_LIST.map((s) => {
-                        const sel = formData.sports.includes(s);
-                        return (
-                          <button
-                            key={s}
-                            onClick={() => toggleArr("sports", s)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-                            style={
-                              sel
-                                ? {
-                                    backgroundColor: "#8a9e60",
-                                    color: "white",
-                                    borderColor: "transparent",
-                                  }
-                                : { borderColor: "#e5e7eb", color: "#6b7280" }
-                            }
-                          >
-                            {s}
-                          </button>
-                        );
-                      })}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-wrap gap-2">
+                        {SPORTS_LIST.map((s) => {
+                          const sel = formData.sports.includes(s);
+                          return (
+                            <button
+                              key={s}
+                              onClick={() => toggleArr("sports", s)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                              style={
+                                sel
+                                  ? {
+                                      backgroundColor: "#8a9e60",
+                                      color: "white",
+                                      borderColor: "transparent",
+                                    }
+                                  : { borderColor: "#e5e7eb", color: "#6b7280" }
+                              }
+                            >
+                              {s}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {errors.sports && (
+                        <p className="text-[10px] text-red-500 font-medium">{errors.sports}</p>
+                      )}
                     </div>
+
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
@@ -2602,15 +2662,22 @@ export default function FieldsPage() {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Surface Type
                       </label>
-                      <select
-                        value={formData.surface}
-                        onChange={(e) => setField("surface", e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white"
-                      >
-                        {SURFACE_LIST.map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={formData.surface}
+                          onChange={(e) => setField("surface", e.target.value)}
+                          className={`w-full border ${errors.surface ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white`}
+                        >
+                          <option value="">Select surface...</option>
+                          {SURFACE_LIST.map((s) => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                        {errors.surface && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.surface}</p>
+                        )}
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -2690,89 +2757,119 @@ export default function FieldsPage() {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         City *
                       </label>
-                      <input
-                        value={formData.address.city}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, city: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="Mumbai"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.city}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: { ...p.address, city: e.target.value },
+                            }))
+                          }
+                          className={`w-full border ${errors.city ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="Mumbai"
+                        />
+                        {errors.city && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.city}</p>
+                        )}
+                      </div>
+
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         State *
                       </label>
-                      <select
-                        value={formData.address.state}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, state: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                      >
-                        <option value="">Select state</option>
-                        {STATES_LIST.map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={formData.address.state}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: { ...p.address, state: e.target.value },
+                            }))
+                          }
+                          className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
+                        >
+                          <option value="">Select state</option>
+                          {STATES_LIST.map((s) => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                        {errors.state && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.state}</p>
+                        )}
+                      </div>
+
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Pincode *
                       </label>
-                      <input
-                        value={formData.address.pinCode}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, pinCode: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="400001"
-                        maxLength={6}
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.pinCode}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: { ...p.address, pinCode: e.target.value },
+                            }))
+                          }
+                          className={`w-full border ${errors.pinCode ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="400001"
+                          maxLength={6}
+                        />
+                        {errors.pinCode && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.pinCode}</p>
+                        )}
+                      </div>
+
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Country *
                       </label>
-                      <input
-                        value={formData.address.country}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, country: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="India"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.country}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: { ...p.address, country: e.target.value },
+                            }))
+                          }
+                          className={`w-full border ${errors.country ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="India"
+                        />
+                        {errors.country && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.country}</p>
+                        )}
+                      </div>
+
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Google Maps Link
                       </label>
-                      <input
-                        value={formData.address.googleMapsLink}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: {
-                              ...p.address,
-                              googleMapsLink: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="Paste maps URL"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.googleMapsLink}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: {
+                                ...p.address,
+                                googleMapsLink: e.target.value,
+                              },
+                            }))
+                          }
+                          className={`w-full border ${errors.googleMapsLink ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="Paste maps URL"
+                        />
+                        {errors.googleMapsLink && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.googleMapsLink}</p>
+                        )}
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -2795,8 +2892,12 @@ export default function FieldsPage() {
                           onChange={(e) =>
                             setField("pricePerHour", e.target.value)
                           }
-                          className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                          className={`w-full border ${errors.pricePerHour ? "border-red-400" : "border-gray-200"} rounded-lg pl-7 pr-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
                         />
+                        {errors.pricePerHour && (
+                          <p className="text-[10px] text-red-500 font-medium mt-1">{errors.pricePerHour}</p>
+                        )}
+
                       </div>
                     </div>
                     <div>
@@ -3055,20 +3156,15 @@ export default function FieldsPage() {
               <button
                 disabled={isSubmitting}
                 onClick={async () => {
-                  if (onboardStep === 1 && !formData.vendorId) {
-                    showToast({
-                      title: "Selection Required",
-                      description: "Please select a vendor first",
-                      tone: "error",
-                    });
-                    return;
-                  }
-                  if (onboardStep < ONBOARD_STEPS.length) {
-                    setOnboardStep((s) => s + 1);
-                  } else {
-                    await onOnboard();
+                  if (validateTurfStep(onboardStep)) {
+                    if (onboardStep < ONBOARD_STEPS.length) {
+                      setOnboardStep((s) => s + 1);
+                    } else {
+                      await onOnboard();
+                    }
                   }
                 }}
+
                 className="flex items-center gap-2 px-6 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: "#8a9e60" }}
               >

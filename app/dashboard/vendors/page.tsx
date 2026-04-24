@@ -170,12 +170,15 @@ const INIT_FORM = {
   },
   payoutCycle: "weekly" as PayoutCycle,
   commissionPct: "10",
+  phonePrefix: "+91",
+  whatsappPrefix: "+91",
   identityProof: "",
   addressProof: "",
   businessRegistration: "",
   gstCertificate: "",
   cancelledCheque: "",
 };
+
 
 type FormData = typeof INIT_FORM;
 type KycDocKey = (typeof KYC_DOCS)[number]["key"];
@@ -227,6 +230,9 @@ export default function VendorsPage() {
   // KYC review modal
   const [kycVendor, setKycVendor] = useState<Vendor | null>(null);
 
+  // Validation
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   // Confirm modal
   const [confirmModal, setConfirmModal] = useState<{
     type: "ban" | "unban" | "remove";
@@ -235,6 +241,8 @@ export default function VendorsPage() {
   const [banReason, setBanReason] = useState("");
 
   const { showToast } = useToast();
+
+
 
   // ── Data Fetching ──────────────────────────────────────────────────────────
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -335,7 +343,102 @@ export default function VendorsPage() {
     setOnboardKycFiles({});
     setUploadingDocKey(null);
     setBanReason("");
+    setErrors({});
   };
+
+  const validateVendorStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (step === 1) {
+      if (!formData.businessName.trim()) newErrors.businessName = "Business name is required";
+      if (!formData.ownerFullName.trim()) newErrors.ownerFullName = "Owner name is required";
+      
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!formData.email.trim()) {
+        newErrors.email = "Email is required";
+      } else if (!emailRegex.test(formData.email)) {
+        newErrors.email = "Invalid email format";
+      }
+
+      // Phone validation
+      if (!formData.phone.trim()) {
+        newErrors.phone = "Phone number is required";
+      } else if (!/^\d{10}$/.test(formData.phone)) {
+        newErrors.phone = "Must be exactly 10 digits";
+      }
+
+      // WhatsApp validation
+      if (formData.whatsapp && !/^\d{10}$/.test(formData.whatsapp)) {
+        newErrors.whatsapp = "Must be exactly 10 digits";
+      }
+
+      // GST validation
+      if (formData.gstNumber && !/^[0-9A-Z]{15}$/i.test(formData.gstNumber)) {
+        newErrors.gstNumber = "Must be 15 alphanumeric characters";
+      }
+
+      // Registration Number
+      if (formData.businessRegistrationNumber && !/^[0-9A-Z]+$/i.test(formData.businessRegistrationNumber)) {
+        newErrors.businessRegistrationNumber = "Must be alphanumeric";
+      }
+
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+      } else if (formData.password.length < 8) {
+        newErrors.password = "Minimum 8 characters required";
+      }
+    }
+
+    if (step === 2) {
+      if (!formData.address.city.trim()) newErrors.city = "City is required";
+      if (!formData.address.state) newErrors.state = "State is required";
+      
+      if (!formData.address.pinCode.trim()) {
+        newErrors.pinCode = "PIN code is required";
+      } else if (!/^\d{6}$/.test(formData.address.pinCode)) {
+        newErrors.pinCode = "Must be 6 digits";
+      }
+
+      if (formData.address.googleMapsLink) {
+        try {
+          new URL(formData.address.googleMapsLink);
+        } catch {
+          newErrors.googleMapsLink = "Invalid URL";
+        }
+      }
+    }
+
+    if (step === 3) {
+      if (!formData.bankingDetails.bankName.trim()) newErrors.bankName = "Bank name is required";
+      if (!formData.bankingDetails.accountHolderName.trim()) newErrors.accountHolderName = "Account holder is required";
+      
+      if (!formData.bankingDetails.accountNumber.trim()) {
+        newErrors.accountNumber = "Account number is required";
+      } else if (!/^\d{9,18}$/.test(formData.bankingDetails.accountNumber)) {
+        newErrors.accountNumber = "Must be 9 to 18 digits";
+      }
+
+      if (!formData.bankingDetails.ifsc.trim()) {
+        newErrors.ifsc = "IFSC code is required";
+      } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.bankingDetails.ifsc)) {
+        newErrors.ifsc = "Invalid IFSC format (e.g. ABCD0123456)";
+      }
+
+      if (formData.bankingDetails.upiId && !formData.bankingDetails.upiId.includes("@")) {
+        newErrors.upiId = "Invalid UPI ID";
+      }
+
+      const comm = parseFloat(formData.commissionPct);
+      if (isNaN(comm) || comm < 0 || comm > 100) {
+        newErrors.commissionPct = "Must be between 0 and 100";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
 
   const handleOnboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -358,10 +461,11 @@ export default function VendorsPage() {
           businessName: formData.businessName,
           businessType: formData.businessType,
           ownerFullName: formData.ownerFullName,
-          phone: formData.phone,
-          whatsapp: formData.whatsapp || undefined,
+          phone: `${formData.phonePrefix}${formData.phone}`,
+          whatsapp: formData.whatsapp ? `${formData.whatsappPrefix}${formData.whatsapp}` : undefined,
           gstNumber: formData.gstNumber || undefined,
           businessRegistrationNumber:
+
             formData.businessRegistrationNumber || undefined,
           address: {
             type: formData.address.type,
@@ -1319,22 +1423,39 @@ export default function VendorsPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {BUSINESS_FIELDS.map(
-                      ({ key, label, placeholder, type }) => (
+                    {BUSINESS_FIELDS.map(({ key, label, placeholder, type }) => {
+                      const isPhone = key === "phone" || key === "whatsapp";
+                      const prefixKey = key === "phone" ? "phonePrefix" : "whatsappPrefix";
+                      return (
                         <div key={key}>
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                             {label}
                           </label>
-                          <input
-                            type={type}
-                            value={formData[key]}
-                            onChange={(e) => setField(key, e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                            placeholder={placeholder}
-                          />
+                          <div className="flex flex-col gap-1">
+                            <div className="flex gap-2">
+                              {isPhone && (
+                                <input
+                                  value={formData[prefixKey as keyof FormData] as string}
+                                  onChange={(e) => setField(prefixKey as any, e.target.value)}
+                                  className="w-16 border border-gray-200 rounded-lg px-2 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-gray-50"
+                                  placeholder="+91"
+                                />
+                              )}
+                              <input
+                                type={type}
+                                value={formData[key] as string}
+                                onChange={(e) => setField(key, e.target.value)}
+                                className={`flex-1 border ${errors[key] ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                                placeholder={placeholder}
+                              />
+                            </div>
+                            {errors[key] && (
+                              <p className="text-[10px] text-red-500 font-medium">{errors[key]}</p>
+                            )}
+                          </div>
                         </div>
-                      ),
-                    )}
+                      );
+                    })}
                   </div>
                   <div className="border-t border-gray-100 pt-4">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
@@ -1345,18 +1466,24 @@ export default function VendorsPage() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                           Login Password *
                         </label>
-                        <input
-                          type="password"
-                          value={formData.password}
-                          onChange={(e) => setField("password", e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                          placeholder="Min. 8 characters"
-                        />
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="password"
+                            value={formData.password}
+                            onChange={(e) => setField("password", e.target.value)}
+                            className={`w-full border ${errors.password ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                            placeholder="Min. 8 characters"
+                          />
+                          {errors.password && (
+                            <p className="text-[10px] text-red-500 font-medium">{errors.password}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
+
 
               {onboardStep === 2 && (
                 <div className="space-y-4">
@@ -1418,62 +1545,83 @@ export default function VendorsPage() {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         City *
                       </label>
-                      <input
-                        value={formData.address.city}
-                        onChange={(e) =>
-                          setAddressField("city", e.target.value)
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="Mumbai"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.city}
+                          onChange={(e) =>
+                            setAddressField("city", e.target.value)
+                          }
+                          className={`w-full border ${errors.city ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="Mumbai"
+                        />
+                        {errors.city && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.city}</p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         State *
                       </label>
-                      <select
-                        value={formData.address.state}
-                        onChange={(e) =>
-                          setAddressField("state", e.target.value)
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                      >
-                        <option value="">Select state</option>
-                        {STATES_LIST.map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={formData.address.state}
+                          onChange={(e) =>
+                            setAddressField("state", e.target.value)
+                          }
+                          className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
+                        >
+                          <option value="">Select state</option>
+                          {STATES_LIST.map((s) => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                        {errors.state && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.state}</p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Pincode *
                       </label>
-                      <input
-                        value={formData.address.pinCode}
-                        onChange={(e) =>
-                          setAddressField("pinCode", e.target.value)
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="400001"
-                        maxLength={6}
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.pinCode}
+                          onChange={(e) =>
+                            setAddressField("pinCode", e.target.value)
+                          }
+                          className={`w-full border ${errors.pinCode ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="400001"
+                          maxLength={6}
+                        />
+                        {errors.pinCode && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.pinCode}</p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Google Maps Link
                       </label>
-                      <input
-                        value={formData.address.googleMapsLink}
-                        onChange={(e) =>
-                          setAddressField("googleMapsLink", e.target.value)
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="Paste maps URL"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.googleMapsLink}
+                          onChange={(e) =>
+                            setAddressField("googleMapsLink", e.target.value)
+                          }
+                          className={`w-full border ${errors.googleMapsLink ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="Paste maps URL"
+                        />
+                        {errors.googleMapsLink && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.googleMapsLink}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
+
 
               {onboardStep === 3 && (
                 <div className="space-y-4">
@@ -1489,47 +1637,58 @@ export default function VendorsPage() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                           {label}
                         </label>
-                        <input
-                          value={
-                            formData.bankingDetails[
-                              key as keyof typeof formData.bankingDetails
-                            ]
-                          }
-                          onChange={(e) =>
-                            setBankField(
-                              key as any,
-                              key === "ifsc"
-                                ? e.target.value.toUpperCase()
-                                : e.target.value,
-                            )
-                          }
-                          className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] ${mono ? "font-mono" : ""}`}
-                          placeholder={placeholder}
-                        />
+                        <div className="flex flex-col gap-1">
+                          <input
+                            value={
+                              formData.bankingDetails[
+                                key as keyof typeof formData.bankingDetails
+                              ]
+                            }
+                            onChange={(e) =>
+                              setBankField(
+                                key as any,
+                                key === "ifsc"
+                                  ? e.target.value.toUpperCase()
+                                  : e.target.value,
+                              )
+                            }
+                            className={`w-full border ${errors[key] ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] ${mono ? "font-mono" : ""}`}
+                            placeholder={placeholder}
+                          />
+                          {errors[key] && (
+                            <p className="text-[10px] text-red-500 font-medium">{errors[key]}</p>
+                          )}
+                        </div>
                       </div>
                     ))}
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Commission % *
                       </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={0}
-                          max={30}
-                          value={formData.commissionPct}
-                          onChange={(e) =>
-                            setField("commissionPct", e.target.value)
-                          }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-8 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        />
-                        <Percent
-                          size={13}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
+                      <div className="flex flex-col gap-1">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={formData.commissionPct}
+                            onChange={(e) =>
+                              setField("commissionPct", e.target.value)
+                            }
+                            className={`w-full border ${errors.commissionPct ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 pr-8 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          />
+                          <Percent
+                            size={13}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          />
+                        </div>
+                        {errors.commissionPct && (
+                          <p className="text-[10px] text-red-500 font-medium">{errors.commissionPct}</p>
+                        )}
                       </div>
                     </div>
                   </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Payout Cycle *
@@ -1670,14 +1829,17 @@ export default function VendorsPage() {
                 {onboardStep === 1 ? "Cancel" : "Back"}
               </button>
               <button
-                onClick={() =>
-                  onboardStep < 4
-                    ? setOnboardStep((s) => s + 1)
-                    : submitOnboard()
-                }
+                onClick={() => {
+                  if (validateVendorStep(onboardStep)) {
+                    onboardStep < 4
+                      ? setOnboardStep((s) => s + 1)
+                      : submitOnboard();
+                  }
+                }}
                 className="flex items-center gap-2 px-6 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: "#8a9e60" }}
               >
+
                 {onboardStep === 4 ? "Submit & Onboard" : "Continue"}
                 {onboardStep < 4 && <CaretRight size={15} />}
               </button>
