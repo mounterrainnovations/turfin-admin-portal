@@ -569,6 +569,7 @@ export default function VendorsPage() {
         closeOnboard();
         refreshData();
         setOnboardingStatus("idle");
+        window.location.reload();
       }, 1500);
     } catch (err: any) {
       setOnboardingStatus("idle");
@@ -603,11 +604,14 @@ export default function VendorsPage() {
     try {
       await updateVendor(editVendor.id, {
         businessName: editForm.businessName,
+        ownerFullName: editForm.ownerFullName,
+        email: editForm.email,
         phone: editForm.phone,
         whatsapp: editForm.whatsapp,
         gstNumber: editForm.gstNumber,
         businessRegistrationNumber: editForm.businessRegistrationNumber,
         payoutCycle: editForm.payoutCycle,
+        commissionPct: editForm.commissionPct,
         address: editForm.address,
       });
       showToast({

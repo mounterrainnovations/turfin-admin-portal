@@ -1660,6 +1660,7 @@ export default function FieldsPage() {
         closeOnboard();
         refreshData();
         setOnboardingStatus("idle");
+        window.location.reload();
       }, 1500);
     } catch (err: any) {
       setOnboardingStatus("idle");

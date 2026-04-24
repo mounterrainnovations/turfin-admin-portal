@@ -101,11 +101,14 @@ export interface AdminOnboardVendorDto {
 
 export interface UpdateVendorDto {
   businessName?: string;
+  ownerFullName?: string;
+  email?: string;
   phone?: string;
   whatsapp?: string;
   gstNumber?: string;
   businessRegistrationNumber?: string;
   payoutCycle?: PayoutCycle;
+  commissionPct?: string;
   address?: VendorAddress;
 }
 
