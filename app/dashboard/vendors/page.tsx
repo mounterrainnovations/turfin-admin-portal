@@ -66,6 +66,7 @@ import {
   performSequentialUploads,
 } from "@/features/vendors/utils";
 import { DashboardPagination } from "@/components/DashboardPagination";
+import { TableRowsSkeleton } from "@/components/LoadingSkeleton";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -815,8 +816,7 @@ export default function VendorsPage() {
                 "Vendor",
                 "Contact",
                 "Location",
-                "Fields",
-                "Sports",
+                // "Fields",
                 "Status",
                 "KYC",
                 "Revenue",
@@ -832,10 +832,12 @@ export default function VendorsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <TableRowsSkeleton rows={limit} cols={7} />
+            ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={7}
                   className="px-4 py-12 text-center text-sm text-gray-400"
                 >
                   No vendors found.
@@ -891,31 +893,13 @@ export default function VendorsPage() {
                         {v.address?.state || "—"}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    {/* <td className="px-4 py-3 text-center">
                       <span
                         className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-[10px] font-bold transition-colors ${sc?.cls || "bg-gray-50 text-gray-400"}`}
                       >
                         {v.fields?.length || 0}
                       </span>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {(v.sports || []).slice(0, 2).map((s) => (
-                          <span
-                            key={s}
-                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${SPORT_COLOR[s] ?? "bg-gray-100 text-gray-600"}`}
-                          >
-                            {s}
-                          </span>
-                        ))}
-                        {(v.sports || []).length > 2 && (
-                          <span className="text-[10px] text-gray-400">
-                            +{(v.sports || []).length - 2}
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                    </td> */}
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${sc.cls}`}
@@ -1144,12 +1128,12 @@ export default function VendorsPage() {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                {/* <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className="text-lg font-bold text-gray-800">
                     {selectedVendor.fields?.length || 0}
                   </p>
                   <p className="text-[10px] text-gray-400">fields</p>
-                </div>
+                </div> */}
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className="text-lg font-bold text-gray-800">
                     {selectedVendor.commissionPct}%
@@ -1243,7 +1227,7 @@ export default function VendorsPage() {
                   {[
                     ["Business Type", selectedVendor.businessType || "—"],
                     ["Payout Cycle", selectedVendor.payoutCycle || "—"],
-                    ["Surface", selectedVendor.fields?.[0]?.surfaceType || "—"],
+                    // ["Surface", selectedVendor.fields?.[0]?.surfaceType || "—"],
                     ["GST Number", selectedVendor.gstNumber || "—"],
                   ].map(([label, value]) => (
                     <div
@@ -1259,30 +1243,6 @@ export default function VendorsPage() {
                 </div>
               </div>
 
-              <div>
-                <p
-                  className={`text-[10px] font-bold uppercase tracking-widest mb-3 px-2 py-1 rounded-md inline-block ${STATUS_CFG[selectedVendor.status]?.cls || "bg-gray-50 text-gray-400"}`}
-                >
-                  Sports
-                </p>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {(selectedVendor.sports || []).length > 0 ? (
-                    (selectedVendor.sports || []).map((s) => (
-                      <span
-                        key={s}
-                        className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${SPORT_COLOR[s] ?? "bg-gray-100 text-gray-600"}`}
-                      >
-                        {s}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[11px] text-gray-300 italic">
-                      No sports listed
-                    </span>
-                  )}
-                </div>
-              </div>
 
               <div>
                 <p
@@ -2194,7 +2154,7 @@ export default function VendorsPage() {
 
               {editTab === "turf" && (
                 <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         Number of Fields
@@ -2211,22 +2171,7 @@ export default function VendorsPage() {
                         {editForm.fields?.[0]?.surfaceType || "—"}
                       </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                      Sports Offered
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {(editForm.sports || []).map((s) => (
-                        <span
-                          key={s}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  </div> */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Facilities
@@ -2472,9 +2417,13 @@ export default function VendorsPage() {
               </button>
               <button
                 onClick={handleConfirm}
-                className={`flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 ${confirmModal.type === "remove" ? "bg-red-500" : confirmModal.type === "ban" ? "bg-amber-500" : ""}`}
+                className={`flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 ${
+                  confirmModal.type === "remove" ? "bg-red-500" : 
+                  confirmModal.type === "ban" ? "bg-amber-500" : 
+                  confirmModal.type === "suspend" ? "bg-gray-500" : ""
+                }`}
                 style={
-                  confirmModal.type === "unban"
+                  confirmModal.type === "unban" || confirmModal.type === "unsuspend"
                     ? { backgroundColor: "#8a9e60" }
                     : {}
                 }

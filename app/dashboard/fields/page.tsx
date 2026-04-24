@@ -55,6 +55,7 @@ import {
   uploadTurfDocuments,
 } from "@/features/turfs";
 import { DashboardPagination } from "@/components/DashboardPagination";
+import { TableRowsSkeleton } from "@/components/LoadingSkeleton";
 import {
   listVendors,
   Vendor,
@@ -2073,9 +2074,9 @@ export default function FieldsPage() {
   ];
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="px-6 py-5 space-y-5">
       {/* Stat cards + filters */}
-      <div className="p-6 pb-0 shrink-0">
+      <div>
         {/* Stat cards */}
         <div className="grid grid-cols-5 gap-4 mb-5">
           {STAT_CARDS.map(({ label, value, sub, color, Icon }) => (
@@ -2107,6 +2108,7 @@ export default function FieldsPage() {
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-64">
               <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
               <input
+                id="field-search-input"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search fields, vendors, cities..."
@@ -2241,7 +2243,7 @@ export default function FieldsPage() {
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-hidden px-6 pb-6">
+      <div className="pb-6">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -2270,7 +2272,18 @@ export default function FieldsPage() {
               </thead>
 
               <tbody className="divide-y divide-gray-50">
-                {filtered.map((field, i) => {
+                {loading ? (
+                  <TableRowsSkeleton rows={limit} cols={10} />
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      className="px-4 py-12 text-center text-sm text-gray-400"
+                    >
+                      No fields found.
+                    </td>
+                  </tr>
+                ) : filtered.map((field, i) => {
                   const sc =
                     STATUS_CONFIG[field.status] || STATUS_CONFIG.pending;
                   const kycStatusValue =
@@ -2512,19 +2525,7 @@ export default function FieldsPage() {
                   );
                 })}
 
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={10} className="py-20 text-center">
-                      <Buildings
-                        size={32}
-                        className="text-gray-200 mx-auto mb-3"
-                      />
-                      <p className="text-sm text-gray-400">
-                        No fields match your filters
-                      </p>
-                    </td>
-                  </tr>
-                )}
+
               </tbody>
             </table>
           </div>
