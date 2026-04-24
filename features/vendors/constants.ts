@@ -6,7 +6,8 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 
-export type VendorStatus = "active" | "pending" | "banned";
+export type VendorStatus = "active" | "pending" | "banned" | "suspended";
+
 export type KycStatus =
   | "not_started"
   | "pending"
@@ -92,6 +93,11 @@ export const STATUS_CFG: Record<
     label: "Banned",
     cls: "bg-red-100 text-red-800",
     dot: "bg-red-700",
+  },
+  suspended: {
+    label: "Suspended",
+    cls: "bg-slate-100 text-slate-700",
+    dot: "bg-slate-500",
   },
 };
 

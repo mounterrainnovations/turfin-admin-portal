@@ -231,6 +231,26 @@ export async function unbanVendor(vendorId: string): Promise<void> {
   await handleResponse(response);
 }
 
+export async function suspendVendor(vendorId: string): Promise<void> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}/suspend`,
+    {
+      method: "POST",
+    },
+  );
+  await handleResponse(response);
+}
+
+export async function unsuspendVendor(vendorId: string): Promise<void> {
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/admin/vendors/${vendorId}/unsuspend`,
+    {
+      method: "POST",
+    },
+  );
+  await handleResponse(response);
+}
+
 export async function reviewVendorKyc(
   vendorId: string,
   dto: KycReviewDto,

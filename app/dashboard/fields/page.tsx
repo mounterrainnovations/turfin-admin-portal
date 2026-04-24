@@ -1437,7 +1437,7 @@ export default function FieldsPage() {
 
   // Confirm modal
   const [confirmModal, setConfirmModal] = useState<{
-    type: "ban" | "unban" | "remove";
+    type: "ban" | "unban" | "remove" | "suspend" | "unsuspend" | "maintenance" | "activate";
     field: Turf;
   } | null>(null);
 
@@ -1876,6 +1876,34 @@ export default function FieldsPage() {
           description: `${field.name} has been unbanned.`,
           tone: "success",
         });
+      } else if (type === "suspend") {
+        await updateTurfStatus(field.id, "suspended");
+        showToast({
+          title: "Suspended",
+          description: `${field.name} has been suspended.`,
+          tone: "warning",
+        });
+      } else if (type === "unsuspend") {
+        await updateTurfStatus(field.id, "active");
+        showToast({
+          title: "Reactivated",
+          description: `${field.name} is now active.`,
+          tone: "success",
+        });
+      } else if (type === "maintenance") {
+        await updateTurfStatus(field.id, "maintenance");
+        showToast({
+          title: "Maintenance Mode",
+          description: `${field.name} is now under maintenance.`,
+          tone: "warning",
+        });
+      } else if (type === "activate") {
+        await updateTurfStatus(field.id, "active");
+        showToast({
+          title: "Reactivated",
+          description: `${field.name} is now active.`,
+          tone: "success",
+        });
       }
       setConfirmModal(null);
       refreshData();
@@ -1916,6 +1944,7 @@ export default function FieldsPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [maintCount, setMaintCount] = useState(0);
   const [suspendedCount, setSuspendedCount] = useState(0);
+  const [bannedCount, setBannedCount] = useState(0);
 
   const refreshData = async () => {
     setLoading(true);
@@ -1945,6 +1974,7 @@ export default function FieldsPage() {
       setSuspendedCount(
         res.items.filter((f) => f.status === "suspended").length,
       );
+      setBannedCount(res.items.filter((f) => f.status === "banned").length);
     } catch (err: any) {
       const isAuthError =
         err.message === "Unauthorized" ||
@@ -1995,13 +2025,14 @@ export default function FieldsPage() {
   });
 
   const STATUS_TABS = [
-    { key: "all", label: "All", count: total },
-    { key: "active", label: "Active", count: activeCount },
-    { key: "inactive", label: "Inactive", count: inactiveCount },
-    { key: "pending", label: "Pending", count: pendingCount },
-    { key: "maintenance", label: "Maintenance", count: maintCount },
-    { key: "suspended", label: "Suspended", count: suspendedCount },
-  ];
+    "all",
+    "active",
+    "inactive",
+    "pending",
+    "maintenance",
+    "suspended",
+    "banned",
+  ] as const;
 
   const STAT_CARDS = [
     {
@@ -2165,33 +2196,46 @@ export default function FieldsPage() {
             </button>
           </div>
 
-          {/* Status tabs */}
+          {/* Status tabs — pill style */}
           <div className="flex gap-1.5 mt-3 flex-wrap">
-            {STATUS_TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setStatusTab(t.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                  statusTab === t.key
-                    ? "text-white"
-                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                }`}
-                style={
-                  statusTab === t.key ? { backgroundColor: "#8a9e60" } : {}
-                }
-              >
-                {t.label}
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                    statusTab === t.key
-                      ? "bg-white/20 text-white"
-                      : "bg-gray-200 text-gray-500"
+            {STATUS_TABS.map((tab) => {
+              const isActive = statusTab === tab;
+              const sc = tab === "all" ? null : STATUS_CONFIG[tab as FieldStatus];
+              const count =
+                tab === "all"
+                  ? total
+                  : fields.filter((f) => (f.status as any) === tab).length;
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setStatusTab(tab);
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                    isActive
+                      ? tab === "all"
+                        ? "bg-[#8a9e60] text-white"
+                        : `${sc?.cls}`
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100"
                   }`}
                 >
-                  {t.count}
-                </span>
-              </button>
-            ))}
+                  {tab === "all"
+                    ? "All Fields"
+                    : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {isActive && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold animate-in fade-in zoom-in duration-200 ${
+                        tab === "all" ? "bg-white/20 text-white" : "bg-black/5"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -2426,9 +2470,31 @@ export default function FieldsPage() {
                                     <CheckCircle size={13} className="text-green-500" />Unban
                                   </button>
                                 ) : (
-                                  <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "ban", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                    <XCircle size={13} className="text-amber-500" />Ban
-                                  </button>
+                                  <>
+                                    <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "ban", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                      <XCircle size={13} className="text-amber-500" />Ban
+                                    </button>
+                                    
+                                    {field.status === "suspended" ? (
+                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "unsuspend", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                        <Check size={13} className="text-blue-500" />Unsuspend
+                                      </button>
+                                    ) : (
+                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "suspend", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                        <Prohibit size={13} className="text-slate-500" />Suspend
+                                      </button>
+                                    )}
+
+                                    {field.status === "maintenance" ? (
+                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "activate", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                        <ArrowsClockwise size={13} className="text-green-500" />End Maintenance
+                                      </button>
+                                    ) : (
+                                      <button onClick={() => { setActionMenu(null); setConfirmModal({ type: "maintenance", field }); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                        <Wrench size={13} className="text-blue-500" />Set Maintenance
+                                      </button>
+                                    )}
+                                  </>
                                 )}
                                 <button onClick={() => { setActionMenu(null); openKycReview(field); }} className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                   <ShieldCheck size={13} className="text-blue-500" />Review KYC
@@ -3677,18 +3743,28 @@ export default function FieldsPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-6">
               <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${confirmModal.type === "remove" ? "bg-red-50 text-red-600" : confirmModal.type === "ban" ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"}`}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${
+                  confirmModal.type === "remove" || confirmModal.type === "ban"
+                    ? "bg-red-50 text-red-600"
+                    : confirmModal.type === "suspend" || confirmModal.type === "maintenance"
+                    ? "bg-amber-50 text-amber-600"
+                    : "bg-green-50 text-green-600"
+                }`}
               >
                 {confirmModal.type === "remove" ? (
                   <Trash size={24} weight="bold" />
                 ) : confirmModal.type === "ban" ? (
                   <XCircle size={24} weight="bold" />
+                ) : confirmModal.type === "suspend" ? (
+                  <Prohibit size={24} weight="bold" />
+                ) : confirmModal.type === "maintenance" ? (
+                  <Wrench size={24} weight="bold" />
                 ) : (
                   <CheckCircle size={24} weight="bold" />
                 )}
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2 capitalize">
-                {confirmModal.type} Field
+                {confirmModal.type === "activate" || confirmModal.type === "unsuspend" ? "Reactivate" : confirmModal.type} Field
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed">
                 Are you sure you want to {confirmModal.type}{" "}
@@ -3705,11 +3781,18 @@ export default function FieldsPage() {
               </button>
               <button
                 onClick={handleConfirm}
-                className={`flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90 ${confirmModal.type === "remove" ? "bg-red-500" : confirmModal.type === "ban" ? "bg-amber-500" : "bg-[#8a9e60]"}`}
+                className={`flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90 ${
+                  confirmModal.type === "remove" || confirmModal.type === "ban"
+                    ? "bg-red-500"
+                    : confirmModal.type === "suspend" || confirmModal.type === "maintenance"
+                    ? "bg-amber-500"
+                    : "bg-[#8a9e60]"
+                }`}
               >
                 Confirm{" "}
-                {confirmModal.type.charAt(0).toUpperCase() +
-                  confirmModal.type.slice(1)}
+                {confirmModal.type === "activate" || confirmModal.type === "unsuspend"
+                  ? "Reactivation"
+                  : confirmModal.type.charAt(0).toUpperCase() + confirmModal.type.slice(1)}
               </button>
             </div>
           </div>
