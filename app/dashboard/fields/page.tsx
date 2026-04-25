@@ -244,7 +244,6 @@ const INIT_FORM = {
   size: "5-a-side",
   surface: "Artificial Turf",
   address: {
-    type: "work" as "home" | "work" | "other",
     houseNumber: "",
     landmark: "",
     city: "",
@@ -1429,7 +1428,7 @@ function FieldDetailPanel({
           {statusOpen && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-10">
               {(Object.entries(STATUS_CONFIG) as [FieldStatus, any][])
-                .filter(([s]) => s !== "banned")
+                .filter(([s]) => s !== "banned" && s !== "active" && s !== "pending")
                 .map(([s, cfg]) => (
                   <button
                     key={s}
@@ -1732,7 +1731,6 @@ export default function FieldsPage() {
           ? parseInt(formData.cancellationWindowHrs)
           : undefined,
         address: {
-          type: formData.address.type,
           houseNumber: formData.address.houseNumber || undefined,
           landmark: formData.address.landmark || undefined,
           city: formData.address.city,
@@ -1944,7 +1942,6 @@ export default function FieldsPage() {
       weekendClose: field.weekendClose,
       address: {
         ...field.address,
-        type: field.address?.type || "other",
       },
     });
     setEditTab("basic");
@@ -1958,7 +1955,6 @@ export default function FieldsPage() {
         ...editForm,
         address: editForm.address
           ? {
-              type: editForm.address.type || "other",
               city: editForm.address.city,
               state: editForm.address.state,
               pinCode: editForm.address.pinCode,
@@ -3023,36 +3019,7 @@ export default function FieldsPage() {
               {onboardStep === 3 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                        Address Type *
-                      </label>
-                      <div className="flex gap-3">
-                        {["home", "work", "other"].map((t) => (
-                          <button
-                            key={t}
-                            onClick={() =>
-                              setFormData((p) => ({
-                                ...p,
-                                address: { ...p.address, type: t as any },
-                              }))
-                            }
-                            className="flex-1 py-2 rounded-lg border text-xs font-medium capitalize transition-colors"
-                            style={
-                              formData.address.type === t
-                                ? {
-                                    backgroundColor: "#8a9e60",
-                                    color: "white",
-                                    borderColor: "transparent",
-                                  }
-                                : { borderColor: "#e5e7eb", color: "#6b7280" }
-                            }
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         House / Shop Number
@@ -3844,34 +3811,7 @@ export default function FieldsPage() {
                     </label>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            Address Type *
-                          </label>
-                          <Select
-                            value={editForm.address?.type || "other"}
-                            onChange={(val) =>
-                              setEditForm((p) =>
-                                p
-                                  ? {
-                                      ...p,
-                                      address: {
-                                        ...p.address!,
-                                        type: val as any,
-                                      },
-                                    }
-                                  : p,
-                              )
-                            }
-                            options={[
-                              { value: "home", label: "Home" },
-                              { value: "work", label: "Work" },
-                              { value: "other", label: "Other" }
-                            ]}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                          />
-                        </div>
-                        <div>
+                        <div className="col-span-2">
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                             House/Plot Number
                           </label>
