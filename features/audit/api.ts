@@ -309,6 +309,13 @@ export async function listAuditLogs(
     eventType?: string;
     actorId?: string;
     search?: string;
+    searchBy?:
+      | "event_type"
+      | "target_type"
+      | "target_label"
+      | "target_id"
+      | "actor_email"
+      | "actor_id";
   } = {},
 ): Promise<AuditListResult> {
   const response = await authenticatedFetch(
@@ -323,6 +330,7 @@ export async function listAuditLogs(
       eventType: params.eventType,
       actorId: params.actorId,
       search: params.search,
+      searchBy: params.searchBy,
     }),
 
     {
@@ -354,6 +362,14 @@ export async function listAuditLogs(
 export async function exportAuditCsv(params: {
   category?: BackendAuditCategory | "all";
   actorId?: string;
+  search?: string;
+  searchBy?:
+    | "event_type"
+    | "target_type"
+    | "target_label"
+    | "target_id"
+    | "actor_email"
+    | "actor_id";
 }) {
   const response = await authenticatedFetch(
     buildAuditUrl("/audit/export/csv", {
@@ -362,6 +378,8 @@ export async function exportAuditCsv(params: {
           ? params.category
           : undefined,
       actorId: params.actorId,
+      search: params.search,
+      searchBy: params.searchBy,
     }),
     {},
   );

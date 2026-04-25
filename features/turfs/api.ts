@@ -144,6 +144,12 @@ export async function listTurfs(
     sportType?: string;
     city?: string;
     search?: string;
+    searchBy?:
+      | "field_name"
+      | "field_id"
+      | "vendor_business_name"
+      | "city"
+      | "state";
     startDate?: string;
     endDate?: string;
   } = {},
@@ -156,6 +162,8 @@ export async function listTurfs(
   if (params.sportType) url.searchParams.set("sportType", params.sportType);
   if (params.city) url.searchParams.set("city", params.city);
   if (params.search) url.searchParams.set("search", params.search);
+  if (params.searchBy && params.search)
+    url.searchParams.set("searchBy", params.searchBy);
   if (params.startDate) url.searchParams.set("startDate", params.startDate);
   if (params.endDate) url.searchParams.set("endDate", params.endDate);
 

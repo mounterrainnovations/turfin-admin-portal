@@ -32,14 +32,11 @@ import {
   listUsers,
   banUser,
   unbanUser,
-  User,
-  UserStatus,
-  UserAddress,
-} from "@/features/users";
+} from "@/features/users/api";
+import { User, UserStatus } from "@/features/users/types";
 import { DashboardPagination } from "@/components/DashboardPagination";
 import { useToast } from "@/features/toast/toast-context";
-
-
+import Select from "@/components/Select";
 
 // ── Config ─────────────────────────────────────────────────────────────────────
 const statusCfg: Record<
@@ -58,6 +55,19 @@ const statusCfg: Record<
   },
   banned: { label: "Banned", cls: "bg-red-50 text-red-600", dot: "bg-red-500" },
 };
+
+const USER_SEARCH_OPTIONS = [
+  { value: "name", label: "Name", placeholder: "Search by user name" },
+  { value: "email", label: "Email", placeholder: "Search by email" },
+  { value: "user_id", label: "User ID", placeholder: "Search by user UUID" },
+  {
+    value: "identity_id",
+    label: "Identity ID",
+    placeholder: "Search by identity UUID",
+  },
+  { value: "city", label: "City", placeholder: "Search by city" },
+  { value: "state", label: "State", placeholder: "Search by state" },
+] as const;
 
 
 function avatar(name: string) {
@@ -487,6 +497,10 @@ export default function UsersPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchBy, setSearchBy] = useState<
+    (typeof USER_SEARCH_OPTIONS)[number]["value"]
+  >("name");
   const [activeTab, setActiveTab] = useState<"all" | UserStatus>("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -506,11 +520,18 @@ export default function UsersPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [activeTab, search]);
+  }, [activeTab, debouncedSearch, searchBy]);
 
   useEffect(() => {
     fetchUsers();
-  }, [page, activeTab, search]);
+  }, [page, activeTab, debouncedSearch, searchBy]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   const fetchUsers = async () => {
     try {
@@ -519,7 +540,8 @@ export default function UsersPage() {
         page,
         limit,
         status: activeTab,
-        search: search || undefined,
+        search: debouncedSearch.trim() || undefined,
+        searchBy,
       });
 
       setUsers(res.items);
@@ -635,12 +657,28 @@ export default function UsersPage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-64">
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+            <Select
+              value={searchBy}
+              onChange={(val) =>
+                setSearchBy(
+                  val as (typeof USER_SEARCH_OPTIONS)[number]["value"],
+                )
+              }
+              options={[...USER_SEARCH_OPTIONS]}
+              className="bg-transparent text-gray-700 text-xs font-medium outline-none min-w-[90px]"
+              dropdownClassName="w-[180px] -left-2"
+            />
+          </div>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-72">
             <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, email, phone, city…"
+              placeholder={
+                USER_SEARCH_OPTIONS.find((option) => option.value === searchBy)
+                  ?.placeholder ?? "Search users"
+              }
               className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
             />
           </div>

@@ -96,18 +96,19 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   );
 }
 
+import GlobalSelect from "@/components/Select";
+
 function Select({ value, onChange, options }: {
   value: string; onChange: (v: string) => void;
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="relative">
-      <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full appearance-none border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#8a9e60] pr-8 transition-colors">
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <CaretDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-    </div>
+    <GlobalSelect 
+      value={value} 
+      onChange={onChange} 
+      options={options} 
+      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:border-[#8a9e60] transition-colors"
+    />
   );
 }
 

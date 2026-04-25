@@ -100,6 +100,12 @@ export async function listVendors(
     limit?: number;
     status?: string;
     search?: string;
+    searchBy?:
+      | "business_name"
+      | "vendor_id"
+      | "owner_name"
+      | "city"
+      | "state";
     startDate?: string;
     endDate?: string;
   } = {},
@@ -110,6 +116,8 @@ export async function listVendors(
   if (params.status && params.status !== "all")
     url.searchParams.set("status", params.status);
   if (params.search) url.searchParams.set("search", params.search);
+  if (params.searchBy && params.search)
+    url.searchParams.set("searchBy", params.searchBy);
   if (params.startDate) url.searchParams.set("startDate", params.startDate);
   if (params.endDate) url.searchParams.set("endDate", params.endDate);
 
