@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   Percent,
   CalendarBlank,
+  CaretDown,
   CaretRight,
   CurrencyDollar,
   CircleNotch,
@@ -66,6 +67,7 @@ import {
   performSequentialUploads,
 } from "@/features/vendors/utils";
 import { DashboardPagination } from "@/components/DashboardPagination";
+import Select from "@/components/Select";
 import { TableRowsSkeleton } from "@/components/LoadingSkeleton";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -109,6 +111,34 @@ const BUSINESS_FIELDS = [
     label: "Registration No.",
     placeholder: "Optional",
     type: "text",
+  },
+] as const;
+
+const VENDOR_SEARCH_OPTIONS = [
+  {
+    value: "business_name",
+    label: "Business Name",
+    placeholder: "Search by business name",
+  },
+  {
+    value: "vendor_id",
+    label: "Vendor ID",
+    placeholder: "Search by vendor UUID",
+  },
+  {
+    value: "owner_name",
+    label: "Owner Name",
+    placeholder: "Search by owner name",
+  },
+  {
+    value: "city",
+    label: "City",
+    placeholder: "Search by city",
+  },
+  {
+    value: "state",
+    label: "State",
+    placeholder: "Search by state",
   },
 ] as const;
 
@@ -187,6 +217,11 @@ const INIT_FORM = {
 
 type FormData = typeof INIT_FORM;
 type KycDocKey = (typeof KYC_DOCS)[number]["key"];
+type ActionMenuState = {
+  vendor: Vendor;
+  top: number;
+  left: number;
+};
 
 function avatar(name: string) {
   return name
@@ -206,11 +241,14 @@ export default function VendorsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchBy, setSearchBy] = useState<
+    (typeof VENDOR_SEARCH_OPTIONS)[number]["value"]
+  >("business_name");
   const [activeTab, setActiveTab] = useState<"all" | VendorStatus>("all");
   const [timeFilter, setTimeFilter] = useState<string>("all");
 
   const [selectedVendor, setSelected] = useState<Vendor | null>(null);
-  const [actionMenu, setActionMenu] = useState<string | null>(null);
+  const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -255,6 +293,36 @@ export default function VendorsPage() {
 
   const { showToast } = useToast();
 
+  const closeActionMenu = useCallback(() => setActionMenu(null), []);
+
+  const openActionMenu = useCallback(
+    (vendor: Vendor, trigger: HTMLButtonElement) => {
+      const rect = trigger.getBoundingClientRect();
+      const menuWidth = 148;
+      const menuItemCount =
+        1 +
+        (vendor.status === "banned" ? 1 : 1) +
+        (vendor.status !== "banned" ? 1 : 0);
+      const menuHeight = menuItemCount * 34 + 8;
+      const gap = 4;
+      const viewportPadding = 12;
+
+      const top =
+        rect.bottom + gap + menuHeight > window.innerHeight - viewportPadding
+          ? Math.max(viewportPadding, rect.top - gap - menuHeight)
+          : rect.bottom + gap;
+      const left = Math.min(
+        Math.max(viewportPadding, rect.right - menuWidth),
+        window.innerWidth - menuWidth - viewportPadding,
+      );
+
+      setActionMenu((current) =>
+        current?.vendor.id === vendor.id ? null : { vendor, top, left },
+      );
+    },
+    [],
+  );
+
   // ── Data Fetching ──────────────────────────────────────────────────────────
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -284,7 +352,8 @@ export default function VendorsPage() {
           page,
           limit,
           status: activeTab,
-          search: debouncedSearch,
+          search: debouncedSearch.trim() || undefined,
+          searchBy,
           startDate,
           endDate,
         });
@@ -318,6 +387,7 @@ export default function VendorsPage() {
     limit,
     activeTab,
     debouncedSearch,
+    searchBy,
     timeFilter,
     showToast,
     refreshTrigger,
@@ -331,8 +401,22 @@ export default function VendorsPage() {
   }, [search]);
 
   useEffect(() => {
+    if (!actionMenu) return;
+
+    const handleViewportChange = () => setActionMenu(null);
+
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [actionMenu]);
+
+  useEffect(() => {
     setPage(1);
-  }, [activeTab, debouncedSearch, timeFilter]);
+  }, [activeTab, debouncedSearch, searchBy, timeFilter]);
 
   useEffect(() => {
     if (selectedVendor) {
@@ -345,15 +429,7 @@ export default function VendorsPage() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const filtered = vendors.filter((v) => {
-    const matchTab = activeTab === "all" || v.status === activeTab;
-    const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      v.businessName.toLowerCase().includes(q) ||
-      v.ownerFullName.toLowerCase().includes(q) ||
-      (v.address?.city || "").toLowerCase().includes(q) ||
-      v.id.toLowerCase().includes(q);
-    return matchTab && matchSearch;
+    return activeTab === "all" || v.status === activeTab;
   });
 
   const totalRevenue = vendors.reduce((s, v) => s + (v.revenue || 0), 0);
@@ -449,12 +525,13 @@ export default function VendorsPage() {
         newErrors.pinCode = "Must be 6 digits";
       }
 
-      if (formData.address.googleMapsLink) {
-        try {
-          new URL(formData.address.googleMapsLink);
-        } catch {
-          newErrors.googleMapsLink = "Invalid URL";
-        }
+      if (
+        formData.address.googleMapsLink &&
+        !/^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(:\d+)?(\/[^\s]*)?$/.test(
+          formData.address.googleMapsLink,
+        )
+      ) {
+        newErrors.googleMapsLink = "Invalid URL format (no spaces allowed)";
       }
     }
 
@@ -771,12 +848,28 @@ export default function VendorsPage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-64">
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+            <Select
+              value={searchBy}
+              onChange={(val) =>
+                setSearchBy(
+                  val as (typeof VENDOR_SEARCH_OPTIONS)[number]["value"],
+                )
+              }
+              options={[...VENDOR_SEARCH_OPTIONS]}
+              className="bg-transparent text-gray-700 text-xs font-medium outline-none min-w-[90px]"
+              dropdownClassName="w-[180px] -left-2"
+            />
+          </div>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-72">
             <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search vendors, owners, cities…"
+              placeholder={
+                VENDOR_SEARCH_OPTIONS.find((option) => option.value === searchBy)
+                  ?.placeholder ?? "Search vendors"
+              }
               className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
             />
           </div>
@@ -784,22 +877,18 @@ export default function VendorsPage() {
           {/* Time Filter */}
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
             <CalendarBlank size={14} className="text-gray-400 shrink-0" />
-            <select
+            <Select
               value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value)}
-              className="bg-transparent text-gray-700 text-xs font-medium outline-none cursor-pointer appearance-none pr-4"
-              style={{
-                backgroundImage:
-                  "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "right center",
-              }}
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="last7">Last 7 Days</option>
-              <option value="last30">Last 30 Days</option>
-            </select>
+              onChange={setTimeFilter}
+              options={[
+                { value: "all", label: "All Time" },
+                { value: "today", label: "Today" },
+                { value: "last7", label: "Last 7 Days" },
+                { value: "last30", label: "Last 30 Days" }
+              ]}
+              className="bg-transparent text-gray-700 text-xs font-medium outline-none min-w-[80px]"
+              dropdownClassName="w-[150px] -left-2"
+            />
           </div>
 
           {/* Pending KYC badge */}
@@ -871,235 +960,172 @@ export default function VendorsPage() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/60">
-              {[
-                "Vendor",
-                "Contact",
-                "Location",
-                // "Fields",
-                "Status",
-                "KYC",
-                "Revenue",
-                "",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className="text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <TableRowsSkeleton rows={limit} cols={7} />
-            ) : filtered.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-12 text-center text-sm text-gray-400"
-                >
-                  No vendors found.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((v, i) => {
-                const kc = KYC_CFG[v.kycStatus];
-                const sc = STATUS_CFG[v.status] || {
-                  label: v.status,
-                  cls: "bg-gray-100 text-gray-700",
-                  dot: "bg-gray-400",
-                };
-                const KycIcon = kc?.icon || WarningCircle;
-                return (
-                  <tr
-                    key={v.id}
-                    onClick={() => setSelected(v)}
-                    className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
-                      selectedVendor?.id === v.id ? "bg-[#8a9e60]/5" : ""
-                    } ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/60">
+                {[
+                  "Vendor",
+                  "Contact",
+                  "Location",
+                  // "Fields",
+                  "Status",
+                  "KYC",
+                  "Revenue",
+                  "",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3"
                   >
-                    <td
-                      className="px-4 py-3"
-                      onClick={(e) => e.stopPropagation()}
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <TableRowsSkeleton rows={limit} cols={7} />
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-12 text-center text-sm text-gray-400"
+                  >
+                    No vendors found.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((v, i) => {
+                  const kc = KYC_CFG[v.kycStatus];
+                  const sc = STATUS_CFG[v.status] || {
+                    label: v.status,
+                    cls: "bg-gray-100 text-gray-700",
+                    dot: "bg-gray-400",
+                  };
+                  const KycIcon = kc?.icon || WarningCircle;
+                  return (
+                    <tr
+                      key={v.id}
+                      onClick={() => {
+                        setActionMenu(null);
+                        setSelected(v);
+                      }}
+                      className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
+                        selectedVendor?.id === v.id ? "bg-[#8a9e60]/5" : ""
+                      } ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
-                          style={{ backgroundColor: "#8a9e60" }}
-                        >
-                          {avatar(v.businessName)}
+                      <td
+                        className="px-4 py-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+                            style={{ backgroundColor: "#8a9e60" }}
+                          >
+                            {avatar(v.businessName)}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-800">
+                              {v.businessName}
+                            </p>
+                            <p className="text-[10px] text-gray-400 font-mono">
+                              {v.id}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800">
-                            {v.businessName}
-                          </p>
-                          <p className="text-[10px] text-gray-400 font-mono">
-                            {v.id}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-xs text-gray-700">{v.ownerFullName}</p>
-                      <p className="text-[10px] text-gray-400">{v.phone}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-xs text-gray-700">
-                        {v.address?.city || "—"}
-                      </p>
-                      <p className="text-[10px] text-gray-400">
-                        {v.address?.state || "—"}
-                      </p>
-                    </td>
-                    {/* <td className="px-4 py-3 text-center">
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-xs text-gray-700">
+                          {v.ownerFullName}
+                        </p>
+                        <p className="text-[10px] text-gray-400">{v.phone}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-xs text-gray-700">
+                          {v.address?.city || "—"}
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          {v.address?.state || "—"}
+                        </p>
+                      </td>
+                      {/* <td className="px-4 py-3 text-center">
                       <span
                         className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-[10px] font-bold transition-colors ${sc?.cls || "bg-gray-50 text-gray-400"}`}
                       >
                         {v.fields?.length || 0}
                       </span>
                     </td> */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${sc.cls}`}
-                      >
+                      <td className="px-4 py-3">
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${sc.dot}`}
-                        />
-                        {sc.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${kc?.cls || "bg-gray-100"}`}
+                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${sc.cls}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${sc.dot}`}
+                          />
+                          {sc.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${kc?.cls || "bg-gray-100"}`}
+                        >
+                          {KycIcon && <KycIcon size={10} weight="fill" />}
+                          {kc?.label || v.kycStatus}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs font-semibold text-gray-700">
+                        {(v.revenue ?? 0) > 0 ? (
+                          `₹${v.revenue?.toLocaleString("en-IN")}`
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td
+                        className="px-4 py-3"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {KycIcon && <KycIcon size={10} weight="fill" />}
-                        {kc?.label || v.kycStatus}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs font-semibold text-gray-700">
-                      {(v.revenue ?? 0) > 0 ? (
-                        `₹${v.revenue?.toLocaleString("en-IN")}`
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setSelected(v)}
-                          className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                          title="View"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          onClick={() => openEdit(v)}
-                          className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                          title="Edit"
-                        >
-                          <PencilSimple size={14} />
-                        </button>
-                        <div className="relative">
+                        <div className="flex items-center gap-1">
                           <button
-                            onClick={() =>
-                              setActionMenu(actionMenu === v.id ? null : v.id)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActionMenu(null);
+                              setSelected(v);
+                            }}
                             className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="View"
                           >
-                            <DotsThreeVertical size={14} />
+                            <Eye size={14} />
                           </button>
-                          {actionMenu === v.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[148px]">
-                              {v.status === "banned" ? (
-                                <button
-                                  onClick={() => {
-                                    setActionMenu(null);
-                                    setConfirmModal({
-                                      type: "unban",
-                                      vendor: v,
-                                    });
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <CheckCircle
-                                    size={13}
-                                    className="text-green-500"
-                                  />
-                                  Unban
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    setActionMenu(null);
-                                    setConfirmModal({ type: "ban", vendor: v });
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <XCircle size={13} className="text-red-500" />
-                                  Ban
-                                </button>
-                              )}
-                              {v.status === "suspended" ? (
-                                <button
-                                  onClick={() => {
-                                    setActionMenu(null);
-                                    setConfirmModal({
-                                      type: "unsuspend",
-                                      vendor: v,
-                                    });
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Check size={13} className="text-blue-500" />
-                                  Unsuspend
-                                </button>
-                              ) : (
-                                v.status !== "banned" && (
-                                  <button
-                                    onClick={() => {
-                                      setActionMenu(null);
-                                      setConfirmModal({
-                                        type: "suspend",
-                                        vendor: v,
-                                      });
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <Trash
-                                      size={13}
-                                      className="text-slate-500"
-                                    />
-                                    Suspend
-                                  </button>
-                                )
-                              )}
-                              <button
-                                onClick={() => {
-                                  setActionMenu(null);
-                                  openKycReview(v);
-                                }}
-                                className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <ShieldCheck
-                                  size={13}
-                                  className="text-blue-500"
-                                />
-                                Review KYC
-                              </button>
-                            </div>
-                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActionMenu(null);
+                              openEdit(v);
+                            }}
+                            className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Edit"
+                          >
+                            <PencilSimple size={14} />
+                          </button>
+                          <div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openActionMenu(v, e.currentTarget);
+                              }}
+                              className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              <DotsThreeVertical size={14} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
         <DashboardPagination
           page={page}
@@ -1112,10 +1138,83 @@ export default function VendorsPage() {
 
       {/* Click-away */}
       {actionMenu && (
+        <div className="fixed inset-0 z-30" onClick={closeActionMenu} />
+      )}
+
+      {actionMenu && (
         <div
-          className="fixed inset-0 z-10"
-          onClick={() => setActionMenu(null)}
-        />
+          className="fixed z-40 min-w-[148px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+          style={{ top: actionMenu.top, left: actionMenu.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {actionMenu.vendor.status === "banned" ? (
+            <button
+              onClick={() => {
+                closeActionMenu();
+                setConfirmModal({
+                  type: "unban",
+                  vendor: actionMenu.vendor,
+                });
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+            >
+              <CheckCircle size={13} className="text-green-500" />
+              Unban
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                closeActionMenu();
+                setConfirmModal({ type: "ban", vendor: actionMenu.vendor });
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+            >
+              <XCircle size={13} className="text-red-500" />
+              Ban
+            </button>
+          )}
+          {actionMenu.vendor.status === "suspended" ? (
+            <button
+              onClick={() => {
+                closeActionMenu();
+                setConfirmModal({
+                  type: "unsuspend",
+                  vendor: actionMenu.vendor,
+                });
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+            >
+              <Check size={13} className="text-blue-500" />
+              Unsuspend
+            </button>
+          ) : (
+            actionMenu.vendor.status !== "banned" && (
+              <button
+                onClick={() => {
+                  closeActionMenu();
+                  setConfirmModal({
+                    type: "suspend",
+                    vendor: actionMenu.vendor,
+                  });
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+              >
+                <Trash size={13} className="text-slate-500" />
+                Suspend
+              </button>
+            )
+          )}
+          <button
+            onClick={() => {
+              closeActionMenu();
+              openKycReview(actionMenu.vendor);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+          >
+            <ShieldCheck size={13} className="text-blue-500" />
+            Review KYC
+          </button>
+        </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -1719,18 +1818,16 @@ export default function VendorsPage() {
                         State *
                       </label>
                       <div className="flex flex-col gap-1">
-                        <select
+                        <Select
                           value={formData.address.state}
-                          onChange={(e) =>
-                            setAddressField("state", e.target.value)
-                          }
+                          onChange={(val) => setAddressField("state", val)}
+                          options={[
+                            { value: "", label: "Select state" },
+                            ...STATES_LIST.map(s => ({ value: s, label: s }))
+                          ]}
+                          searchable
                           className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
-                        >
-                          <option value="">Select state</option>
-                          {STATES_LIST.map((s) => (
-                            <option key={s}>{s}</option>
-                          ))}
-                        </select>
+                        />
                         {errors.state && (
                           <p className="text-[10px] text-red-500 font-medium">
                             {errors.state}
@@ -2180,17 +2277,13 @@ export default function VendorsPage() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                           State *
                         </label>
-                        <select
+                        <Select
                           value={editForm.address.state}
-                          onChange={(e) =>
-                            setEditAddressField("state", e.target.value)
-                          }
+                          onChange={(val) => setEditAddressField("state", val)}
+                          options={STATES_LIST.map(s => ({ value: s, label: s }))}
+                          searchable
                           className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                        >
-                          {STATES_LIST.map((s) => (
-                            <option key={s}>{s}</option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">

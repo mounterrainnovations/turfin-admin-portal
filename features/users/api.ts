@@ -61,6 +61,13 @@ export async function listUsers(
     limit?: number;
     status?: string;
     search?: string;
+    searchBy?:
+      | "name"
+      | "email"
+      | "user_id"
+      | "identity_id"
+      | "city"
+      | "state";
   } = {},
 ): Promise<UserListResult> {
   const url = new URL(`${getApiUrl()}/admin/users`);
@@ -69,6 +76,8 @@ export async function listUsers(
   if (params.status && params.status !== "all")
     url.searchParams.set("status", params.status);
   if (params.search) url.searchParams.set("search", params.search);
+  if (params.searchBy && params.search)
+    url.searchParams.set("searchBy", params.searchBy);
 
   const response = await authenticatedFetch(url.toString(), {
     cache: "no-store",

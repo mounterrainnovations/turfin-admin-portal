@@ -10,7 +10,7 @@ import { useToast } from "@/features/toast/toast-context";
 import { exportAuditCsv, listAuditLogs } from "@/features/audit/api";
 import type { AuditEntry, AuditSeverity, BackendAuditCategory } from "@/features/audit/types";
 import { DashboardPagination } from "@/components/DashboardPagination";
-
+import Select from "@/components/Select";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const CATEGORY_CONFIG: Record<BackendAuditCategory, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
@@ -28,6 +28,15 @@ const CATEGORY_CONFIG: Record<BackendAuditCategory, { label: string; color: stri
 const ALL_CATEGORIES: BackendAuditCategory[] = [
   "auth", "kyc", "booking", "payment", "slot", "admin", "vendor", "turf", "user",
 ];
+
+const AUDIT_SEARCH_OPTIONS = [
+  { value: "event_type", label: "Action", placeholder: "Search by action" },
+  { value: "target_type", label: "Target Type", placeholder: "Search by target type" },
+  { value: "target_label", label: "Target Label", placeholder: "Search by target label" },
+  { value: "target_id", label: "Target ID", placeholder: "Search by target ID" },
+  { value: "actor_email", label: "Actor Email", placeholder: "Search by actor email" },
+  { value: "actor_id", label: "Actor ID", placeholder: "Search by actor ID" },
+] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatTime(iso: string): string {
@@ -143,6 +152,10 @@ export default function AuditPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchBy, setSearchBy] = useState<
+    (typeof AUDIT_SEARCH_OPTIONS)[number]["value"]
+  >("event_type");
   const [catFilter, setCatFilter] = useState<BackendAuditCategory | "all">("all");
   const [sevFilter, setSevFilter] = useState<AuditSeverity | "all">("all");
   const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null);
@@ -153,7 +166,14 @@ export default function AuditPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [catFilter]);
+  }, [catFilter, debouncedSearch, searchBy]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   useEffect(() => {
     let active = true;
@@ -166,7 +186,8 @@ export default function AuditPage() {
           category: catFilter,
           page,
           limit,
-          search: search || undefined,
+          search: debouncedSearch.trim() || undefined,
+          searchBy,
         });
 
 
@@ -199,33 +220,16 @@ export default function AuditPage() {
     return () => {
       active = false;
     };
-  }, [catFilter, showToast, page, limit, search]);
+  }, [catFilter, showToast, page, limit, debouncedSearch, searchBy]);
 
 
 
   const filtered = useMemo(() => {
     return entries.filter(e => {
       if (sevFilter !== "all" && e.severity !== sevFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        return (
-          e.action.toLowerCase().includes(q) ||
-          e.description.toLowerCase().includes(q) ||
-          e.eventType.toLowerCase().includes(q) ||
-          e.route.toLowerCase().includes(q) ||
-          e.method.toLowerCase().includes(q) ||
-          e.targetId.toLowerCase().includes(q) ||
-          e.targetType.toLowerCase().includes(q) ||
-          e.actor.name.toLowerCase().includes(q) ||
-          e.actor.email.toLowerCase().includes(q) ||
-          e.actor.role.toLowerCase().includes(q) ||
-          e.ipAddress.toLowerCase().includes(q) ||
-          (e.resource?.label ?? "").toLowerCase().includes(q)
-        );
-      }
       return true;
     });
-  }, [entries, sevFilter, search]);
+  }, [entries, sevFilter]);
 
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
 
@@ -241,7 +245,12 @@ export default function AuditPage() {
     setExporting(true);
 
     try {
-      const result = await exportAuditCsv({ category: catFilter });
+      const result = await exportAuditCsv({
+        category: catFilter,
+        search: debouncedSearch.trim() || undefined,
+        searchBy,
+      });
+
       const url = window.URL.createObjectURL(result.blob);
       const link = document.createElement("a");
       link.href = url;
@@ -314,12 +323,28 @@ export default function AuditPage() {
 
         {/* Search + filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 w-64">
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5">
+            <Select
+              value={searchBy}
+              onChange={(val) =>
+                setSearchBy(
+                  val as (typeof AUDIT_SEARCH_OPTIONS)[number]["value"],
+                )
+              }
+              options={[...AUDIT_SEARCH_OPTIONS]}
+              className="bg-transparent text-gray-700 text-xs font-medium outline-none min-w-[120px]"
+              dropdownClassName="w-[180px] -left-2"
+            />
+          </div>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 w-72">
             <MagnifyingGlass size={13} className="text-gray-400 shrink-0" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search action, actor, email…"
+              placeholder={
+                AUDIT_SEARCH_OPTIONS.find((option) => option.value === searchBy)
+                  ?.placeholder ?? "Search audit logs"
+              }
               className="flex-1 text-xs bg-transparent outline-none text-gray-700 placeholder-gray-400"
             />
             {search && (

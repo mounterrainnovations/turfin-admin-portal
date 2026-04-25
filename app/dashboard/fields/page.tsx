@@ -34,7 +34,7 @@ import {
   CircleNotch,
   Check,
 } from "@phosphor-icons/react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   banTurf,
   unbanTurf,
@@ -56,6 +56,7 @@ import {
   uploadTurfDocuments,
 } from "@/features/turfs";
 import { DashboardPagination } from "@/components/DashboardPagination";
+import Select from "@/components/Select";
 import { TableRowsSkeleton } from "@/components/LoadingSkeleton";
 import {
   listVendors,
@@ -71,6 +72,19 @@ import { TurfKycUpload } from "@/features/turfs/components/TurfKycUpload";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const STATUS_CONFIG = TURF_STATUS_CONFIG;
+
+type ActionMenuState = {
+  field: Turf;
+  top: number;
+  left: number;
+};
+
+type SportsTooltipState = {
+  fieldId: string;
+  sports: string[];
+  top: number;
+  left: number;
+};
 
 const SPORTS_LIST = [
   "Football",
@@ -89,59 +103,60 @@ const SPORTS_LIST = [
   "Handball",
   "Dodgeball",
 ];
+
+const FIELD_SEARCH_OPTIONS = [
+  {
+    value: "field_name",
+    label: "Field Name",
+    placeholder: "Search by field name",
+  },
+  {
+    value: "field_id",
+    label: "Field ID",
+    placeholder: "Search by field UUID",
+  },
+  {
+    value: "vendor_business_name",
+    label: "Vendor Business Name",
+    placeholder: "Search by vendor business name",
+  },
+  {
+    value: "city",
+    label: "City",
+    placeholder: "Search by city",
+  },
+  {
+    value: "state",
+    label: "State",
+    placeholder: "Search by state",
+  },
+] as const;
 const FACILITIES_LIST = [
   "Parking",
   "Flood Lights",
-  "Changing Room",
+  "Washrooms",
+  "Changing Rooms",
+  "Showers",
+  "Drinking Water",
   "Cafeteria",
   "Equipment Rental",
   "First Aid",
   "WiFi",
   "CCTV",
-  "Drinking Water",
-  "Indoor Facility",
-  "Outdoor Facility",
-  "Covered Turf",
-  "Ground Size",
-  "Sport Type Supported",
-  "Proper Markings",
-  "Multi-sport Facility",
-  "Practice Nets",
-  "Court Quality",
-  "Floodlights / Night Play",
   "Power Backup",
-  "Day & Night Availability",
-  "Washrooms",
-  "Changing Rooms",
-  "Showers",
-  "Seating / Dugout",
   "Locker Facility",
-  "Clean Environment",
-  "Easy Location Access",
-  "Nearby Public Transport",
-  "Security Presence",
-  "Verified / Safe Turf",
-  "Equipment Available",
-  "Referee / Umpire",
+  "Seating Area",
+  "Practice Nets",
   "Scoreboard",
   "Warm-up Area",
-  "Coaching Available",
-  "Tournament Hosting",
-  "Event Hosting",
   "Music System",
-  "Night Ambiance Lighting",
-  "Snacks / Cafe",
-  "Energy Drinks",
-  "Online Booking",
-  "Real-time Availability",
-  "Digital Payments (UPI/card)",
-  "Booking Confirmation & Reminders",
-  "Ratings & Reviews",
-  "Open Matches",
-  "Player Matching",
-  "Team Bookings",
-  "Membership Plans",
-  "Corporate Bookings",
+  "Coaching",
+  "Referee",
+  "Covered Turf",
+  "Indoor Facility",
+  "Outdoor Facility",
+  "Bibs Available",
+  "Prayer Room",
 ];
 const SURFACE_LIST = [
   "Natural Grass",
@@ -1507,6 +1522,9 @@ function FieldDetailPanel({
 export default function FieldsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchBy, setSearchBy] = useState<
+    (typeof FIELD_SEARCH_OPTIONS)[number]["value"]
+  >("field_name");
   const [statusTab, setStatusTab] = useState("all");
   const [sportFilter, setSportFilter] = useState("All");
   const [cityFilter, setCityFilter] = useState("All");
@@ -1514,7 +1532,10 @@ export default function FieldsPage() {
   const [sportOpen, setSportOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [selected, setSelected] = useState<Turf | null>(null);
-  const [actionMenu, setActionMenu] = useState<string | null>(null);
+  const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null);
+  const [sportsTooltip, setSportsTooltip] = useState<SportsTooltipState | null>(
+    null,
+  );
 
   // Confirm modal
   const [confirmModal, setConfirmModal] = useState<{
@@ -1541,6 +1562,34 @@ export default function FieldsPage() {
   const [vendorsList, setVendors] = useState<Vendor[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Async Vendor Selection
+  const [onboardVendors, setOnboardVendors] = useState<Vendor[]>([]);
+  const [onboardVendorSearch, setOnboardVendorSearch] = useState("");
+  const [onboardVendorSearchBy, setOnboardVendorSearchBy] = useState<"business_name" | "vendor_id">("business_name");
+  const [onboardVendorsLoading, setOnboardVendorsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchOnboardVendors = async () => {
+      setOnboardVendorsLoading(true);
+      try {
+        const res = await listVendors({
+          limit: 20,
+          status: "active",
+          search: onboardVendorSearch,
+          searchBy: onboardVendorSearchBy,
+        });
+        setOnboardVendors(res.items);
+      } catch (err) {
+        console.error("Failed to fetch onboard vendors", err);
+      } finally {
+        setOnboardVendorsLoading(false);
+      }
+    };
+    
+    const timeoutId = setTimeout(fetchOnboardVendors, 500);
+    return () => clearTimeout(timeoutId);
+  }, [onboardVendorSearch, onboardVendorSearchBy]);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -1612,12 +1661,13 @@ export default function FieldsPage() {
         newErrors.pinCode = "Must be 6 digits";
       }
 
-      if (formData.address.googleMapsLink) {
-        try {
-          new URL(formData.address.googleMapsLink);
-        } catch {
-          newErrors.googleMapsLink = "Invalid URL";
-        }
+      if (
+        formData.address.googleMapsLink &&
+        !/^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(:\d+)?(\/[^\s]*)?$/.test(
+          formData.address.googleMapsLink,
+        )
+      ) {
+        newErrors.googleMapsLink = "Invalid URL format (no spaces allowed)";
       }
     }
 
@@ -2036,6 +2086,51 @@ export default function FieldsPage() {
 
   const { showToast } = useToast();
 
+  const closeActionMenu = useCallback(() => setActionMenu(null), []);
+  const closeSportsTooltip = useCallback(() => setSportsTooltip(null), []);
+
+  const openActionMenu = useCallback(
+    (field: Turf, trigger: HTMLButtonElement) => {
+      const rect = trigger.getBoundingClientRect();
+      const menuWidth = 148;
+      const menuItemCount = field.status === "banned" ? 3 : 5;
+      const menuHeight = menuItemCount * 34 + 18;
+      const gap = 4;
+      const viewportPadding = 12;
+
+      const top =
+        rect.bottom + gap + menuHeight > window.innerHeight - viewportPadding
+          ? Math.max(viewportPadding, rect.top - gap - menuHeight)
+          : rect.bottom + gap;
+      const left = Math.min(
+        Math.max(viewportPadding, rect.right - menuWidth),
+        window.innerWidth - menuWidth - viewportPadding,
+      );
+
+      setActionMenu((current) =>
+        current?.field.id === field.id ? null : { field, top, left },
+      );
+    },
+    [],
+  );
+
+  const openSportsTooltip = useCallback((field: Turf, trigger: HTMLElement) => {
+    const rect = trigger.getBoundingClientRect();
+    const tooltipWidth = 260;
+    const viewportPadding = 12;
+    const left = Math.min(
+      Math.max(viewportPadding + tooltipWidth / 2, rect.left + rect.width / 2),
+      window.innerWidth - viewportPadding - tooltipWidth / 2,
+    );
+
+    setSportsTooltip({
+      fieldId: field.id,
+      sports: field.sports || [],
+      top: rect.top - 8,
+      left,
+    });
+  }, []);
+
   const [activeCount, setActiveCount] = useState(0);
   const [inactiveCount, setInactiveCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -2071,6 +2166,7 @@ export default function FieldsPage() {
             sportFilter === "All" ? undefined : sportFilter.toLowerCase(),
           city: cityFilter === "All" ? undefined : cityFilter,
           search: debouncedSearch.trim() || undefined,
+          searchBy,
           startDate,
           endDate,
         }),
@@ -2117,6 +2213,7 @@ export default function FieldsPage() {
     sportFilter,
     cityFilter,
     debouncedSearch,
+    searchBy,
     timeFilter,
   ]);
 
@@ -2128,8 +2225,36 @@ export default function FieldsPage() {
   }, [search]);
 
   useEffect(() => {
+    if (!actionMenu) return;
+
+    const handleViewportChange = () => setActionMenu(null);
+
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [actionMenu]);
+
+  useEffect(() => {
+    if (!sportsTooltip) return;
+
+    const handleViewportChange = () => setSportsTooltip(null);
+
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [sportsTooltip]);
+
+  useEffect(() => {
     setPage(1);
-  }, [statusTab, sportFilter, cityFilter, debouncedSearch, timeFilter]);
+  }, [statusTab, sportFilter, cityFilter, debouncedSearch, searchBy, timeFilter]);
 
   const allSports = ["All", ...SPORTS_LIST];
   const allCities = [
@@ -2143,16 +2268,7 @@ export default function FieldsPage() {
     "Nashik",
   ];
 
-  const filtered = fields.filter((f) => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      f.name.toLowerCase().includes(q) ||
-      (f.vendorBusinessName || "").toLowerCase().includes(q) ||
-      (f.address?.city || "").toLowerCase().includes(q) ||
-      f.id.toLowerCase().includes(q);
-    return matchSearch;
-  });
+  const filtered = fields;
 
   const STATUS_TABS = [
     "all",
@@ -2234,13 +2350,29 @@ export default function FieldsPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
           <div className="flex items-center gap-3 flex-wrap">
             {/* Search */}
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-64">
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+              <Select
+                value={searchBy}
+                onChange={(val) =>
+                  setSearchBy(
+                    val as (typeof FIELD_SEARCH_OPTIONS)[number]["value"],
+                  )
+                }
+                options={[...FIELD_SEARCH_OPTIONS]}
+                className="bg-transparent text-gray-700 text-xs font-medium outline-none min-w-[90px]"
+                dropdownClassName="w-[180px] -left-2"
+              />
+            </div>
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-72">
               <MagnifyingGlass size={14} className="text-gray-400 shrink-0" />
               <input
                 id="field-search-input"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search fields, vendors, cities..."
+                placeholder={
+                  FIELD_SEARCH_OPTIONS.find((option) => option.value === searchBy)
+                    ?.placeholder ?? "Search fields"
+                }
                 className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
               />
             </div>
@@ -2248,22 +2380,18 @@ export default function FieldsPage() {
             {/* Time Filter */}
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
               <CalendarBlank size={14} className="text-gray-400 shrink-0" />
-              <select
+              <Select
                 value={timeFilter}
-                onChange={(e) => setTimeFilter(e.target.value)}
-                className="bg-transparent text-gray-700 text-xs font-medium outline-none cursor-pointer appearance-none pr-4"
-                style={{
-                  backgroundImage:
-                    "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%226%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M1%201l4%204%204-4%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E')",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "right center",
-                }}
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="last7">Last 7 Days</option>
-                <option value="last30">Last 30 Days</option>
-              </select>
+                onChange={setTimeFilter}
+                options={[
+                  { value: "all", label: "All Time" },
+                  { value: "today", label: "Today" },
+                  { value: "last7", label: "Last 7 Days" },
+                  { value: "last30", label: "Last 30 Days" }
+                ]}
+                className="bg-transparent text-gray-700 text-xs font-medium outline-none min-w-[80px]"
+                dropdownClassName="w-[150px] -left-2"
+              />
             </div>
 
             {/* Sport filter */}
@@ -2402,7 +2530,7 @@ export default function FieldsPage() {
                 <tr className="border-b border-gray-100 bg-gray-50/60">
                   {[
                     "Field",
-                    "Vendor",
+                    "Vendor Business Name",
                     "Location",
                     "Sports",
                     "Price",
@@ -2450,7 +2578,11 @@ export default function FieldsPage() {
                     return (
                       <tr
                         key={field.id}
-                        onClick={() => setSelected(field)}
+                        onClick={() => {
+                          setActionMenu(null);
+                          setSportsTooltip(null);
+                          setSelected(field);
+                        }}
                         className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
                           selected?.id === field.id ? "bg-[#8a9e60]/5" : ""
                         } ${i < filtered.length - 1 ? "border-b border-gray-50" : ""}`}
@@ -2527,33 +2659,16 @@ export default function FieldsPage() {
                               </span>
                             ))}
                             {(field.sports || []).length > 2 && (
-                              <div className="relative group">
-                                <span className="text-[10px] text-gray-400 font-bold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 cursor-help hover:bg-gray-100 transition-colors">
+                              <div>
+                                <span
+                                  onMouseEnter={(e) =>
+                                    openSportsTooltip(field, e.currentTarget)
+                                  }
+                                  onMouseLeave={closeSportsTooltip}
+                                  className="text-[10px] text-gray-400 font-bold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 cursor-help hover:bg-gray-100 transition-colors"
+                                >
                                   +{(field.sports || []).length - 2}
                                 </span>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-[200]">
-                                  <div className="bg-white border border-gray-100 shadow-2xl rounded-xl p-3 min-w-[200px] max-w-[320px]">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                        All Sports Listed
-                                      </p>
-                                      <span className="text-[10px] font-bold text-[#8a9e60]">
-                                        {(field.sports || []).length} Total
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {(field.sports || []).map((s) => (
-                                        <span
-                                          key={s}
-                                          className={`text-[10px] font-medium px-2 py-0.5 rounded ${SPORT_COLOR[s.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
-                                        >
-                                          {s.replace(/_/g, " ")}
-                                        </span>
-                                      ))}
-                                    </div>
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-gray-100 rotate-45 -mt-1.5" />
-                                  </div>
-                                </div>
                               </div>
                             )}
                           </div>
@@ -2624,170 +2739,37 @@ export default function FieldsPage() {
                         >
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => setSelected(field)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActionMenu(null);
+                                setSelected(field);
+                              }}
                               className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                               title="View"
                             >
                               <Eye size={14} />
                             </button>
                             <button
-                              onClick={() => onEdit(field)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActionMenu(null);
+                                onEdit(field);
+                              }}
                               className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                               title="Edit"
                             >
                               <PencilSimple size={14} />
                             </button>
-                            <div className="relative">
+                            <div>
                               <button
-                                onClick={() =>
-                                  setActionMenu(
-                                    actionMenu === field.id ? null : field.id,
-                                  )
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openActionMenu(field, e.currentTarget);
+                                }}
                                 className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                               >
                                 <DotsThreeVertical size={14} />
                               </button>
-                              {actionMenu === field.id && (
-                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[148px]">
-                                  {field.status === "banned" ? (
-                                    <button
-                                      onClick={() => {
-                                        setActionMenu(null);
-                                        setConfirmModal({
-                                          type: "unban",
-                                          field,
-                                        });
-                                      }}
-                                      className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                    >
-                                      <CheckCircle
-                                        size={13}
-                                        className="text-green-500"
-                                      />
-                                      Unban
-                                    </button>
-                                  ) : (
-                                    <>
-                                      <button
-                                        onClick={() => {
-                                          setActionMenu(null);
-                                          setConfirmModal({
-                                            type: "ban",
-                                            field,
-                                          });
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                      >
-                                        <XCircle
-                                          size={13}
-                                          className="text-amber-500"
-                                        />
-                                        Ban
-                                      </button>
-
-                                      {field.status === "suspended" ? (
-                                        <button
-                                          onClick={() => {
-                                            setActionMenu(null);
-                                            setConfirmModal({
-                                              type: "unsuspend",
-                                              field,
-                                            });
-                                          }}
-                                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                        >
-                                          <Check
-                                            size={13}
-                                            className="text-blue-500"
-                                          />
-                                          Unsuspend
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={() => {
-                                            setActionMenu(null);
-                                            setConfirmModal({
-                                              type: "suspend",
-                                              field,
-                                            });
-                                          }}
-                                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                        >
-                                          <Prohibit
-                                            size={13}
-                                            className="text-slate-500"
-                                          />
-                                          Suspend
-                                        </button>
-                                      )}
-
-                                      {field.status === "maintenance" ? (
-                                        <button
-                                          onClick={() => {
-                                            setActionMenu(null);
-                                            setConfirmModal({
-                                              type: "activate",
-                                              field,
-                                            });
-                                          }}
-                                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                        >
-                                          <ArrowsClockwise
-                                            size={13}
-                                            className="text-green-500"
-                                          />
-                                          End Maintenance
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={() => {
-                                            setActionMenu(null);
-                                            setConfirmModal({
-                                              type: "maintenance",
-                                              field,
-                                            });
-                                          }}
-                                          className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                        >
-                                          <Wrench
-                                            size={13}
-                                            className="text-blue-500"
-                                          />
-                                          Set Maintenance
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                  <button
-                                    onClick={() => {
-                                      setActionMenu(null);
-                                      openKycReview(field);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <ShieldCheck
-                                      size={13}
-                                      className="text-blue-500"
-                                    />
-                                    Review KYC
-                                  </button>
-                                  <div className="border-t border-gray-100 my-1" />
-                                  <button
-                                    onClick={() => {
-                                      setActionMenu(null);
-                                      setConfirmModal({
-                                        type: "remove",
-                                        field,
-                                      });
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2"
-                                  >
-                                    <Trash size={13} />
-                                    Remove
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </td>
@@ -2883,7 +2865,7 @@ export default function FieldsPage() {
             </div>
 
             {/* Form Body */}
-            <div className="flex-1 overflow-y-auto px-7 py-5">
+            <div className="flex-1 overflow-y-auto px-7 py-5 min-h-[400px]">
               {onboardStep === 1 && (
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-2">
@@ -2897,20 +2879,34 @@ export default function FieldsPage() {
                       Select Vendor *
                     </label>
                     <div className="flex flex-col gap-1">
-                      <select
+                      <Select
                         value={formData.vendorId}
-                        onChange={(e) => setField("vendorId", e.target.value)}
+                        onChange={(val) => setField("vendorId", val)}
+                        options={[
+                          { value: "", label: "Select a vendor..." },
+                          ...onboardVendors.map((v) => ({
+                            value: v.id,
+                            label: v.businessName,
+                          })),
+                        ]}
+                        searchable
+                        asyncSearch
+                        loading={onboardVendorsLoading}
+                        onSearchChange={setOnboardVendorSearch}
+                        searchByValue={onboardVendorSearchBy}
+                        onSearchByChange={(val) =>
+                          setOnboardVendorSearchBy(
+                            val as "business_name" | "vendor_id",
+                          )
+                        }
+                        searchByOptions={[
+                          { label: "Business Name", value: "business_name" },
+                          { label: "Vendor ID", value: "vendor_id" },
+                        ]}
+                        pagination
+                        itemsPerPage={5}
                         className={`w-full border ${errors.vendorId ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
-                      >
-                        <option value="">Select a vendor...</option>
-                        {vendorsList
-                          .filter((v) => v.status === "active")
-                          .map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.businessName}
-                            </option>
-                          ))}
-                      </select>
+                      />
                       {errors.vendorId && (
                         <p className="text-[10px] text-red-500 font-medium">
                           {errors.vendorId}
@@ -3004,16 +3000,15 @@ export default function FieldsPage() {
                         Surface Type
                       </label>
                       <div className="flex flex-col gap-1">
-                        <select
+                        <Select
                           value={formData.surface}
-                          onChange={(e) => setField("surface", e.target.value)}
+                          onChange={(val) => setField("surface", val)}
+                          options={[
+                            { value: "", label: "Select surface..." },
+                            ...SURFACE_LIST.map((s) => ({ value: s, label: s }))
+                          ]}
                           className={`w-full border ${errors.surface ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white`}
-                        >
-                          <option value="">Select surface...</option>
-                          {SURFACE_LIST.map((s) => (
-                            <option key={s}>{s}</option>
-                          ))}
-                        </select>
+                        />
                         {errors.surface && (
                           <p className="text-[10px] text-red-500 font-medium">
                             {errors.surface}
@@ -3123,21 +3118,21 @@ export default function FieldsPage() {
                         State *
                       </label>
                       <div className="flex flex-col gap-1">
-                        <select
+                        <Select
                           value={formData.address.state}
-                          onChange={(e) =>
+                          onChange={(val) =>
                             setFormData((p) => ({
                               ...p,
-                              address: { ...p.address, state: e.target.value },
+                              address: { ...p.address, state: val },
                             }))
                           }
+                          options={[
+                            { value: "", label: "Select state" },
+                            ...STATES_LIST.map((s) => ({ value: s, label: s }))
+                          ]}
+                          searchable
                           className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
-                        >
-                          <option value="">Select state</option>
-                          {STATES_LIST.map((s) => (
-                            <option key={s}>{s}</option>
-                          ))}
-                        </select>
+                        />
                         {errors.state && (
                           <p className="text-[10px] text-red-500 font-medium">
                             {errors.state}
@@ -3586,10 +3581,158 @@ export default function FieldsPage() {
 
       {/* Click-away */}
       {actionMenu && (
+        <div className="fixed inset-0 z-30" onClick={closeActionMenu} />
+      )}
+
+      {sportsTooltip && (
         <div
-          className="fixed inset-0 z-10"
-          onClick={() => setActionMenu(null)}
-        />
+          className="pointer-events-none fixed z-40 w-[260px] -translate-x-1/2 -translate-y-full"
+          style={{ top: sportsTooltip.top, left: sportsTooltip.left }}
+        >
+          <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-2xl">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                All Sports Listed
+              </p>
+              <span className="text-[10px] font-bold text-[#8a9e60]">
+                {sportsTooltip.sports.length} Total
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {sportsTooltip.sports.map((sport) => (
+                <span
+                  key={sport}
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded ${SPORT_COLOR[sport.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}
+                >
+                  {sport.replace(/_/g, " ")}
+                </span>
+              ))}
+            </div>
+            <div className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -mt-1.5 rotate-45 border-b border-r border-gray-100 bg-white" />
+          </div>
+        </div>
+      )}
+
+      {actionMenu && (
+        <div
+          className="fixed z-40 min-w-[148px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+          style={{ top: actionMenu.top, left: actionMenu.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {actionMenu.field.status === "banned" ? (
+            <button
+              onClick={() => {
+                closeActionMenu();
+                setConfirmModal({
+                  type: "unban",
+                  field: actionMenu.field,
+                });
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+            >
+              <CheckCircle size={13} className="text-green-500" />
+              Unban
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  closeActionMenu();
+                  setConfirmModal({
+                    type: "ban",
+                    field: actionMenu.field,
+                  });
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+              >
+                <XCircle size={13} className="text-amber-500" />
+                Ban
+              </button>
+              {actionMenu.field.status === "suspended" ? (
+                <button
+                  onClick={() => {
+                    closeActionMenu();
+                    setConfirmModal({
+                      type: "unsuspend",
+                      field: actionMenu.field,
+                    });
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+                >
+                  <Check size={13} className="text-blue-500" />
+                  Unsuspend
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    closeActionMenu();
+                    setConfirmModal({
+                      type: "suspend",
+                      field: actionMenu.field,
+                    });
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+                >
+                  <Prohibit size={13} className="text-slate-500" />
+                  Suspend
+                </button>
+              )}
+              {actionMenu.field.status === "maintenance" ? (
+                <button
+                  onClick={() => {
+                    closeActionMenu();
+                    setConfirmModal({
+                      type: "activate",
+                      field: actionMenu.field,
+                    });
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+                >
+                  <ArrowsClockwise size={13} className="text-green-500" />
+                  End Maintenance
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    closeActionMenu();
+                    setConfirmModal({
+                      type: "maintenance",
+                      field: actionMenu.field,
+                    });
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+                >
+                  <Wrench size={13} className="text-blue-500" />
+                  Set Maintenance
+                </button>
+              )}
+            </>
+          )}
+          <button
+            onClick={() => {
+              closeActionMenu();
+              openKycReview(actionMenu.field);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
+          >
+            <ShieldCheck size={13} className="text-blue-500" />
+            Review KYC
+          </button>
+          <div className="my-1 border-t border-gray-100" />
+          <button
+            onClick={() => {
+              closeActionMenu();
+              setConfirmModal({
+                type: "remove",
+                field: actionMenu.field,
+              });
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-500 hover:bg-red-50"
+          >
+            <Trash size={13} />
+            Remove
+          </button>
+        </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -3705,27 +3848,28 @@ export default function FieldsPage() {
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                             Address Type *
                           </label>
-                          <select
+                          <Select
                             value={editForm.address?.type || "other"}
-                            onChange={(e) =>
+                            onChange={(val) =>
                               setEditForm((p) =>
                                 p
                                   ? {
                                       ...p,
                                       address: {
                                         ...p.address!,
-                                        type: e.target.value as any,
+                                        type: val as any,
                                       },
                                     }
                                   : p,
                               )
                             }
+                            options={[
+                              { value: "home", label: "Home" },
+                              { value: "work", label: "Work" },
+                              { value: "other", label: "Other" }
+                            ]}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                          >
-                            <option value="home">Home</option>
-                            <option value="work">Work</option>
-                            <option value="other">Other</option>
-                          </select>
+                          />
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
@@ -3781,30 +3925,28 @@ export default function FieldsPage() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                           State *
                         </label>
-                        <select
+                        <Select
                           value={editForm.address?.state || ""}
-                          onChange={(e) =>
+                          onChange={(val) =>
                             setEditForm((p) =>
                               p
                                 ? {
                                     ...p,
                                     address: {
                                       ...p.address!,
-                                      state: e.target.value,
+                                      state: val,
                                     },
                                   }
                                 : p,
                             )
                           }
+                          options={[
+                            { value: "", label: "Select State" },
+                            ...STATES_LIST.map((s) => ({ value: s, label: s })),
+                          ]}
+                          searchable
                           className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
-                        >
-                          <option value="">Select State</option>
-                          {STATES_LIST.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">

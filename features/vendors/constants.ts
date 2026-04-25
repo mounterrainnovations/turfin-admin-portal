@@ -132,13 +132,30 @@ export const SPORTS_LIST = [
 
 export const FACILITIES_LIST = [
   "Parking",
-  "Floodlights",
+  "Flood Lights",
+  "Washrooms",
   "Changing Rooms",
+  "Showers",
+  "Drinking Water",
   "Cafeteria",
   "Equipment Rental",
   "First Aid",
   "WiFi",
   "CCTV",
+  "Power Backup",
+  "Locker Facility",
+  "Seating Area",
+  "Practice Nets",
+  "Scoreboard",
+  "Warm-up Area",
+  "Music System",
+  "Coaching",
+  "Referee",
+  "Covered Turf",
+  "Indoor Facility",
+  "Outdoor Facility",
+  "Bibs Available",
+  "Prayer Room",
 ];
 
 export const SURFACE_LIST = [
