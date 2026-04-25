@@ -2,7 +2,6 @@ import { SportType, SurfaceType, KycStatus } from "../vendors/constants";
 import { FieldStatus, AmenityType } from "./constants";
 
 export interface TurfAddress {
-  type: "home" | "work" | "other";  // Required by TurfAddressDto
   label?: string;
   pinCode: string;
   city: string;
