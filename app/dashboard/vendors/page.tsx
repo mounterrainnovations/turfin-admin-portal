@@ -1826,6 +1826,7 @@ export default function VendorsPage() {
                             ...STATES_LIST.map(s => ({ value: s, label: s }))
                           ]}
                           searchable
+                          useFixed
                           className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
                         />
                         {errors.state && (
@@ -2282,6 +2283,7 @@ export default function VendorsPage() {
                           onChange={(val) => setEditAddressField("state", val)}
                           options={STATES_LIST.map(s => ({ value: s, label: s }))}
                           searchable
+                          useFixed
                           className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
                         />
                       </div>

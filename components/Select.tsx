@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { CaretDown, MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
 
 export interface SelectOption {
@@ -29,6 +29,7 @@ export interface SelectProps {
   searchByValue?: string;
   onSearchByChange?: (value: string) => void;
   loading?: boolean;
+  useFixed?: boolean; // Renders dropdown with fixed positioning to avoid parent clipping
 }
 
 export default function Select({
@@ -49,12 +50,18 @@ export default function Select({
   searchByValue,
   onSearchByChange,
   loading = false,
+  useFixed = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number }>({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
 
   // Handle click outside to close
   useEffect(() => {
@@ -66,6 +73,31 @@ export default function Select({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Update coordinates when opened in fixed mode
+  const updateCoords = useCallback(() => {
+    if (useFixed && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, [useFixed]);
+
+  // Handle viewport changes in fixed mode
+  useEffect(() => {
+    if (!isOpen || !useFixed) return;
+
+    window.addEventListener("scroll", updateCoords, true);
+    window.addEventListener("resize", updateCoords);
+
+    return () => {
+      window.removeEventListener("scroll", updateCoords, true);
+      window.removeEventListener("resize", updateCoords);
+    };
+  }, [isOpen, useFixed, updateCoords]);
 
   // Focus search input when opened
   useEffect(() => {
@@ -110,6 +142,7 @@ export default function Select({
       setSearchQuery("");
       setCurrentPage(1);
       if (onSearchChange) onSearchChange(""); // Reset parent search when reopened
+      updateCoords(); // Calculate position immediately
     }
   };
 
@@ -146,7 +179,8 @@ export default function Select({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute z-50 mt-1 w-full min-w-[200px] bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${dropdownClassName}`}
+          className={`${useFixed ? "fixed" : "absolute"} z-50 mt-1 min-w-[200px] bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${dropdownClassName}`}
+          style={useFixed ? { top: coords.top, left: coords.left, width: coords.width } : { width: "100%" }}
         >
           {/* Search Input */}
           {searchable && (

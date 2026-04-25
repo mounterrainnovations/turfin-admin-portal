@@ -2886,6 +2886,7 @@ export default function FieldsPage() {
                           })),
                         ]}
                         searchable
+                        useFixed
                         asyncSearch
                         loading={onboardVendorsLoading}
                         onSearchChange={setOnboardVendorSearch}
@@ -3003,6 +3004,7 @@ export default function FieldsPage() {
                             { value: "", label: "Select surface..." },
                             ...SURFACE_LIST.map((s) => ({ value: s, label: s }))
                           ]}
+                          useFixed
                           className={`w-full border ${errors.surface ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white`}
                         />
                         {errors.surface && (
@@ -3098,6 +3100,7 @@ export default function FieldsPage() {
                             ...STATES_LIST.map((s) => ({ value: s, label: s }))
                           ]}
                           searchable
+                          useFixed
                           className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white`}
                         />
                         {errors.state && (
@@ -3885,6 +3888,7 @@ export default function FieldsPage() {
                             ...STATES_LIST.map((s) => ({ value: s, label: s })),
                           ]}
                           searchable
+                          useFixed
                           className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] bg-white"
                         />
                       </div>

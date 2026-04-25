@@ -20,7 +20,7 @@ import {
   UserGear,
   Info,
 } from "@phosphor-icons/react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSubAdmins, useRoles } from "@/features/rbac/hooks";
 import * as rbacApi from "@/features/rbac/api";
 import { useToast } from "@/features/toast/toast-context";
@@ -78,7 +78,44 @@ export default function IdentityManagementPage() {
   // Assignment Modal State
   const [modifyingAdmin, setModifyingAdmin] = useState<string | null>(null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [activeMenu, setActiveMenu] = useState<{
+    id: string;
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const closeActionMenu = useCallback(() => setActiveMenu(null), []);
+
+  const openActionMenu = useCallback((adminId: string, trigger: HTMLButtonElement) => {
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = 192; // w-48 is 12rem = 192px
+    const menuHeight = 120; // Approx height for 3 items + divider
+    const gap = 4;
+    const viewportPadding = 12;
+
+    const top =
+      rect.bottom + gap + menuHeight > window.innerHeight - viewportPadding
+        ? Math.max(viewportPadding, rect.top - gap - menuHeight)
+        : rect.bottom + gap;
+    const left = Math.min(
+      Math.max(viewportPadding, rect.right - menuWidth),
+      window.innerWidth - menuWidth - viewportPadding,
+    );
+
+    setActiveMenu((current) =>
+      current?.id === adminId ? null : { id: adminId, top, left },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!activeMenu) return;
+    window.addEventListener("resize", closeActionMenu);
+    window.addEventListener("scroll", closeActionMenu, true);
+    return () => {
+      window.removeEventListener("resize", closeActionMenu);
+      window.removeEventListener("scroll", closeActionMenu, true);
+    };
+  }, [activeMenu, closeActionMenu]);
 
   const filteredAdmins = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -206,7 +243,8 @@ export default function IdentityManagementPage() {
   };
 
   return (
-    <div className="px-6 py-5">
+    <>
+      <div className="px-6 py-5">
       {/* ── Stats ── */}
       <div className="grid grid-cols-4 gap-4 mb-5">
         {[
@@ -445,60 +483,16 @@ export default function IdentityManagementPage() {
                           ID: {admin.id.slice(0, 8)}
                         </p>
                       </td>
-                      <td className="px-6 py-4 text-right relative">
+                      <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() =>
-                            setActiveMenu(
-                              activeMenu === admin.id ? null : admin.id,
-                            )
-                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openActionMenu(admin.id, e.currentTarget);
+                          }}
                           className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
                         >
                           <DotsThreeVertical size={16} weight="bold" />
                         </button>
-
-                        {activeMenu === admin.id && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-[40]"
-                              onClick={() => setActiveMenu(null)}
-                            />
-                            <div className="absolute right-6 top-10 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-[50] py-1 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                              <button
-                                onClick={() => {
-                                  setActiveMenu(null);
-                                  openRoleAssignment(
-                                    admin.id,
-                                    admin.roles.map((r) => r.id),
-                                  );
-                                }}
-                                className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors"
-                              >
-                                <UserGear size={16} className="text-gray-400" />
-                                Update Assignments
-                              </button>
-                              <button
-                                className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors"
-                                onClick={() => setActiveMenu(null)}
-                              >
-                                <Lock size={16} className="text-gray-400" />
-                                Reset Password
-                              </button>
-                              <div className="h-px bg-gray-100 my-1" />
-                              <button
-                                onClick={() => {
-                                  setActiveMenu(null);
-                                  handleDeleteAdmin(admin.id, admin.email);
-                                }}
-                                disabled={isCurrentUser}
-                                className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors disabled:opacity-30"
-                              >
-                                <Prohibit size={16} />
-                                Revoke Access
-                              </button>
-                            </div>
-                          </>
-                        )}
                       </td>
                     </tr>
                   );
@@ -726,5 +720,60 @@ export default function IdentityManagementPage() {
         </div>
       )}
     </div>
+
+    {/* ── Action Menu Dropdown (Fixed) ── */}
+    {activeMenu && (
+      <>
+        <div className="fixed inset-0 z-[40]" onClick={closeActionMenu} />
+        <div
+          className="fixed w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-[50] py-1 text-left animate-in fade-in slide-in-from-top-2 duration-200"
+          style={{ top: activeMenu.top, left: activeMenu.left }}
+        >
+          {(() => {
+            const admin = subAdmins.find((a) => a.id === activeMenu.id);
+            if (!admin) return null;
+            const isCurrentUser = admin.email === session?.email;
+
+            return (
+              <>
+                <button
+                  onClick={() => {
+                    closeActionMenu();
+                    openRoleAssignment(
+                      admin.id,
+                      admin.roles.map((r) => r.id),
+                    );
+                  }}
+                  className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors"
+                >
+                  <UserGear size={16} className="text-gray-400" />
+                  Update Assignments
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors"
+                  onClick={closeActionMenu}
+                >
+                  <Lock size={16} className="text-gray-400" />
+                  Reset Password
+                </button>
+                <div className="h-px bg-gray-100 my-1" />
+                <button
+                  onClick={() => {
+                    closeActionMenu();
+                    handleDeleteAdmin(admin.id, admin.email);
+                  }}
+                  disabled={isCurrentUser}
+                  className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors disabled:opacity-30"
+                >
+                  <Prohibit size={16} />
+                  Revoke Access
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      </>
+    )}
+    </>
   );
 }

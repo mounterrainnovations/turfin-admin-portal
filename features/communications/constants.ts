@@ -5,7 +5,50 @@ import {
   CheckCircle, BellRinging, PaperPlaneTilt, CalendarBlank,
   Eye, Clock
 } from "@phosphor-icons/react";
-import { AudienceKey, NotifStatus, SentNotif, NotifTemplate } from "./types";
+import { AudienceKey, NotifStatus, SentNotif, NotifTemplate, InboxNotification } from "./types";
+
+export const INIT_INBOX_NOTIFICATIONS: InboxNotification[] = [
+  {
+    id: "1",
+    title: "New Vendor Request",
+    message: "Olympia Sports Hub has submitted their KYC for review. Please verify the documents.",
+    time: "2 mins ago",
+    read: false,
+    type: "vendor",
+  },
+  {
+    id: "2",
+    title: "Booking Cancellation",
+    message: "Booking #BK-9942 at Arena Hub was cancelled by the user. Automatic refund initiated.",
+    time: "1 hour ago",
+    read: false,
+    type: "booking",
+  },
+  {
+    id: "3",
+    title: "System Alert",
+    message: "Weekly database backup completed successfully. All systems are healthy.",
+    time: "3 hours ago",
+    read: true,
+    type: "system",
+  },
+  {
+    id: "4",
+    title: "New Turf Added",
+    message: "Power Play Arena has added 3 new premium 7-a-side turfs to their inventory.",
+    time: "5 hours ago",
+    read: true,
+    type: "vendor",
+  },
+  {
+    id: "5",
+    title: "High Demand Alert",
+    message: "High traffic detected for weekend slots in Bengaluru. Consider highlighting premium venues.",
+    time: "Yesterday",
+    read: true,
+    type: "system",
+  },
+];
 
 export const INIT_HISTORY: SentNotif[] = [
   { id: "PN-001", title: "Weekend Warriors Deal",            message: "Book this weekend and get 20% off on all turfs! Use code WEEKEND20 at checkout. Valid for 48 hours only.",                         audience: "Active Users",    reach: 834,  opened: 312, openRate: 37, sentAt: "Mar 20, 2026",          status: "sent"      },
