@@ -66,7 +66,6 @@ import {
   SLOT_STATUS_COLORS,
   UpsertSlotConfigPayload,
   SlotConfigDayPricing,
-  SLOT_CONFIG_LIMITS,
 } from "@/features/slots";
 import { generateDefaultWeeklyPricing } from "@/features/slots/utils";
 import { SlotConfigEditor } from "@/features/slots/components/SlotConfigEditor";
@@ -284,9 +283,6 @@ const INIT_FORM = {
     weekdayClose: "22:00",
     weekendOpen: "06:00",
     weekendClose: "23:00",
-    bookingWindowDays: SLOT_CONFIG_LIMITS.DEFAULT_BOOKING_WINDOW,
-    generationWindowDays: SLOT_CONFIG_LIMITS.DEFAULT_GENERATION_WINDOW,
-    holdDurationMinutes: SLOT_CONFIG_LIMITS.DEFAULT_HOLD_DURATION,
     weeklyPricing: [] as SlotConfigDayPricing[],
   } as UpsertSlotConfigPayload,
 };
@@ -1608,6 +1604,7 @@ export default function FieldsPage() {
 
   // Edit State for Slot Config
   const [editSlotConfig, setEditSlotConfig] = useState<UpsertSlotConfigPayload | null>(null);
+  const [editSlotConfigLoading, setEditSlotConfigLoading] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -2007,6 +2004,7 @@ export default function FieldsPage() {
     setEditTab("basic");
 
     // Fetch Slot Config
+    setEditSlotConfigLoading(true);
     try {
       const config = await getAdminSlotConfig(field.id);
       setEditSlotConfig({
@@ -2015,25 +2013,29 @@ export default function FieldsPage() {
         weekdayClose: config.weekdayClose,
         weekendOpen: config.weekendOpen,
         weekendClose: config.weekendClose,
-        bookingWindowDays: config.bookingWindowDays || SLOT_CONFIG_LIMITS.DEFAULT_BOOKING_WINDOW,
-        generationWindowDays: config.generationWindowDays || SLOT_CONFIG_LIMITS.DEFAULT_GENERATION_WINDOW,
-        holdDurationMinutes: config.holdDurationMinutes || SLOT_CONFIG_LIMITS.DEFAULT_HOLD_DURATION,
         weeklyPricing: config.weeklyPricing.map((p) => ({
           dayOfWeek: p.dayOfWeek,
           prices: p.prices,
         })),
-      });
-    } catch (err) {
-      // If no config exists, generate default
+      } as any);
+    } catch (err: any) {
+      // If it's a 404, we just generate defaults silently
+      // For other errors, we show a warning but still allow editing with defaults
+      if (!err.message?.includes("404") && !err.toString().includes("404")) {
+        showToast({
+          title: "Config Load Warning",
+          description: "Existing slot config couldn't be loaded. Using defaults.",
+          tone: "warning",
+        });
+      }
+      
+      // If no config exists or failed to load, generate default
       setEditSlotConfig({
         slotDurationMins: 60,
         weekdayOpen: field.weekdayOpen,
         weekdayClose: field.weekdayClose,
         weekendOpen: field.weekendOpen,
         weekendClose: field.weekendClose,
-        bookingWindowDays: SLOT_CONFIG_LIMITS.DEFAULT_BOOKING_WINDOW,
-        generationWindowDays: SLOT_CONFIG_LIMITS.DEFAULT_GENERATION_WINDOW,
-        holdDurationMinutes: SLOT_CONFIG_LIMITS.DEFAULT_HOLD_DURATION,
         weeklyPricing: generateDefaultWeeklyPricing({
           weekdayOpen: field.weekdayOpen,
           weekdayClose: field.weekdayClose,
@@ -2042,7 +2044,9 @@ export default function FieldsPage() {
           pricePerHour: (field.standardPricePaise || 0) / 100,
           slotDurationMins: 60,
         }),
-      });
+      } as any);
+    } finally {
+      setEditSlotConfigLoading(false);
     }
   }
 
@@ -4139,12 +4143,27 @@ export default function FieldsPage() {
                 </div>
               )}
 
-              {editTab === "slot-config" && editSlotConfig && (
+              {editTab === "slot-config" && (
                 <div className="space-y-4">
-                  <SlotConfigEditor
-                    config={editSlotConfig}
-                    onChange={(cfg) => setEditSlotConfig(cfg)}
-                  />
+                  {editSlotConfigLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <div className="w-8 h-8 border-4 border-[#8a9e60] border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <p className="text-xs font-medium text-gray-500">
+                        Loading slot configuration...
+                      </p>
+                    </div>
+                  ) : editSlotConfig ? (
+                    <SlotConfigEditor
+                      config={editSlotConfig}
+                      onChange={(cfg) => setEditSlotConfig(cfg)}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <p className="text-xs font-medium text-gray-500">
+                        No configuration found for this field.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -28,9 +28,6 @@ export interface UpsertSlotConfigPayload {
   weekdayClose: string;
   weekendOpen: string;
   weekendClose: string;
-  bookingWindowDays: number;
-  generationWindowDays: number;
-  holdDurationMinutes: number;
   weeklyPricing: SlotConfigDayPricing[];
 }
 
