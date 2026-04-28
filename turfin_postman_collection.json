@@ -1075,6 +1075,179 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "Slots",
+          "description": "Admin delegated slot management and configuration.",
+          "item": [
+            {
+              "name": "Get Slots (Admin)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/turfs/:turfId/slots?date=2024-05-20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId", "slots"],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2024-05-20",
+                      "description": "YYYY-MM-DD"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                },
+                "description": "List slots for any field with admin-level details (hold status, price overrides)."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Slot Config (Admin)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/turfs/:turfId/slot-config",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId", "slot-config"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                },
+                "description": "Fetch detailed slot config including pricing grid for any field."
+              },
+              "response": []
+            },
+            {
+              "name": "Upsert Slot Config (Admin)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slotDurationMins\": 60,\n  \"weekdayOpen\": \"06:00\",\n  \"weekdayClose\": \"09:00\",\n  \"weekendOpen\": \"06:00\",\n  \"weekendClose\": \"09:00\",\n  \"bookingWindowDays\": 7,\n  \"generationWindowDays\": 30,\n  \"holdDurationMinutes\": 10,\n  \"weeklyPricing\": [\n    { \"dayOfWeek\": 0, \"prices\": [150000, 150000, 180000] },\n    { \"dayOfWeek\": 1, \"prices\": [120000, 120000, 120000] },\n    { \"dayOfWeek\": 2, \"prices\": [120000, 120000, 120000] },\n    { \"dayOfWeek\": 3, \"prices\": [120000, 120000, 120000] },\n    { \"dayOfWeek\": 4, \"prices\": [120000, 120000, 120000] },\n    { \"dayOfWeek\": 5, \"prices\": [120000, 140000, 160000] },\n    { \"dayOfWeek\": 6, \"prices\": [150000, 150000, 180000] }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/turfs/:turfId/slot-config",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId", "slot-config"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Generate Slots (Admin)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/turfs/:turfId/slots/generate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "turfs", ":turfId", "slots", "generate"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Patch Slot (Admin)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"blocked\",\n  \"blockReason\": \"private_event\",\n  \"pricePaise\": 200000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/slots/:slotId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "slots", ":slotId"],
+                  "variable": [
+                    {
+                      "key": "slotId",
+                      "value": "{{slotId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -1455,6 +1628,36 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "Slots",
+          "description": "Public slot discovery for users.",
+          "item": [
+            {
+              "name": "Get Turf Slots",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/users/turfs/:turfId/slots?date=2024-05-20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "turfs", ":turfId", "slots"],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2024-05-20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -1823,6 +2026,232 @@
                   ]
                 },
                 "description": "Get current status and metadata of turf documents."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Slots",
+          "description": "Vendor self-service slot management.",
+          "item": [
+            {
+              "name": "Get My Slots",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/turfs/:turfId/slots?date=2024-05-20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":turfId", "slots"],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2024-05-20"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Slot Config",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/turfs/:turfId/slot-config",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":turfId", "slot-config"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Upsert My Slot Config",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slotDurationMins\": 60,\n  \"weekdayOpen\": \"06:00\",\n  \"weekdayClose\": \"09:00\",\n  \"weekendOpen\": \"06:00\",\n  \"weekendClose\": \"09:00\",\n  \"bookingWindowDays\": 7,\n  \"generationWindowDays\": 30,\n  \"holdDurationMinutes\": 10,\n  \"weeklyPricing\": [\n    { \"dayOfWeek\": 0, \"prices\": [150000, 150000, 180000] },\n    { \"dayOfWeek\": 1, \"prices\": [120000, 120000, 120000] },\n    { \"dayOfWeek\": 2, \"prices\": [120000, 120000, 120000] },\n    { \"dayOfWeek\": 3, \"prices\": [120000, 120000, 120000] },\n    { \"dayOfWeek\": 4, \"prices\": [120000, 120000, 120000] },\n    { \"dayOfWeek\": 5, \"prices\": [120000, 140000, 160000] },\n    { \"dayOfWeek\": 6, \"prices\": [150000, 150000, 180000] }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/turfs/:turfId/slot-config",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":turfId", "slot-config"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Generate My Slots",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/turfs/:turfId/slots/generate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "turfs", ":turfId", "slots", "generate"],
+                  "variable": [
+                    {
+                      "key": "turfId",
+                      "value": "{{turfId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Block Slot",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/slots/:slotId/block",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "slots", ":slotId", "block"],
+                  "variable": [
+                    {
+                      "key": "slotId",
+                      "value": "{{slotId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Unblock Slot",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/slots/:slotId/block",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "slots", ":slotId", "block"],
+                  "variable": [
+                    {
+                      "key": "slotId",
+                      "value": "{{slotId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Override Price",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pricePaise\": 250000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/slots/:slotId/price",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["vendors", "slots", ":slotId", "price"],
+                  "variable": [
+                    {
+                      "key": "slotId",
+                      "value": "{{slotId}}"
+                    }
+                  ]
+                }
               },
               "response": []
             }
@@ -2384,6 +2813,319 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Support",
+      "description": "Customer-facing support ticket endpoints. Requires a valid user JWT (Bearer {{accessToken}}).",
+      "item": [
+        {
+          "name": "Raise Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/support/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "support", "tickets"]
+            },
+            "description": "Create a new support ticket. category must be one of: booking, payment, account, technical, general.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"booking\",\n  \"subject\": \"Unable to cancel my booking\",\n  \"description\": \"I tried cancelling booking #123 but the button is greyed out. Please help.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/support/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "support", "tickets"]
+            },
+            "description": "### Expected Response: PaginatedResponseDto<TicketResponseDto>\n\nReturn all tickets raised by the authenticated user. Supports pagination (`?page=1&limit=10`) and filtering (`?status=open&category=booking&search=query`).\n\n| Property | Type | Description |\n|----------|------|-------------|\n| data | TicketResponseDto[] | Array of tickets |\n| meta | PaginationMeta | Pagination metadata (total, page, limit) |"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/support/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "support", "tickets", "{{ticketId}}"]
+            },
+            "description": "Return a single ticket. Returns 403 if the ticket belongs to another user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/support/tickets/{{ticketId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "support",
+                "tickets",
+                "{{ticketId}}",
+                "messages"
+              ]
+            },
+            "description": "Return the full message thread for a ticket the caller owns (chronological order)."
+          },
+          "response": []
+        },
+        {
+          "name": "Reply to Ticket (Customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/support/tickets/{{ticketId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "support",
+                "tickets",
+                "{{ticketId}}",
+                "messages"
+              ]
+            },
+            "description": "Customer adds a reply to their own ticket. Returns 403 if the ticket is closed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Hi, still waiting for an update on this issue.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Support (Admin)",
+      "description": "Admin/agent support endpoints. Requires super_admin or system_admin role.",
+      "item": [
+        {
+          "name": "Get All Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/support/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "support", "tickets"]
+            },
+            "description": "### Expected Response: PaginatedResponseDto<TicketResponseDto>\n\nReturn ALL support tickets across all users. Admin only. Supports pagination (`?page=1&limit=10`) and filtering (`?status=open&category=booking&search=query`).\n\n| Property | Type | Description |\n|----------|------|-------------|\n| data | TicketResponseDto[] | Array of tickets |\n| meta | PaginationMeta | Pagination metadata (total, page, limit) |"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/support/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "support",
+                "tickets",
+                "{{ticketId}}"
+              ]
+            },
+            "description": "Return a single ticket by ID — no ownership restriction."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Messages (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/support/tickets/{{ticketId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "support",
+                "tickets",
+                "{{ticketId}}",
+                "messages"
+              ]
+            },
+            "description": "Return the full message thread for any ticket — no ownership check."
+          },
+          "response": []
+        },
+        {
+          "name": "Reply as Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/support/tickets/{{ticketId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "support",
+                "tickets",
+                "{{ticketId}}",
+                "messages"
+              ]
+            },
+            "description": "### Expected Response: TicketMessageResponseDto\n\nAgent sends a reply stored with sender_role = 'agent'. Returns 403 if ticket is closed.\n\n| Property | Type | Description |\n|----------|------|-------------|\n| id | string | Unique message ID |\n| ticketId | string | ID of the ticket |\n| senderRole | string | 'user' or 'agent' |\n| body | string | Content of the reply |\n| createdAt | Date | Timestamp |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Hello, we have received your request and are looking into it.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Ticket Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/support/tickets/{{ticketId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "support",
+                "tickets",
+                "{{ticketId}}",
+                "status"
+              ]
+            },
+            "description": "Change ticket status. Allowed values: open, in_progress, resolved, closed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -2426,6 +3168,12 @@
       "key": "reviewId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "ticketId",
+      "value": "",
+      "type": "string",
+      "description": "UUID of the support ticket under test"
     }
   ]
 }

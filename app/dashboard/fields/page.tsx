@@ -55,6 +55,21 @@ import {
   getTurfById,
   uploadTurfDocuments,
 } from "@/features/turfs";
+import {
+  AdminSlot,
+  SlotConfig,
+  getAdminSlots,
+  getAdminSlotConfig,
+  upsertAdminSlotConfig,
+  generateAdminSlots,
+  patchAdminSlot,
+  SLOT_STATUS_COLORS,
+  UpsertSlotConfigPayload,
+  SlotConfigDayPricing,
+  SLOT_CONFIG_LIMITS,
+} from "@/features/slots";
+import { generateDefaultWeeklyPricing } from "@/features/slots/utils";
+import { SlotConfigEditor } from "@/features/slots/components/SlotConfigEditor";
 import { DashboardPagination } from "@/components/DashboardPagination";
 import Select from "@/components/Select";
 import { TableRowsSkeleton } from "@/components/LoadingSkeleton";
@@ -263,6 +278,17 @@ const INIT_FORM = {
   municipalNoc: "",
   liabilityInsurance: "",
   fieldPhotos: "",
+  slotConfig: {
+    slotDurationMins: 60,
+    weekdayOpen: "06:00",
+    weekdayClose: "22:00",
+    weekendOpen: "06:00",
+    weekendClose: "23:00",
+    bookingWindowDays: SLOT_CONFIG_LIMITS.DEFAULT_BOOKING_WINDOW,
+    generationWindowDays: SLOT_CONFIG_LIMITS.DEFAULT_GENERATION_WINDOW,
+    holdDurationMinutes: SLOT_CONFIG_LIMITS.DEFAULT_HOLD_DURATION,
+    weeklyPricing: [] as SlotConfigDayPricing[],
+  } as UpsertSlotConfigPayload,
 };
 
 type FormData = typeof INIT_FORM;
@@ -296,26 +322,7 @@ function getReviewerName(review: TurfReview) {
 // ─── Actions Menu ─────────────────────────────────────────────────────────────
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
-const TOTAL_SLOTS = 17; // 6 AM – 10 PM (last slot starts at 10 PM)
-const TODAY = new Date(2026, 2, 21); // Mar 21, 2026
-
-/** Deterministic mock booked slots for a given field + date */
-function getMockBookedSlots(field: Turf, date: Date): Set<number> {
-  if (field.status !== "active") return new Set();
-  const day = date.getDay();
-  const isWeekend = day === 0 || day === 6;
-  const popularity = Math.min(Math.floor((field.totalBookings || 0) / 80), 8);
-  const base = isWeekend ? popularity + 5 : popularity + 2;
-  const count = Math.min(base, 13);
-  const seed =
-    (field.id.charCodeAt(4) || 3) + date.getDate() * 7 + date.getMonth() * 31;
-  const booked = new Set<number>();
-  for (let i = 0; booked.size < count; i++) {
-    booked.add((seed * (i + 3) * 7 + i * 13) % TOTAL_SLOTS);
-    if (i > 200) break;
-  }
-  return booked;
-}
+const TODAY = new Date();
 
 /** Format a Date to display string */
 function fmtDate(d: Date): string {
@@ -327,9 +334,9 @@ function fmtDate(d: Date): string {
   });
 }
 
-/** Format a Date to a key string */
+/** Format a Date to a key string YYYY-MM-DD */
 function dateKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  return d.toISOString().split("T")[0];
 }
 
 function FieldDetailPanel({
@@ -363,16 +370,58 @@ function FieldDetailPanel({
   const [calOpen, setCalOpen] = useState(false);
   const [calMonth, setCalMonth] = useState(TODAY.getMonth());
   const [calYear, setCalYear] = useState(TODAY.getFullYear());
-  // blocked slots: dateKey -> Set of slot indices blocked by admin
-  const [blockedMap, setBlockedMap] = useState<Record<string, Set<number>>>({});
+
+  const [slots, setSlots] = useState<AdminSlot[]>([]);
+  const [config, setConfig] = useState<SlotConfig | null>(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [isPatching, setIsPatching] = useState<string | null>(null);
 
   const calRef = useRef<HTMLDivElement>(null);
+
+  const refreshSlots = useCallback(async () => {
+    setSlotsLoading(true);
+    try {
+      const data = await getAdminSlots(field.id, dateKey(scheduleDate));
+      setSlots(data);
+    } catch (err: any) {
+      showToast({
+        title: "Error",
+        description: "Failed to load slots",
+        tone: "error",
+      });
+    } finally {
+      setSlotsLoading(false);
+    }
+  }, [field.id, scheduleDate, showToast]);
+
+  const refreshConfig = useCallback(async () => {
+    setConfigLoading(true);
+    try {
+      const data = await getAdminSlotConfig(field.id);
+      setConfig(data);
+    } catch (err: any) {
+      // Silence config error if it doesn't exist
+    } finally {
+      setConfigLoading(false);
+    }
+  }, [field.id]);
+
+  useEffect(() => {
+    if (tab === "schedule") {
+      refreshSlots();
+      refreshConfig();
+    }
+  }, [tab, refreshSlots, refreshConfig]);
+
   useEffect(() => {
     setTab("overview");
     setStatusOpen(false);
     setReviews([]);
     setReviewsLoadedFor(null);
     setDeletingReviewId(null);
+    setSlots([]);
+    setConfig(null);
   }, [field.id]);
 
   useEffect(() => {
@@ -384,44 +433,40 @@ function FieldDetailPanel({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const dk = dateKey(scheduleDate);
-  const bookedSlots = getMockBookedSlots(field, scheduleDate);
-  const blocked = blockedMap[dk] ?? new Set<number>();
-
-  function toggleBlock(slotIdx: number) {
-    if (bookedSlots.has(slotIdx)) return; // can't block a booked slot
-    setBlockedMap((prev) => {
-      const next = new Map(Object.entries(prev));
-      const cur = new Set(prev[dk] ?? []);
-      if (cur.has(slotIdx)) cur.delete(slotIdx);
-      else cur.add(slotIdx);
-      return { ...prev, [dk]: cur };
-    });
+  async function handleToggleBlock(slot: AdminSlot) {
+    if (slot.status === "booked") return;
+    const nextStatus = slot.status === "available" ? "blocked" : "available";
+    setIsPatching(slot.slotId);
+    try {
+      await patchAdminSlot(slot.slotId, { status: nextStatus });
+      refreshSlots();
+    } catch (err: any) {
+      showToast({
+        title: "Update Failed",
+        description: err.message,
+        tone: "error",
+      });
+    } finally {
+      setIsPatching(null);
+    }
   }
 
-  function blockAllAvailable() {
-    setBlockedMap((prev) => {
-      const cur = new Set(prev[dk] ?? []);
-      for (let i = 0; i < TOTAL_SLOTS; i++) {
-        if (!bookedSlots.has(i)) cur.add(i);
-      }
-      return { ...prev, [dk]: cur };
-    });
-  }
-
-  function unblockAll() {
-    setBlockedMap((prev) => ({ ...prev, [dk]: new Set() }));
-  }
-
-  function blockPeak() {
-    // Peak = slots 11 onwards (5PM+)
-    setBlockedMap((prev) => {
-      const cur = new Set(prev[dk] ?? []);
-      for (let i = 11; i < TOTAL_SLOTS; i++) {
-        if (!bookedSlots.has(i)) cur.add(i);
-      }
-      return { ...prev, [dk]: cur };
-    });
+  async function handleGenerate() {
+    try {
+      await generateAdminSlots(field.id);
+      showToast({
+        title: "Generated",
+        description: "Slots generated successfully",
+        tone: "success",
+      });
+      refreshSlots();
+    } catch (err: any) {
+      showToast({
+        title: "Generation Failed",
+        description: err.message,
+        tone: "error",
+      });
+    }
   }
 
   function shiftDate(delta: number) {
@@ -432,10 +477,14 @@ function FieldDetailPanel({
     setCalYear(d.getFullYear());
   }
 
-  const bookedCount = bookedSlots.size;
-  const blockedCount = [...blocked].filter((i) => !bookedSlots.has(i)).length;
-  const availableCount = TOTAL_SLOTS - bookedCount - blockedCount;
-  const occupancyPct = Math.round((bookedCount / TOTAL_SLOTS) * 100);
+  const bookedCount = slots.filter((s) => s.status === "booked").length;
+  const blockedCount = slots.filter(
+    (s) => s.status === "blocked" || s.status === "maintenance",
+  ).length;
+  const availableCount = slots.filter((s) => s.status === "available").length;
+  const totalSlotsCount = slots.length;
+  const occupancyPct =
+    totalSlotsCount > 0 ? Math.round((bookedCount / totalSlotsCount) * 100) : 0;
 
   // Mini calendar helpers
   const monthNames = [
@@ -548,20 +597,16 @@ function FieldDetailPanel({
       <div className="flex border-b border-gray-100 shrink-0 bg-white">
         {(["overview", "reviews", "schedule", "analytics"] as const).map(
           (t) => {
-            const disabled = t === "schedule" || t === "analytics";
             return (
               <button
                 key={t}
                 onClick={() => {
-                  if (!disabled) setTab(t);
+                  setTab(t);
                 }}
-                disabled={disabled}
                 className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors ${
                   tab === t
                     ? "border-b-2 border-[#8a9e60] text-[#8a9e60]"
-                    : disabled
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-400 hover:text-gray-600"
+                    : "text-gray-400 hover:text-gray-600"
                 }`}
               >
                 {t === "reviews" ? "reviews" : t}
@@ -1000,7 +1045,6 @@ function FieldDetailPanel({
                           TODAY.getMonth(),
                           TODAY.getDate(),
                         );
-                      const hasBooking = getMockBookedSlots(field, d).size > 0;
                       return (
                         <button
                           key={i}
@@ -1026,14 +1070,6 @@ function FieldDetailPanel({
                           }
                         >
                           {d.getDate()}
-                          {hasBooking && !isSel && (
-                            <span
-                              className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                              style={{
-                                backgroundColor: isSel ? "white" : "#8a9e60",
-                              }}
-                            />
-                          )}
                         </button>
                       );
                     })}
@@ -1055,26 +1091,31 @@ function FieldDetailPanel({
               )}
             </div>
 
-            {/* ── Field not bookable ── */}
-            {field.status === "maintenance" ? (
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center">
-                <Wrench size={26} className="text-blue-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-blue-600">
-                  Under Maintenance
-                </p>
-                <p className="text-xs text-blue-400 mt-1">
-                  No slots available on any date
-                </p>
+            {slotsLoading ? (
+              <div className="grid grid-cols-4 gap-1.5 animate-pulse">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="h-14 bg-gray-50 rounded-xl" />
+                ))}
               </div>
-            ) : field.status !== "active" ? (
-              <div className="bg-gray-50 border border-gray-100 rounded-xl p-5 text-center">
-                <XCircle size={26} className="text-gray-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-gray-500">
-                  Field Not Active
+            ) : slots.length === 0 ? (
+              <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                <CalendarBlank
+                  size={32}
+                  className="text-gray-300 mx-auto mb-3"
+                />
+                <p className="text-sm font-semibold text-gray-600">
+                  No slots generated
                 </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Activate the field to manage slots
+                <p className="text-xs text-gray-400 mt-1 mb-4">
+                  Slots need to be generated for this field.
                 </p>
+                <button
+                  onClick={handleGenerate}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md hover:opacity-90 transition-all"
+                  style={{ backgroundColor: "#8a9e60" }}
+                >
+                  GENERATE SLOTS
+                </button>
               </div>
             ) : (
               <>
@@ -1088,61 +1129,57 @@ function FieldDetailPanel({
                     Booked
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-red-100 border border-red-200" />{" "}
+                    <span className="w-3 h-3 rounded bg-red-50 border border-red-200" />{" "}
                     Blocked
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-gray-100 border border-gray-200" />{" "}
+                    <span className="w-3 h-3 rounded bg-gray-50 border border-gray-100" />{" "}
                     Available
-                  </span>
-                  <span className="text-[10px] text-gray-400 ml-auto">
-                    Click to block/unblock
                   </span>
                 </div>
 
                 {/* ── Slot grid ── */}
                 <div className="grid grid-cols-4 gap-1.5">
-                  {Array.from({ length: TOTAL_SLOTS }, (_, i) => {
-                    const hour = 6 + i;
-                    const isBooked = bookedSlots.has(i);
-                    const isBlocked = !isBooked && blocked.has(i);
-                    const h = hour > 12 ? hour - 12 : hour === 12 ? 12 : hour;
-                    const ampm = hour >= 12 ? "PM" : "AM";
-                    const isPeak = hour >= 17;
+                  {slots.map((slot) => {
+                    const isBooked = slot.status === "booked";
+                    const isBlocked = slot.status === "blocked";
+                    const isMaintenance = slot.status === "maintenance";
+                    const isPatchingThis = isPatching === slot.slotId;
 
                     return (
                       <button
-                        key={i}
-                        disabled={isBooked}
-                        onClick={() => toggleBlock(i)}
-                        className={`rounded-xl py-2.5 text-center flex flex-col items-center gap-0.5 transition-all ${
+                        key={slot.slotId}
+                        disabled={isBooked || isPatchingThis}
+                        onClick={() => handleToggleBlock(slot)}
+                        className={`relative rounded-xl py-2.5 text-center flex flex-col items-center gap-0.5 transition-all ${
                           isBooked
                             ? "cursor-default"
-                            : isBlocked
+                            : isBlocked || isMaintenance
                               ? "bg-red-50 border border-red-200 hover:bg-red-100"
                               : "bg-gray-50 border border-gray-100 hover:border-gray-300 hover:bg-white"
                         }`}
                         style={isBooked ? { backgroundColor: "#8a9e60" } : {}}
                       >
+                        {isPatchingThis && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-xl z-10">
+                            <CircleNotch
+                              size={14}
+                              className="animate-spin text-gray-400"
+                            />
+                          </div>
+                        )}
                         <span
                           className={`text-[10px] font-bold ${
                             isBooked
                               ? "text-white"
-                              : isBlocked
+                              : isBlocked || isMaintenance
                                 ? "text-red-500"
                                 : "text-gray-500"
                           }`}
                         >
-                          {h}
-                          {ampm}
+                          {slot.startTime}
                         </span>
-                        {isPeak && !isBooked && (
-                          <span
-                            className={`text-[8px] font-semibold ${isBlocked ? "text-red-400" : "text-amber-500"}`}
-                          >
-                            PEAK
-                          </span>
-                        )}
+
                         {isBooked && (
                           <CheckCircle
                             size={10}
@@ -1150,7 +1187,7 @@ function FieldDetailPanel({
                             weight="fill"
                           />
                         )}
-                        {isBlocked && (
+                        {(isBlocked || isMaintenance) && (
                           <LockSimple
                             size={10}
                             className="text-red-400"
@@ -1165,25 +1202,11 @@ function FieldDetailPanel({
                 {/* ── Quick actions ── */}
                 <div className="flex gap-2 flex-wrap">
                   <button
-                    onClick={blockAllAvailable}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-[11px] font-semibold hover:bg-red-100 transition-colors"
+                    onClick={handleGenerate}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 text-[11px] font-semibold hover:bg-gray-100 transition-colors border border-gray-200"
                   >
-                    <LockSimple size={12} weight="fill" /> Block All
+                    <ArrowsClockwise size={12} /> Regenerate / Sync
                   </button>
-                  <button
-                    onClick={blockPeak}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-[11px] font-semibold hover:bg-amber-100 transition-colors"
-                  >
-                    <LockSimple size={12} /> Block Peak (5PM+)
-                  </button>
-                  {blockedCount > 0 && (
-                    <button
-                      onClick={unblockAll}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 text-[11px] font-semibold hover:bg-green-100 transition-colors"
-                    >
-                      <LockSimpleOpen size={12} /> Unblock All
-                    </button>
-                  )}
                 </div>
 
                 {/* ── Day summary ── */}
@@ -1230,38 +1253,28 @@ function FieldDetailPanel({
                     />
                     <div
                       style={{
-                        width: `${Math.round((blockedCount / TOTAL_SLOTS) * 100)}%`,
+                        width:
+                          totalSlotsCount > 0
+                            ? `${Math.round((blockedCount / totalSlotsCount) * 100)}%`
+                            : "0%",
                         backgroundColor: "#fca5a5",
                       }}
                     />
                   </div>
-                  <div className="flex justify-between text-[9px] text-gray-400 mt-1">
-                    <span>Booked</span>
-                    <span>Blocked</span>
-                    <span>Available</span>
-                  </div>
                 </div>
 
-                {/* ── Pricing note ── */}
+                {/* ── Pricing Note ── */}
                 <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
                   <p className="text-[11px] font-bold text-amber-700 mb-1.5">
-                    Pricing Tiers
+                    Standard Pricing
                   </p>
-                  <div className="space-y-1 text-xs text-amber-700">
-                    <div className="flex justify-between">
-                      <span className="text-amber-600">
-                        Standard (6AM – 5PM)
-                      </span>
-                      <span className="font-semibold">
-                        ₹{(field as any).pricePerHour}/hr
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-amber-600">Peak (5PM – close)</span>
-                      <span className="font-semibold">
-                        ₹{(field as any).peakPricePerHour}/hr
-                      </span>
-                    </div>
+                  <div className="flex justify-between items-center text-xs text-amber-700">
+                    <span>Hourly Rate</span>
+                    <span className="font-semibold">
+                      ₹
+                      {((field.standardPricePaise || 0) / 100).toLocaleString()}
+                      /hr
+                    </span>
                   </div>
                 </div>
               </>
@@ -1428,7 +1441,9 @@ function FieldDetailPanel({
           {statusOpen && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-10">
               {(Object.entries(STATUS_CONFIG) as [FieldStatus, any][])
-                .filter(([s]) => s !== "banned" && s !== "active" && s !== "pending")
+                .filter(
+                  ([s]) => s !== "banned" && s !== "active" && s !== "pending",
+                )
                 .map(([s, cfg]) => (
                   <button
                     key={s}
@@ -1521,9 +1536,8 @@ function FieldDetailPanel({
 export default function FieldsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [searchBy, setSearchBy] = useState<
-    (typeof FIELD_SEARCH_OPTIONS)[number]["value"]
-  >("field_name");
+  const [searchBy, setSearchBy] =
+    useState<(typeof FIELD_SEARCH_OPTIONS)[number]["value"]>("field_name");
   const [statusTab, setStatusTab] = useState("all");
   const [sportFilter, setSportFilter] = useState("All");
   const [cityFilter, setCityFilter] = useState("All");
@@ -1552,7 +1566,7 @@ export default function FieldsPage() {
   // Edit modal
   const [editTurf, setEditTurf] = useState<Turf | null>(null);
   const [editForm, setEditForm] = useState<UpdateTurfDto | null>(null);
-  const [editTab, setEditTab] = useState<"basic" | "pricing" | "sports">(
+  const [editTab, setEditTab] = useState<"basic" | "pricing" | "slot-config" | "sports">(
     "basic",
   );
 
@@ -1565,7 +1579,9 @@ export default function FieldsPage() {
   // Async Vendor Selection
   const [onboardVendors, setOnboardVendors] = useState<Vendor[]>([]);
   const [onboardVendorSearch, setOnboardVendorSearch] = useState("");
-  const [onboardVendorSearchBy, setOnboardVendorSearchBy] = useState<"business_name" | "vendor_id">("business_name");
+  const [onboardVendorSearchBy, setOnboardVendorSearchBy] = useState<
+    "business_name" | "vendor_id"
+  >("business_name");
   const [onboardVendorsLoading, setOnboardVendorsLoading] = useState(false);
 
   useEffect(() => {
@@ -1585,10 +1601,13 @@ export default function FieldsPage() {
         setOnboardVendorsLoading(false);
       }
     };
-    
+
     const timeoutId = setTimeout(fetchOnboardVendors, 500);
     return () => clearTimeout(timeoutId);
   }, [onboardVendorSearch, onboardVendorSearchBy]);
+
+  // Edit State for Slot Config
+  const [editSlotConfig, setEditSlotConfig] = useState<UpsertSlotConfigPayload | null>(null);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -1598,6 +1617,39 @@ export default function FieldsPage() {
   const [showOnboard, setShowOnboard] = useState(false);
   const [onboardStep, setOnboardStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({ ...INIT_FORM });
+
+  // Sync slot config with pricing/hours
+  useEffect(() => {
+    setFormData((prev) => {
+      const weeklyPricing = generateDefaultWeeklyPricing({
+        weekdayOpen: prev.weekdayFrom,
+        weekdayClose: prev.weekdayTo,
+        weekendOpen: prev.weekendFrom,
+        weekendClose: prev.weekendTo,
+        pricePerHour: parseFloat(prev.pricePerHour) || 0,
+        slotDurationMins: prev.slotConfig.slotDurationMins,
+      });
+
+      return {
+        ...prev,
+        slotConfig: {
+          ...prev.slotConfig,
+          weekdayOpen: prev.weekdayFrom,
+          weekdayClose: prev.weekdayTo,
+          weekendOpen: prev.weekendFrom,
+          weekendClose: prev.weekendTo,
+          weeklyPricing,
+        },
+      };
+    });
+  }, [
+    formData.weekdayFrom,
+    formData.weekdayTo,
+    formData.weekendFrom,
+    formData.weekendTo,
+    formData.pricePerHour,
+    formData.slotConfig.slotDurationMins,
+  ]);
   const [onboardKycFiles, setOnboardKycFiles] = useState<
     Record<string, File | File[]>
   >({});
@@ -1756,6 +1808,14 @@ export default function FieldsPage() {
 
       if (!turfId) {
         throw new Error("Failed to retrieve Field ID from response.");
+      }
+
+      // 1.5. Upsert Slot Config
+      try {
+        await upsertAdminSlotConfig(turfId, formData.slotConfig);
+      } catch (slotErr) {
+        console.error("Slot config upsert failed:", slotErr);
+        // We don't block the whole process if slot config fails
       }
 
       // 2. Sequential Uploads for KYC (if any)
@@ -1926,7 +1986,7 @@ export default function FieldsPage() {
   }
 
   // Edit Helpers
-  function onEdit(field: Turf) {
+  async function onEdit(field: Turf) {
     setEditTurf(field);
     setEditForm({
       name: field.name,
@@ -1945,6 +2005,45 @@ export default function FieldsPage() {
       },
     });
     setEditTab("basic");
+
+    // Fetch Slot Config
+    try {
+      const config = await getAdminSlotConfig(field.id);
+      setEditSlotConfig({
+        slotDurationMins: config.slotDurationMins,
+        weekdayOpen: config.weekdayOpen,
+        weekdayClose: config.weekdayClose,
+        weekendOpen: config.weekendOpen,
+        weekendClose: config.weekendClose,
+        bookingWindowDays: config.bookingWindowDays || SLOT_CONFIG_LIMITS.DEFAULT_BOOKING_WINDOW,
+        generationWindowDays: config.generationWindowDays || SLOT_CONFIG_LIMITS.DEFAULT_GENERATION_WINDOW,
+        holdDurationMinutes: config.holdDurationMinutes || SLOT_CONFIG_LIMITS.DEFAULT_HOLD_DURATION,
+        weeklyPricing: config.weeklyPricing.map((p) => ({
+          dayOfWeek: p.dayOfWeek,
+          prices: p.prices,
+        })),
+      });
+    } catch (err) {
+      // If no config exists, generate default
+      setEditSlotConfig({
+        slotDurationMins: 60,
+        weekdayOpen: field.weekdayOpen,
+        weekdayClose: field.weekdayClose,
+        weekendOpen: field.weekendOpen,
+        weekendClose: field.weekendClose,
+        bookingWindowDays: SLOT_CONFIG_LIMITS.DEFAULT_BOOKING_WINDOW,
+        generationWindowDays: SLOT_CONFIG_LIMITS.DEFAULT_GENERATION_WINDOW,
+        holdDurationMinutes: SLOT_CONFIG_LIMITS.DEFAULT_HOLD_DURATION,
+        weeklyPricing: generateDefaultWeeklyPricing({
+          weekdayOpen: field.weekdayOpen,
+          weekdayClose: field.weekdayClose,
+          weekendOpen: field.weekendOpen,
+          weekendClose: field.weekendClose,
+          pricePerHour: (field.standardPricePaise || 0) / 100,
+          slotDurationMins: 60,
+        }),
+      });
+    }
   }
 
   async function saveEdit() {
@@ -1976,6 +2075,12 @@ export default function FieldsPage() {
       };
 
       await updateTurf(editTurf.id, payload);
+
+      // Upsert Slot Config if available
+      if (editSlotConfig) {
+        await upsertAdminSlotConfig(editTurf.id, editSlotConfig);
+      }
+
       showToast({
         title: "Success",
         description: `${editTurf.name} updated successfully.`,
@@ -1983,6 +2088,7 @@ export default function FieldsPage() {
       });
       setEditTurf(null);
       setEditForm(null);
+      setEditSlotConfig(null);
       refreshData();
     } catch (err: any) {
       showToast({
@@ -2250,7 +2356,14 @@ export default function FieldsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusTab, sportFilter, cityFilter, debouncedSearch, searchBy, timeFilter]);
+  }, [
+    statusTab,
+    sportFilter,
+    cityFilter,
+    debouncedSearch,
+    searchBy,
+    timeFilter,
+  ]);
 
   const allSports = ["All", ...SPORTS_LIST];
   const allCities = [
@@ -2366,8 +2479,9 @@ export default function FieldsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={
-                  FIELD_SEARCH_OPTIONS.find((option) => option.value === searchBy)
-                    ?.placeholder ?? "Search fields"
+                  FIELD_SEARCH_OPTIONS.find(
+                    (option) => option.value === searchBy,
+                  )?.placeholder ?? "Search fields"
                 }
                 className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
               />
@@ -2383,7 +2497,7 @@ export default function FieldsPage() {
                   { value: "all", label: "All Time" },
                   { value: "today", label: "Today" },
                   { value: "last7", label: "Last 7 Days" },
-                  { value: "last30", label: "Last 30 Days" }
+                  { value: "last30", label: "Last 30 Days" },
                 ]}
                 className="bg-transparent text-gray-700 text-xs font-medium outline-none min-w-[80px]"
                 dropdownClassName="w-[150px] -left-2"
@@ -3002,7 +3116,10 @@ export default function FieldsPage() {
                           onChange={(val) => setField("surface", val)}
                           options={[
                             { value: "", label: "Select surface..." },
-                            ...SURFACE_LIST.map((s) => ({ value: s, label: s }))
+                            ...SURFACE_LIST.map((s) => ({
+                              value: s,
+                              label: s,
+                            })),
                           ]}
                           useFixed
                           className={`w-full border ${errors.surface ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white`}
@@ -3021,7 +3138,6 @@ export default function FieldsPage() {
               {onboardStep === 3 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
-
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         House / Shop Number
@@ -3097,7 +3213,7 @@ export default function FieldsPage() {
                           }
                           options={[
                             { value: "", label: "Select state" },
-                            ...STATES_LIST.map((s) => ({ value: s, label: s }))
+                            ...STATES_LIST.map((s) => ({ value: s, label: s })),
                           ]}
                           searchable
                           useFixed
@@ -3287,6 +3403,13 @@ export default function FieldsPage() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <SlotConfigEditor
+                      config={formData.slotConfig}
+                      onChange={(cfg) => setField("slotConfig", cfg)}
+                    />
                   </div>
                 </div>
               )}
@@ -3738,7 +3861,7 @@ export default function FieldsPage() {
                 </button>
               </div>
               <div className="flex gap-1 border-b border-gray-100 -mb-4">
-                {(["basic", "pricing", "sports"] as const).map((tab) => (
+                {(["basic", "pricing", "slot-config", "sports"] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setEditTab(tab)}
@@ -3749,7 +3872,9 @@ export default function FieldsPage() {
                       ? "Basic Info"
                       : tab === "pricing"
                         ? "Pricing & Schedule"
-                        : "Sports & Amenities"}
+                        : tab === "slot-config"
+                          ? "Slot Pricing"
+                          : "Sports & Amenities"}
                   </button>
                 ))}
               </div>
@@ -4011,6 +4136,15 @@ export default function FieldsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {editTab === "slot-config" && editSlotConfig && (
+                <div className="space-y-4">
+                  <SlotConfigEditor
+                    config={editSlotConfig}
+                    onChange={(cfg) => setEditSlotConfig(cfg)}
+                  />
                 </div>
               )}
 
