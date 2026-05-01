@@ -2,33 +2,27 @@ import { KycStatus, SportType } from "../vendors/constants";
 import { FieldStatus } from "../turfs/constants";
 import { BlockReason, SlotStatus } from "@/features/slots/constants";
 
-export interface SlotConfigDayPricing {
+export interface SlotDayConfig {
   dayOfWeek: number;
-  prices: number[];
+  openTime: string;
+  closeTime: string;
+  pricePaise: number;
 }
 
 export interface SlotConfig {
   fieldId: string;
   slotDurationMins: number;
-  weekdayOpen: string;
-  weekdayClose: string;
-  weekendOpen: string;
-  weekendClose: string;
   bookingWindowDays: number;
   generationWindowDays: number;
   holdDurationMinutes: number;
-  weeklyPricing: SlotConfigDayPricing[];
+  dailyConfigs: SlotDayConfig[];
   configVersion: number;
   updatedAt: string;
 }
 
 export interface UpsertSlotConfigPayload {
   slotDurationMins: number;
-  weekdayOpen: string;
-  weekdayClose: string;
-  weekendOpen: string;
-  weekendClose: string;
-  weeklyPricing: SlotConfigDayPricing[];
+  dailyConfigs: SlotDayConfig[];
 }
 
 export interface AdminSlot {

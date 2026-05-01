@@ -64,10 +64,10 @@ export async function getAdminSlotConfig(turfId: string): Promise<SlotConfig> {
   const config = extractObject(payload);
   
   // Convert Paise to Rupees for UI
-  if (config && config.weeklyPricing) {
-    config.weeklyPricing = config.weeklyPricing.map((p: any) => ({
+  if (config && config.dailyConfigs) {
+    config.dailyConfigs = config.dailyConfigs.map((p: any) => ({
       ...p,
-      prices: p.prices.map((paise: number) => paise / 100)
+      pricePaise: p.pricePaise / 100
     }));
   }
   
@@ -81,9 +81,9 @@ export async function upsertAdminSlotConfig(
   // Convert Rupees to Paise for backend
   const payloadWithPaise = {
     ...payload,
-    weeklyPricing: payload.weeklyPricing.map(p => ({
+    dailyConfigs: payload.dailyConfigs.map(p => ({
       ...p,
-      prices: p.prices.map(rupees => Math.round(rupees * 100))
+      pricePaise: Math.round(p.pricePaise * 100)
     }))
   };
 

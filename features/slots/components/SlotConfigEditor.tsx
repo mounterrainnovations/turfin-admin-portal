@@ -1,19 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { 
   Clock, 
-  CurrencyInr, 
   Calendar, 
-  Check, 
-  PencilSimple, 
-  Trash, 
-  Plus,
-  CaretLeft,
-  CaretRight,
   Warning
 } from "@phosphor-icons/react";
-import { SlotConfigDayPricing, UpsertSlotConfigPayload } from "../types";
+import { UpsertSlotConfigPayload } from "../types";
 import { DAY_NAMES } from "../constants";
-import { minutesToTime, timeToMinutes } from "../utils";
 
 interface SlotConfigEditorProps {
   config: UpsertSlotConfigPayload;
@@ -29,51 +21,33 @@ export const SlotConfigEditor: React.FC<SlotConfigEditorProps> = ({
   const [activeDay, setActiveDay] = useState<number>(new Date().getDay()); // Default to today
   const [bulkPrice, setBulkPrice] = useState<string>("");
 
-  const currentDayPricing = config.weeklyPricing.find(p => p.dayOfWeek === activeDay) || {
+  const currentDayConfig = config.dailyConfigs?.find(p => p.dayOfWeek === activeDay) || {
     dayOfWeek: activeDay,
-    prices: []
+    openTime: "06:00",
+    closeTime: "22:00",
+    pricePaise: 0
   };
 
-  const isWeekend = activeDay === 0 || activeDay === 6;
-  const openTime = isWeekend ? config.weekendOpen : config.weekdayOpen;
-  const closeTime = isWeekend ? config.weekendClose : config.weekdayClose;
-
-  const handlePriceChange = (index: number, value: string) => {
-    const newPrice = parseInt(value) || 0;
-    const newWeeklyPricing = config.weeklyPricing.map(dayPricing => {
-      if (dayPricing.dayOfWeek === activeDay) {
-        const newPrices = [...dayPricing.prices];
-        newPrices[index] = newPrice;
-        return { ...dayPricing, prices: newPrices };
+  const handleDayChange = (field: "openTime" | "closeTime" | "pricePaise", value: string | number) => {
+    const newDailyConfigs = config.dailyConfigs.map(dayConfig => {
+      if (dayConfig.dayOfWeek === activeDay) {
+        return { ...dayConfig, [field]: value };
       }
-      return dayPricing;
+      return dayConfig;
     });
-
-    onChange({ ...config, weeklyPricing: newWeeklyPricing });
+    onChange({ ...config, dailyConfigs: newDailyConfigs });
   };
 
   const handleBulkPriceApply = () => {
     const price = parseInt(bulkPrice);
     if (isNaN(price)) return;
 
-    const newWeeklyPricing = config.weeklyPricing.map(dayPricing => {
-      if (dayPricing.dayOfWeek === activeDay) {
-        return { ...dayPricing, prices: dayPricing.prices.fill(price) };
-      }
-      return dayPricing;
+    const newDailyConfigs = config.dailyConfigs.map(dayConfig => {
+      return { ...dayConfig, pricePaise: price };
     });
 
-    onChange({ ...config, weeklyPricing: newWeeklyPricing });
+    onChange({ ...config, dailyConfigs: newDailyConfigs });
     setBulkPrice("");
-  };
-
-  const getSlotTimes = (index: number) => {
-    const startMins = timeToMinutes(openTime) + index * config.slotDurationMins;
-    const endMins = startMins + config.slotDurationMins;
-    return {
-      start: minutesToTime(startMins % (24 * 60)),
-      end: minutesToTime(endMins % (24 * 60))
-    };
   };
 
   return (
@@ -125,9 +99,9 @@ export const SlotConfigEditor: React.FC<SlotConfigEditorProps> = ({
               <Calendar size={20} className="text-[#8a9e60]" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-gray-800">{DAY_NAMES[activeDay]}</h4>
+              <h4 className="text-sm font-bold text-gray-800">{DAY_NAMES[activeDay]} Pricing</h4>
               <p className="text-[10px] text-gray-500 font-medium">
-                {openTime} to {closeTime} • {currentDayPricing.prices.length} slots
+                Flat price for the entire day
               </p>
             </div>
           </div>
@@ -148,44 +122,43 @@ export const SlotConfigEditor: React.FC<SlotConfigEditorProps> = ({
               disabled={!bulkPrice}
               className="px-3 py-1.5 bg-[#8a9e60] text-white text-[10px] font-bold rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              APPLY ALL
+              APPLY ALL DAYS
             </button>
           </div>
         </div>
 
-        {/* Slots Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2">
-          {currentDayPricing.prices.length > 0 ? (
-            currentDayPricing.prices.map((price, idx) => {
-              const { start, end } = getSlotTimes(idx);
-              return (
-                <div 
-                  key={idx}
-                  className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/30 hover:border-[#8a9e60]/30 transition-colors"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Slot {idx + 1}</span>
-                    <span className="text-xs font-bold text-gray-700">{start} - {end}</span>
-                  </div>
-                  <div className="relative w-24">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span>
-                    <input
-                      type="number"
-                      value={price}
-                      onChange={(e) => handlePriceChange(idx, e.target.value)}
-                      className="w-full pl-5 pr-2 py-1.5 text-xs font-bold text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[#8a9e60]"
-                    />
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full py-10 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-              <Warning size={32} className="mb-2 opacity-20" />
-              <p className="text-xs font-medium">No operating hours defined for this day</p>
-              <p className="text-[10px] opacity-60">Slots will appear once you set opening/closing times.</p>
+        {/* Day Config Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-gray-500 uppercase">Open Time</label>
+            <input
+              type="time"
+              value={currentDayConfig.openTime}
+              onChange={(e) => handleDayChange("openTime", e.target.value)}
+              className="w-full px-3 py-2 text-xs font-bold text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[#8a9e60]"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-gray-500 uppercase">Close Time</label>
+            <input
+              type="time"
+              value={currentDayConfig.closeTime}
+              onChange={(e) => handleDayChange("closeTime", e.target.value)}
+              className="w-full px-3 py-2 text-xs font-bold text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[#8a9e60]"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-gray-500 uppercase">Day Price (₹)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">₹</span>
+              <input
+                type="number"
+                value={currentDayConfig.pricePaise}
+                onChange={(e) => handleDayChange("pricePaise", parseInt(e.target.value) || 0)}
+                className="w-full pl-6 pr-3 py-2 text-xs font-bold text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[#8a9e60]"
+              />
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -198,3 +171,4 @@ export const SlotConfigEditor: React.FC<SlotConfigEditorProps> = ({
     </div>
   );
 };
+

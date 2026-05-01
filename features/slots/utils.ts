@@ -1,4 +1,4 @@
-import { SlotConfigDayPricing } from "./types";
+import { SlotDayConfig } from "./types";
 
 /**
  * Converts a time string (HH:mm) to minutes from midnight
@@ -24,56 +24,42 @@ export function generateDefaultDayPricing(
   dayOfWeek: number,
   openTime: string,
   closeTime: string,
-  pricePerHour: number,
-  slotDurationMins: number
-): SlotConfigDayPricing {
-  const startMins = timeToMinutes(openTime);
-  let endMins = timeToMinutes(closeTime);
-
-  // Handle case where close time is on the next day (e.g. 02:00)
-  if (endMins <= startMins) {
-    endMins += 24 * 60;
-  }
-
-  const duration = endMins - startMins;
-  const slotCount = Math.floor(duration / slotDurationMins);
-
-  const prices = Array(slotCount).fill(pricePerHour);
-
+  pricePerHour: number
+): SlotDayConfig {
   return {
     dayOfWeek,
-    prices,
+    openTime,
+    closeTime,
+    pricePaise: pricePerHour, // Technically it's rupees in UI until it hits api.ts
   };
 }
 
 /**
  * Generates a full weekly pricing config
  */
-export function generateDefaultWeeklyPricing(params: {
+export function generateDefaultDailyConfigs(params: {
   weekdayOpen: string;
   weekdayClose: string;
   weekendOpen: string;
   weekendClose: string;
   pricePerHour: number;
-  slotDurationMins: number;
-}): SlotConfigDayPricing[] {
-  const weeklyPricing: SlotConfigDayPricing[] = [];
+}): SlotDayConfig[] {
+  const dailyConfigs: SlotDayConfig[] = [];
 
   for (let day = 0; day < 7; day++) {
     const isWeekend = day === 0 || day === 6; // 0 is Sunday, 6 is Saturday
     const open = isWeekend ? params.weekendOpen : params.weekdayOpen;
     const close = isWeekend ? params.weekendClose : params.weekdayClose;
 
-    weeklyPricing.push(
+    dailyConfigs.push(
       generateDefaultDayPricing(
         day,
         open,
         close,
-        params.pricePerHour,
-        params.slotDurationMins
+        params.pricePerHour
       )
     );
   }
 
-  return weeklyPricing;
+  return dailyConfigs;
 }

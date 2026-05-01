@@ -65,9 +65,9 @@ import {
   patchAdminSlot,
   SLOT_STATUS_COLORS,
   UpsertSlotConfigPayload,
-  SlotConfigDayPricing,
+  SlotDayConfig,
 } from "@/features/slots";
-import { generateDefaultWeeklyPricing } from "@/features/slots/utils";
+import { generateDefaultDailyConfigs } from "@/features/slots/utils";
 import { SlotConfigEditor } from "@/features/slots/components/SlotConfigEditor";
 import { DashboardPagination } from "@/components/DashboardPagination";
 import Select from "@/components/Select";
@@ -279,11 +279,7 @@ const INIT_FORM = {
   fieldPhotos: "",
   slotConfig: {
     slotDurationMins: 60,
-    weekdayOpen: "06:00",
-    weekdayClose: "22:00",
-    weekendOpen: "06:00",
-    weekendClose: "23:00",
-    weeklyPricing: [] as SlotConfigDayPricing[],
+    dailyConfigs: [],
   } as UpsertSlotConfigPayload,
 };
 
@@ -1618,24 +1614,19 @@ export default function FieldsPage() {
   // Sync slot config with pricing/hours
   useEffect(() => {
     setFormData((prev) => {
-      const weeklyPricing = generateDefaultWeeklyPricing({
+      const dailyConfigs = generateDefaultDailyConfigs({
         weekdayOpen: prev.weekdayFrom,
         weekdayClose: prev.weekdayTo,
         weekendOpen: prev.weekendFrom,
         weekendClose: prev.weekendTo,
         pricePerHour: parseFloat(prev.pricePerHour) || 0,
-        slotDurationMins: prev.slotConfig.slotDurationMins,
       });
 
       return {
         ...prev,
         slotConfig: {
           ...prev.slotConfig,
-          weekdayOpen: prev.weekdayFrom,
-          weekdayClose: prev.weekdayTo,
-          weekendOpen: prev.weekendFrom,
-          weekendClose: prev.weekendTo,
-          weeklyPricing,
+          dailyConfigs,
         },
       };
     });
@@ -2009,15 +2000,13 @@ export default function FieldsPage() {
       const config = await getAdminSlotConfig(field.id);
       setEditSlotConfig({
         slotDurationMins: config.slotDurationMins,
-        weekdayOpen: config.weekdayOpen,
-        weekdayClose: config.weekdayClose,
-        weekendOpen: config.weekendOpen,
-        weekendClose: config.weekendClose,
-        weeklyPricing: config.weeklyPricing.map((p) => ({
+        dailyConfigs: config.dailyConfigs.map((p) => ({
           dayOfWeek: p.dayOfWeek,
-          prices: p.prices,
+          openTime: p.openTime,
+          closeTime: p.closeTime,
+          pricePaise: p.pricePaise,
         })),
-      } as any);
+      });
     } catch (err: any) {
       // If it's a 404, we just generate defaults silently
       // For other errors, we show a warning but still allow editing with defaults
@@ -2032,19 +2021,14 @@ export default function FieldsPage() {
       // If no config exists or failed to load, generate default
       setEditSlotConfig({
         slotDurationMins: 60,
-        weekdayOpen: field.weekdayOpen,
-        weekdayClose: field.weekdayClose,
-        weekendOpen: field.weekendOpen,
-        weekendClose: field.weekendClose,
-        weeklyPricing: generateDefaultWeeklyPricing({
+        dailyConfigs: generateDefaultDailyConfigs({
           weekdayOpen: field.weekdayOpen,
           weekdayClose: field.weekdayClose,
           weekendOpen: field.weekendOpen,
           weekendClose: field.weekendClose,
           pricePerHour: (field.standardPricePaise || 0) / 100,
-          slotDurationMins: 60,
         }),
-      } as any);
+      });
     } finally {
       setEditSlotConfigLoading(false);
     }
