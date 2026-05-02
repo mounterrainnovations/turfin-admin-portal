@@ -33,6 +33,9 @@ import {
   X,
   CircleNotch,
   Check,
+  Info,
+  Warning,
+  Timer,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -439,7 +442,6 @@ function FieldDetailPanel({
   }, []);
 
   async function handleSlotClick(slot: AdminSlot) {
-    if (slot.status === "booked") return;
     setSlotToEdit(slot);
     setSlotPriceInput((slot.pricePaise / 100).toString());
     setSlotBlockReason(slot.blockReason || "vendor_hold");
@@ -1157,6 +1159,14 @@ function FieldDetailPanel({
                     <span className="w-3 h-3 rounded bg-gray-50 border border-gray-100" />{" "}
                     Available
                   </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-blue-50 border border-blue-200" />{" "}
+                    Held
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-purple-50 border border-purple-200" />{" "}
+                    Reserved
+                  </span>
                 </div>
 
                 {/* ── Slot grid ── */}
@@ -1165,21 +1175,27 @@ function FieldDetailPanel({
                     const isBooked = slot.status === "booked";
                     const isBlocked = slot.status === "blocked";
                     const isMaintenance = slot.status === "maintenance";
+                    const isHeld = slot.status === "held";
+                    const isReserved = slot.status === "reserved";
                     const isPatchingThis = isPatching === slot.slotId;
 
                     return (
                       <button
                         key={slot.slotId}
-                        disabled={isBooked || isPatchingThis}
+                        disabled={isPatchingThis}
                         onClick={() => handleSlotClick(slot)}
                         className={`relative rounded-xl py-2.5 text-center flex flex-col items-center gap-0.5 transition-all ${
                           isBooked
-                            ? "cursor-default"
+                            ? "hover:opacity-90"
                             : isBlocked
                               ? "bg-red-50 border border-red-200 hover:bg-red-100"
                               : isMaintenance
                                 ? "bg-amber-50 border border-amber-200 hover:bg-amber-100"
-                                : "bg-gray-50 border border-gray-100 hover:border-gray-300 hover:bg-white"
+                                : isHeld
+                                  ? "bg-blue-50 border border-blue-200 hover:bg-blue-100"
+                                  : isReserved
+                                    ? "bg-purple-50 border border-purple-200 hover:bg-purple-100"
+                                    : "bg-gray-50 border border-gray-100 hover:border-gray-300 hover:bg-white"
                         }`}
                         style={isBooked ? { backgroundColor: "#8a9e60" } : {}}
                       >
@@ -1199,7 +1215,11 @@ function FieldDetailPanel({
                                 ? "text-red-500"
                                 : isMaintenance
                                   ? "text-amber-600"
-                                  : "text-gray-500"
+                                  : isHeld
+                                    ? "text-blue-600"
+                                    : isReserved
+                                      ? "text-purple-600"
+                                      : "text-gray-500"
                           }`}
                         >
                           {slot.startTime}
@@ -1226,7 +1246,23 @@ function FieldDetailPanel({
                         {(isBlocked || isMaintenance) && (
                           <LockSimple
                             size={10}
-                            className="text-red-400"
+                            className={
+                              isBlocked ? "text-red-400" : "text-amber-500"
+                            }
+                            weight="fill"
+                          />
+                        )}
+                        {isHeld && (
+                          <Timer
+                            size={10}
+                            className="text-blue-500 animate-pulse"
+                            weight="fill"
+                          />
+                        )}
+                        {isReserved && (
+                          <LockSimple
+                            size={10}
+                            className="text-purple-500"
                             weight="fill"
                           />
                         )}
@@ -1592,69 +1628,229 @@ function FieldDetailPanel({
             </div>
 
             <div className="p-5 space-y-5">
-              {/* Status Section */}
-              <div>
-                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3">
-                  Change Status
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {slotToEdit.status !== "available" ? (
-                    <button
-                      onClick={() => {
-                        setConfirm({
-                          title: "Make Available?",
-                          message:
-                            "Are you sure you want to make this slot available for bookings?",
-                          type: "success",
-                          icon: <CheckCircle size={24} weight="bold" />,
-                          onConfirm: () =>
-                            handleUpdateSlot({ status: "available" }),
-                        });
-                      }}
-                      className="col-span-2 flex items-center justify-center gap-2 py-2 rounded-xl bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-all shadow-sm"
+              {/* Force Release UI for Protected Slots (Booked, Held, Reserved) */}
+              {(slotToEdit.status === "booked" ||
+                slotToEdit.status === "held" ||
+                slotToEdit.status === "reserved") && (
+                <div
+                  className={`border rounded-xl p-4 space-y-3 ${
+                    slotToEdit.status === "booked"
+                      ? "bg-blue-50 border-blue-200"
+                      : "bg-amber-50 border-amber-200"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`p-2 rounded-lg ${
+                        slotToEdit.status === "booked"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-amber-100 text-amber-600"
+                      }`}
                     >
-                      <CheckCircle size={15} /> Make Available
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => {
-                          setConfirm({
-                            title: "Block Slot?",
-                            message: `Are you sure you want to block this slot for ${slotBlockReason.replace("_", " ")}?`,
-                            type: "danger",
-                            icon: <XCircle size={24} weight="bold" />,
-                            onConfirm: () =>
-                              handleUpdateSlot({
-                                status: "blocked",
-                                blockReason: slotBlockReason,
-                              }),
-                          });
-                        }}
-                        className="flex items-center justify-center gap-2 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-xs font-semibold hover:bg-red-100 transition-all shadow-sm"
+                      {slotToEdit.status === "booked" ? (
+                        <ShieldCheck size={20} weight="bold" />
+                      ) : (
+                        <Timer
+                          size={20}
+                          weight="bold"
+                          className={
+                            slotToEdit.status === "held" ? "animate-pulse" : ""
+                          }
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <h4
+                        className={`text-xs font-bold ${
+                          slotToEdit.status === "booked"
+                            ? "text-blue-900"
+                            : "text-amber-900"
+                        }`}
                       >
-                        <XCircle size={15} /> Block Slot
-                      </button>
+                        {slotToEdit.status === "booked"
+                          ? "Protected Slot"
+                          : slotToEdit.status === "held"
+                            ? "Transaction in Progress"
+                            : "Slot Reserved"}
+                      </h4>
+                      <p
+                        className={`text-[10px] leading-relaxed mt-0.5 ${
+                          slotToEdit.status === "booked"
+                            ? "text-blue-700"
+                            : "text-amber-700"
+                        }`}
+                      >
+                        {slotToEdit.status === "booked"
+                          ? "This slot is active. To modify it, you must perform a **Force Release**, which will cancel the associated booking."
+                          : slotToEdit.status === "held"
+                            ? "This slot is strictly locked for an active payment session. No administrative overrides are permitted until the hold expires."
+                            : (() => {
+                                const [h, m] = slotToEdit.startTime
+                                  .split(":")
+                                  .map(Number);
+                                const sd = new Date(slotToEdit.slotDate);
+                                sd.setHours(h, m, 0, 0);
+                                const canCancel =
+                                  sd.getTime() - Date.now() >=
+                                  2 * 60 * 60 * 1000;
+
+                                if (!canCancel) {
+                                  return "This slot is reserved. Administrative overrides are disabled as the slot starts in less than 2 hours.";
+                                }
+                                return "This slot is reserved. Admins can override this if necessary.";
+                              })()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const [h, m] = slotToEdit.startTime.split(":").map(Number);
+                    const sd = new Date(slotToEdit.slotDate);
+                    sd.setHours(h, m, 0, 0);
+                    const canCancel =
+                      sd.getTime() - Date.now() >= 2 * 60 * 60 * 1000;
+
+                    if (!canCancel) {
+                      // Only show the red warning box for BOOKED and RESERVED slots.
+                      if (
+                        slotToEdit.status === "booked" ||
+                        slotToEdit.status === "reserved"
+                      ) {
+                        return (
+                          <div className="flex items-center gap-2 text-[10px] text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
+                            <WarningCircle size={14} weight="bold" />
+                            <span>
+                              Cancellation window closed (Less than 2h
+                              remaining).
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }
+
+                    // Strict Lockout for HELD: No button allowed
+                    if (slotToEdit.status === "held") return null;
+
+                    return (
                       <button
                         onClick={() => {
                           setConfirm({
-                            title: "Maintenance Mode?",
+                            title: `Force Release ${slotToEdit.status.charAt(0).toUpperCase() + slotToEdit.status.slice(1)} Slot?`,
                             message:
-                              "Set this slot to maintenance mode? This will prevent any bookings.",
-                            type: "warning",
-                            icon: <Wrench size={24} weight="bold" />,
+                              slotToEdit.status === "booked"
+                                ? "This will cancel the user's booking. Are you sure you want to proceed?"
+                                : "This will clear the hold/reservation. Are you sure you want to proceed?",
+                            type: "danger",
+                            icon: <Warning size={24} weight="bold" />,
                             onConfirm: () =>
-                              handleUpdateSlot({ status: "maintenance" }),
+                              handleUpdateSlot({ status: "available" }),
                           });
                         }}
-                        className="flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-all shadow-sm"
+                        className={`w-full py-2 text-white text-[11px] font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 ${
+                          slotToEdit.status === "booked"
+                            ? "bg-blue-600 hover:bg-blue-700"
+                            : "bg-amber-600 hover:bg-amber-700"
+                        }`}
                       >
-                        <Wrench size={15} /> Maintenance
+                        <ArrowsClockwise size={14} weight="bold" />
+                        Perform Force Release
                       </button>
-                    </>
-                  )}
+                    );
+                  })()}
                 </div>
-              </div>
+              )}
+
+              {/* Historical Context (Metadata Overlay) */}
+              {slotToEdit.lastCancelledBooking && (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ArrowsClockwise size={12} className="text-gray-400" />
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                      Recent Activity
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-gray-600 leading-relaxed">
+                    <p className="font-semibold text-gray-900">
+                      Force Released by Admin
+                    </p>
+                    <p className="mt-0.5 text-gray-400 italic">
+                      "
+                      {slotToEdit.lastCancelledBooking.reason ||
+                        "No reason provided"}
+                      "
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Section (Hidden for Protected States) */}
+              {slotToEdit.status !== "held" &&
+                slotToEdit.status !== "reserved" &&
+                slotToEdit.status !== "booked" && (
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3">
+                      Change Status
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {slotToEdit.status !== "available" ? (
+                        <button
+                          onClick={() => {
+                            setConfirm({
+                              title: "Make Available?",
+                              message:
+                                "Are you sure you want to make this slot available for bookings?",
+                              type: "success",
+                              icon: <CheckCircle size={24} weight="bold" />,
+                              onConfirm: () =>
+                                handleUpdateSlot({ status: "available" }),
+                            });
+                          }}
+                          className="col-span-2 flex items-center justify-center gap-2 py-2 rounded-xl bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-all shadow-sm"
+                        >
+                          <CheckCircle size={15} /> Make Available
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              setConfirm({
+                                title: "Block Slot?",
+                                message: `Are you sure you want to block this slot for ${slotBlockReason.replace("_", " ")}?`,
+                                type: "danger",
+                                icon: <XCircle size={24} weight="bold" />,
+                                onConfirm: () =>
+                                  handleUpdateSlot({
+                                    status: "blocked",
+                                    blockReason: slotBlockReason,
+                                  }),
+                              });
+                            }}
+                            className="flex items-center justify-center gap-2 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-xs font-semibold hover:bg-red-100 transition-all shadow-sm"
+                          >
+                            <XCircle size={15} /> Block Slot
+                          </button>
+                          <button
+                            onClick={() => {
+                              setConfirm({
+                                title: "Maintenance Mode?",
+                                message:
+                                  "Set this slot to maintenance mode? This will prevent any bookings.",
+                                type: "warning",
+                                icon: <Wrench size={24} weight="bold" />,
+                                onConfirm: () =>
+                                  handleUpdateSlot({ status: "maintenance" }),
+                              });
+                            }}
+                            className="flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-all shadow-sm"
+                          >
+                            <Wrench size={15} /> Maintenance
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
 
               {/* Block Reason (only if available) */}
               {slotToEdit.status === "available" && (
@@ -1678,62 +1874,67 @@ function FieldDetailPanel({
                   />
                 </div>
               )}
+              {/* Price Override Section (Disabled for Held/Reserved) */}
+              {slotToEdit.status !== "held" &&
+                slotToEdit.status !== "reserved" && (
+                  <>
+                    <div className="h-px bg-gray-100" />
+                    <div>
+                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        Price Override
+                        {slotToEdit.isPriceOverridden && (
+                          <span className="text-[9px] px-2 py-0.5 bg-[#8a9e60]/10 text-[#8a9e60] rounded-full font-bold">
+                            ACTIVE
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={slotPriceInput}
+                            onChange={(e) => setSlotPriceInput(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            disabled={slotToEdit.status === "booked"}
+                            className="w-full pl-7 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 focus:ring-1 focus:ring-[#8a9e60] focus:border-[#8a9e60] outline-none transition-all disabled:opacity-50"
+                            placeholder="Enter amount"
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            const price = parseFloat(slotPriceInput);
+                            if (isNaN(price)) return;
+                            const newPricePaise = Math.round(price * 100);
+                            if (newPricePaise === slotToEdit.pricePaise) return;
 
-              <div className="h-px bg-gray-100" />
-
-              {/* Price Override Section */}
-              <div>
-                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center justify-between">
-                  Price Override
-                  {slotToEdit.isPriceOverridden && (
-                    <span className="text-[9px] px-2 py-0.5 bg-[#8a9e60]/10 text-[#8a9e60] rounded-full font-bold">
-                      ACTIVE
-                    </span>
-                  )}
-                </p>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={slotPriceInput}
-                      onChange={(e) => setSlotPriceInput(e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      className="w-full pl-7 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 focus:ring-1 focus:ring-[#8a9e60] focus:border-[#8a9e60] outline-none transition-all"
-                      placeholder="Enter amount"
-                    />
-                  </div>
-                  <button
-                    onClick={() => {
-                      const price = parseFloat(slotPriceInput);
-                      if (isNaN(price)) return;
-                      const newPricePaise = Math.round(price * 100);
-                      if (newPricePaise === slotToEdit.pricePaise) return;
-
-                      setConfirm({
-                        title: "Override Price?",
-                        message: `Set price to ₹${price.toLocaleString()} for this slot?`,
-                        type: "success",
-                        icon: <CheckCircle size={24} weight="bold" />,
-                        onConfirm: () =>
-                          handleUpdateSlot({ pricePaise: newPricePaise }),
-                      });
-                    }}
-                    disabled={
-                      Math.round(parseFloat(slotPriceInput) * 100) ===
-                      slotToEdit.pricePaise
-                    }
-                    className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: "#8a9e60" }}
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
+                            setConfirm({
+                              title: "Override Price?",
+                              message: `Set price to ₹${price.toLocaleString()} for this slot?`,
+                              type: "success",
+                              icon: <CheckCircle size={24} weight="bold" />,
+                              onConfirm: () =>
+                                handleUpdateSlot({ pricePaise: newPricePaise }),
+                            });
+                          }}
+                          disabled={
+                            slotToEdit.status === "booked" ||
+                            Math.round(parseFloat(slotPriceInput) * 100) ===
+                              slotToEdit.pricePaise
+                          }
+                          className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{ backgroundColor: "#8a9e60" }}
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
             </div>
           </div>
         </div>

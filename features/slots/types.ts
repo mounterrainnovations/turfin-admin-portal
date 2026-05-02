@@ -40,6 +40,11 @@ export interface AdminSlot {
   configVersion: number;
   heldByBookingId: string | null;
   generatedAt: string;
+  lastCancelledBooking?: {
+    bookingId: string;
+    cancelledAt: string;
+    reason: string | null;
+  } | null;
 }
 
 export interface AdminSlotPatchPayload {

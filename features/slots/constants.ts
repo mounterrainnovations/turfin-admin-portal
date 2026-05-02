@@ -1,4 +1,4 @@
-export type SlotStatus = 'available' | 'booked' | 'blocked' | 'maintenance';
+export type SlotStatus = 'available' | 'booked' | 'blocked' | 'maintenance' | 'held' | 'reserved';
 
 export type BlockReason = 'maintenance' | 'private_event' | 'weather' | 'vendor_hold' | 'other';
 
@@ -26,6 +26,8 @@ export const SLOT_STATUS_LABELS: Record<SlotStatus, string> = {
   booked: "Booked",
   blocked: "Blocked",
   maintenance: "Maintenance",
+  held: "Held",
+  reserved: "Reserved",
 };
 
 export const SLOT_STATUS_COLORS: Record<SlotStatus, string> = {
@@ -33,4 +35,6 @@ export const SLOT_STATUS_COLORS: Record<SlotStatus, string> = {
   booked: "bg-[#8a9e60] text-white",
   blocked: "bg-red-50 border-red-200 text-red-500",
   maintenance: "bg-amber-50 border-amber-200 text-amber-600",
+  held: "bg-blue-50 border-blue-200 text-blue-600",
+  reserved: "bg-purple-50 border-purple-200 text-purple-600",
 };
