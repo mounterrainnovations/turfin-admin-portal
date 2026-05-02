@@ -377,6 +377,7 @@ function FieldDetailPanel({
   const [slotPriceInput, setSlotPriceInput] = useState("");
   const [slotBlockReason, setSlotBlockReason] =
     useState<BlockReason>("vendor_hold");
+  const [slotOverrideReason, setSlotOverrideReason] = useState("");
   const [confirm, setConfirm] = useState<{
     title: string;
     message: string;
@@ -445,6 +446,7 @@ function FieldDetailPanel({
     setSlotToEdit(slot);
     setSlotPriceInput((slot.pricePaise / 100).toString());
     setSlotBlockReason(slot.blockReason || "vendor_hold");
+    setSlotOverrideReason(""); // Reset on click
   }
 
   async function handleUpdateSlot(updates: AdminSlotPatchPayload) {
@@ -1711,7 +1713,6 @@ function FieldDetailPanel({
                       sd.getTime() - Date.now() >= 2 * 60 * 60 * 1000;
 
                     if (!canCancel) {
-                      // Only show the red warning box for BOOKED and RESERVED slots.
                       if (
                         slotToEdit.status === "booked" ||
                         slotToEdit.status === "reserved"
@@ -1729,33 +1730,109 @@ function FieldDetailPanel({
                       return null;
                     }
 
-                    // Strict Lockout for HELD: No button allowed
                     if (slotToEdit.status === "held") return null;
 
                     return (
-                      <button
-                        onClick={() => {
-                          setConfirm({
-                            title: `Force Release ${slotToEdit.status.charAt(0).toUpperCase() + slotToEdit.status.slice(1)} Slot?`,
-                            message:
+                      <div className="space-y-4 pt-1">
+                        <div className="h-px bg-white/20" />
+                        <div>
+                          <p
+                            className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${
                               slotToEdit.status === "booked"
-                                ? "This will cancel the user's booking. Are you sure you want to proceed?"
-                                : "This will clear the hold/reservation. Are you sure you want to proceed?",
-                            type: "danger",
-                            icon: <Warning size={24} weight="bold" />,
-                            onConfirm: () =>
-                              handleUpdateSlot({ status: "available" }),
-                          });
-                        }}
-                        className={`w-full py-2 text-white text-[11px] font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 ${
-                          slotToEdit.status === "booked"
-                            ? "bg-blue-600 hover:bg-blue-700"
-                            : "bg-amber-600 hover:bg-amber-700"
-                        }`}
-                      >
-                        <ArrowsClockwise size={14} weight="bold" />
-                        Perform Force Release
-                      </button>
+                                ? "text-blue-900"
+                                : "text-amber-900"
+                            }`}
+                          >
+                            Cancellation Note (Mandatory)
+                          </p>
+                          <textarea
+                            value={slotOverrideReason}
+                            onChange={(e) =>
+                              setSlotOverrideReason(e.target.value)
+                            }
+                            placeholder="Explain why this slot is being released (sent to user)..."
+                            className={`w-full px-3 py-2 border rounded-lg text-xs font-medium focus:ring-1 outline-none transition-all resize-none h-16 ${
+                              slotToEdit.status === "booked"
+                                ? "bg-white border-blue-200 focus:ring-blue-500 text-blue-900"
+                                : "bg-white border-amber-200 focus:ring-amber-500 text-amber-900"
+                            }`}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <button
+                            disabled={!slotOverrideReason.trim()}
+                            onClick={() => {
+                              setConfirm({
+                                title: "Release & Make Available?",
+                                message:
+                                  "This will cancel the booking and open the slot for new users.",
+                                type: "success",
+                                icon: (
+                                  <ArrowsClockwise size={24} weight="bold" />
+                                ),
+                                onConfirm: () =>
+                                  handleUpdateSlot({
+                                    status: "available",
+                                    overrideReason: slotOverrideReason,
+                                  }),
+                              });
+                            }}
+                            className={`w-full py-2 text-white text-[11px] font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                              slotToEdit.status === "booked"
+                                ? "bg-blue-600 hover:bg-blue-700"
+                                : "bg-amber-600 hover:bg-amber-700"
+                            }`}
+                          >
+                            <CheckCircle size={14} weight="bold" /> Release &
+                            Available
+                          </button>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              disabled={!slotOverrideReason.trim()}
+                              onClick={() => {
+                                setConfirm({
+                                  title: "Release & Block?",
+                                  message:
+                                    "This will cancel the booking and block the slot.",
+                                  type: "danger",
+                                  icon: <Prohibit size={24} weight="bold" />,
+                                  onConfirm: () =>
+                                    handleUpdateSlot({
+                                      status: "blocked",
+                                      blockReason: "other",
+                                      overrideReason: slotOverrideReason,
+                                    }),
+                                });
+                              }}
+                              className="py-2 bg-red-50 text-red-700 border border-red-100 text-[11px] font-bold rounded-lg hover:bg-red-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <LockSimple size={14} /> Force Block
+                            </button>
+                            <button
+                              disabled={!slotOverrideReason.trim()}
+                              onClick={() => {
+                                setConfirm({
+                                  title: "Release & Maintenance?",
+                                  message:
+                                    "This will cancel the booking and set to maintenance.",
+                                  type: "warning",
+                                  icon: <Wrench size={24} weight="bold" />,
+                                  onConfirm: () =>
+                                    handleUpdateSlot({
+                                      status: "maintenance",
+                                      overrideReason: slotOverrideReason,
+                                    }),
+                                });
+                              }}
+                              className="py-2 bg-amber-50 text-amber-700 border border-amber-100 text-[11px] font-bold rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Wrench size={14} /> Maintenance
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })()}
                 </div>
@@ -1874,9 +1951,10 @@ function FieldDetailPanel({
                   />
                 </div>
               )}
-              {/* Price Override Section (Disabled for Held/Reserved) */}
+              {/* Price Override Section (Disabled for Booked/Held/Reserved) */}
               {slotToEdit.status !== "held" &&
-                slotToEdit.status !== "reserved" && (
+                slotToEdit.status !== "reserved" &&
+                slotToEdit.status !== "booked" && (
                   <>
                     <div className="h-px bg-gray-100" />
                     <div>
@@ -1900,7 +1978,6 @@ function FieldDetailPanel({
                             value={slotPriceInput}
                             onChange={(e) => setSlotPriceInput(e.target.value)}
                             onFocus={(e) => e.target.select()}
-                            disabled={slotToEdit.status === "booked"}
                             className="w-full pl-7 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 focus:ring-1 focus:ring-[#8a9e60] focus:border-[#8a9e60] outline-none transition-all disabled:opacity-50"
                             placeholder="Enter amount"
                           />
@@ -1922,9 +1999,8 @@ function FieldDetailPanel({
                             });
                           }}
                           disabled={
-                            slotToEdit.status === "booked" ||
                             Math.round(parseFloat(slotPriceInput) * 100) ===
-                              slotToEdit.pricePaise
+                            slotToEdit.pricePaise
                           }
                           className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           style={{ backgroundColor: "#8a9e60" }}

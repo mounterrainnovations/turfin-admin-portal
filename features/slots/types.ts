@@ -32,7 +32,7 @@ export interface AdminSlot {
   startTime: string;
   endTime: string;
   pricePaise: number;
-  availability: 'available' | 'unavailable';
+  availability: "available" | "unavailable";
   status: SlotStatus;
   blockReason: BlockReason | null;
   holdExpiresAt: string | null;
@@ -51,6 +51,7 @@ export interface AdminSlotPatchPayload {
   status?: SlotStatus;
   blockReason?: BlockReason;
   pricePaise?: number;
+  overrideReason?: string;
 }
 
 export interface SlotGenerateResponse {
