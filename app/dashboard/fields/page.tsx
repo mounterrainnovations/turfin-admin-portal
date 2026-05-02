@@ -33,6 +33,9 @@ import {
   X,
   CircleNotch,
   Check,
+  Info,
+  Warning,
+  Timer,
 } from "@phosphor-icons/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -55,6 +58,22 @@ import {
   getTurfById,
   uploadTurfDocuments,
 } from "@/features/turfs";
+import {
+  AdminSlot,
+  SlotConfig,
+  getAdminSlots,
+  getAdminSlotConfig,
+  upsertAdminSlotConfig,
+  generateAdminSlots,
+  patchAdminSlot,
+  SLOT_STATUS_COLORS,
+  UpsertSlotConfigPayload,
+  SlotDayConfig,
+  BlockReason,
+  AdminSlotPatchPayload,
+} from "@/features/slots";
+import { generateDefaultDailyConfigs } from "@/features/slots/utils";
+import { SlotConfigEditor } from "@/features/slots/components/SlotConfigEditor";
 import { DashboardPagination } from "@/components/DashboardPagination";
 import Select from "@/components/Select";
 import { TableRowsSkeleton } from "@/components/LoadingSkeleton";
@@ -263,6 +282,10 @@ const INIT_FORM = {
   municipalNoc: "",
   liabilityInsurance: "",
   fieldPhotos: "",
+  slotConfig: {
+    slotDurationMins: 60,
+    dailyConfigs: [],
+  } as UpsertSlotConfigPayload,
 };
 
 type FormData = typeof INIT_FORM;
@@ -296,26 +319,7 @@ function getReviewerName(review: TurfReview) {
 // ─── Actions Menu ─────────────────────────────────────────────────────────────
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
-const TOTAL_SLOTS = 17; // 6 AM – 10 PM (last slot starts at 10 PM)
-const TODAY = new Date(2026, 2, 21); // Mar 21, 2026
-
-/** Deterministic mock booked slots for a given field + date */
-function getMockBookedSlots(field: Turf, date: Date): Set<number> {
-  if (field.status !== "active") return new Set();
-  const day = date.getDay();
-  const isWeekend = day === 0 || day === 6;
-  const popularity = Math.min(Math.floor((field.totalBookings || 0) / 80), 8);
-  const base = isWeekend ? popularity + 5 : popularity + 2;
-  const count = Math.min(base, 13);
-  const seed =
-    (field.id.charCodeAt(4) || 3) + date.getDate() * 7 + date.getMonth() * 31;
-  const booked = new Set<number>();
-  for (let i = 0; booked.size < count; i++) {
-    booked.add((seed * (i + 3) * 7 + i * 13) % TOTAL_SLOTS);
-    if (i > 200) break;
-  }
-  return booked;
-}
+const TODAY = new Date();
 
 /** Format a Date to display string */
 function fmtDate(d: Date): string {
@@ -327,9 +331,9 @@ function fmtDate(d: Date): string {
   });
 }
 
-/** Format a Date to a key string */
+/** Format a Date to a key string YYYY-MM-DD */
 function dateKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  return d.toISOString().split("T")[0];
 }
 
 function FieldDetailPanel({
@@ -363,16 +367,70 @@ function FieldDetailPanel({
   const [calOpen, setCalOpen] = useState(false);
   const [calMonth, setCalMonth] = useState(TODAY.getMonth());
   const [calYear, setCalYear] = useState(TODAY.getFullYear());
-  // blocked slots: dateKey -> Set of slot indices blocked by admin
-  const [blockedMap, setBlockedMap] = useState<Record<string, Set<number>>>({});
+
+  const [slots, setSlots] = useState<AdminSlot[]>([]);
+  const [config, setConfig] = useState<SlotConfig | null>(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [isPatching, setIsPatching] = useState<string | null>(null);
+  const [slotToEdit, setSlotToEdit] = useState<AdminSlot | null>(null);
+  const [slotPriceInput, setSlotPriceInput] = useState("");
+  const [slotBlockReason, setSlotBlockReason] =
+    useState<BlockReason>("vendor_hold");
+  const [slotOverrideReason, setSlotOverrideReason] = useState("");
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: "danger" | "warning" | "success";
+    icon?: React.ReactNode;
+  } | null>(null);
 
   const calRef = useRef<HTMLDivElement>(null);
+
+  const refreshSlots = useCallback(async () => {
+    setSlotsLoading(true);
+    try {
+      const data = await getAdminSlots(field.id, dateKey(scheduleDate));
+      setSlots(data);
+    } catch (err: any) {
+      showToast({
+        title: "Error",
+        description: "Failed to load slots",
+        tone: "error",
+      });
+    } finally {
+      setSlotsLoading(false);
+    }
+  }, [field.id, scheduleDate, showToast]);
+
+  const refreshConfig = useCallback(async () => {
+    setConfigLoading(true);
+    try {
+      const data = await getAdminSlotConfig(field.id);
+      setConfig(data);
+    } catch (err: any) {
+      // Silence config error if it doesn't exist
+    } finally {
+      setConfigLoading(false);
+    }
+  }, [field.id]);
+
+  useEffect(() => {
+    if (tab === "schedule") {
+      refreshSlots();
+      refreshConfig();
+    }
+  }, [tab, refreshSlots, refreshConfig]);
+
   useEffect(() => {
     setTab("overview");
     setStatusOpen(false);
     setReviews([]);
     setReviewsLoadedFor(null);
     setDeletingReviewId(null);
+    setSlots([]);
+    setConfig(null);
   }, [field.id]);
 
   useEffect(() => {
@@ -384,44 +442,52 @@ function FieldDetailPanel({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const dk = dateKey(scheduleDate);
-  const bookedSlots = getMockBookedSlots(field, scheduleDate);
-  const blocked = blockedMap[dk] ?? new Set<number>();
-
-  function toggleBlock(slotIdx: number) {
-    if (bookedSlots.has(slotIdx)) return; // can't block a booked slot
-    setBlockedMap((prev) => {
-      const next = new Map(Object.entries(prev));
-      const cur = new Set(prev[dk] ?? []);
-      if (cur.has(slotIdx)) cur.delete(slotIdx);
-      else cur.add(slotIdx);
-      return { ...prev, [dk]: cur };
-    });
+  async function handleSlotClick(slot: AdminSlot) {
+    setSlotToEdit(slot);
+    setSlotPriceInput((slot.pricePaise / 100).toString());
+    setSlotBlockReason(slot.blockReason || "vendor_hold");
+    setSlotOverrideReason(""); // Reset on click
   }
 
-  function blockAllAvailable() {
-    setBlockedMap((prev) => {
-      const cur = new Set(prev[dk] ?? []);
-      for (let i = 0; i < TOTAL_SLOTS; i++) {
-        if (!bookedSlots.has(i)) cur.add(i);
-      }
-      return { ...prev, [dk]: cur };
-    });
+  async function handleUpdateSlot(updates: AdminSlotPatchPayload) {
+    if (!slotToEdit) return;
+    setIsPatching(slotToEdit.slotId);
+    try {
+      await patchAdminSlot(slotToEdit.slotId, updates);
+      setSlotToEdit(null);
+      refreshSlots();
+      showToast({
+        title: "Success",
+        description: "Slot updated successfully",
+        tone: "success",
+      });
+    } catch (err: any) {
+      showToast({
+        title: "Update Failed",
+        description: err.message,
+        tone: "error",
+      });
+    } finally {
+      setIsPatching(null);
+    }
   }
 
-  function unblockAll() {
-    setBlockedMap((prev) => ({ ...prev, [dk]: new Set() }));
-  }
-
-  function blockPeak() {
-    // Peak = slots 11 onwards (5PM+)
-    setBlockedMap((prev) => {
-      const cur = new Set(prev[dk] ?? []);
-      for (let i = 11; i < TOTAL_SLOTS; i++) {
-        if (!bookedSlots.has(i)) cur.add(i);
-      }
-      return { ...prev, [dk]: cur };
-    });
+  async function handleGenerate() {
+    try {
+      await generateAdminSlots(field.id);
+      showToast({
+        title: "Generated",
+        description: "Slots generated successfully",
+        tone: "success",
+      });
+      refreshSlots();
+    } catch (err: any) {
+      showToast({
+        title: "Generation Failed",
+        description: err.message,
+        tone: "error",
+      });
+    }
   }
 
   function shiftDate(delta: number) {
@@ -432,10 +498,14 @@ function FieldDetailPanel({
     setCalYear(d.getFullYear());
   }
 
-  const bookedCount = bookedSlots.size;
-  const blockedCount = [...blocked].filter((i) => !bookedSlots.has(i)).length;
-  const availableCount = TOTAL_SLOTS - bookedCount - blockedCount;
-  const occupancyPct = Math.round((bookedCount / TOTAL_SLOTS) * 100);
+  const bookedCount = slots.filter((s) => s.status === "booked").length;
+  const blockedCount = slots.filter(
+    (s) => s.status === "blocked" || s.status === "maintenance",
+  ).length;
+  const availableCount = slots.filter((s) => s.status === "available").length;
+  const totalSlotsCount = slots.length;
+  const occupancyPct =
+    totalSlotsCount > 0 ? Math.round((bookedCount / totalSlotsCount) * 100) : 0;
 
   // Mini calendar helpers
   const monthNames = [
@@ -548,20 +618,16 @@ function FieldDetailPanel({
       <div className="flex border-b border-gray-100 shrink-0 bg-white">
         {(["overview", "reviews", "schedule", "analytics"] as const).map(
           (t) => {
-            const disabled = t === "schedule" || t === "analytics";
             return (
               <button
                 key={t}
                 onClick={() => {
-                  if (!disabled) setTab(t);
+                  setTab(t);
                 }}
-                disabled={disabled}
                 className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors ${
                   tab === t
                     ? "border-b-2 border-[#8a9e60] text-[#8a9e60]"
-                    : disabled
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-400 hover:text-gray-600"
+                    : "text-gray-400 hover:text-gray-600"
                 }`}
               >
                 {t === "reviews" ? "reviews" : t}
@@ -1000,7 +1066,6 @@ function FieldDetailPanel({
                           TODAY.getMonth(),
                           TODAY.getDate(),
                         );
-                      const hasBooking = getMockBookedSlots(field, d).size > 0;
                       return (
                         <button
                           key={i}
@@ -1026,14 +1091,6 @@ function FieldDetailPanel({
                           }
                         >
                           {d.getDate()}
-                          {hasBooking && !isSel && (
-                            <span
-                              className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                              style={{
-                                backgroundColor: isSel ? "white" : "#8a9e60",
-                              }}
-                            />
-                          )}
                         </button>
                       );
                     })}
@@ -1055,26 +1112,31 @@ function FieldDetailPanel({
               )}
             </div>
 
-            {/* ── Field not bookable ── */}
-            {field.status === "maintenance" ? (
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center">
-                <Wrench size={26} className="text-blue-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-blue-600">
-                  Under Maintenance
-                </p>
-                <p className="text-xs text-blue-400 mt-1">
-                  No slots available on any date
-                </p>
+            {slotsLoading ? (
+              <div className="grid grid-cols-4 gap-1.5 animate-pulse">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="h-14 bg-gray-50 rounded-xl" />
+                ))}
               </div>
-            ) : field.status !== "active" ? (
-              <div className="bg-gray-50 border border-gray-100 rounded-xl p-5 text-center">
-                <XCircle size={26} className="text-gray-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-gray-500">
-                  Field Not Active
+            ) : slots.length === 0 ? (
+              <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                <CalendarBlank
+                  size={32}
+                  className="text-gray-300 mx-auto mb-3"
+                />
+                <p className="text-sm font-semibold text-gray-600">
+                  No slots generated
                 </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Activate the field to manage slots
+                <p className="text-xs text-gray-400 mt-1 mb-4">
+                  Slots need to be generated for this field.
                 </p>
+                <button
+                  onClick={handleGenerate}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md hover:opacity-90 transition-all"
+                  style={{ backgroundColor: "#8a9e60" }}
+                >
+                  GENERATE SLOTS
+                </button>
               </div>
             ) : (
               <>
@@ -1088,61 +1150,94 @@ function FieldDetailPanel({
                     Booked
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-red-100 border border-red-200" />{" "}
+                    <span className="w-3 h-3 rounded bg-red-50 border border-red-200" />{" "}
                     Blocked
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-gray-100 border border-gray-200" />{" "}
+                    <span className="w-3 h-3 rounded bg-amber-50 border border-amber-200" />{" "}
+                    Maintenance
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-gray-50 border border-gray-100" />{" "}
                     Available
                   </span>
-                  <span className="text-[10px] text-gray-400 ml-auto">
-                    Click to block/unblock
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-blue-50 border border-blue-200" />{" "}
+                    Held
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-purple-50 border border-purple-200" />{" "}
+                    Reserved
                   </span>
                 </div>
 
                 {/* ── Slot grid ── */}
                 <div className="grid grid-cols-4 gap-1.5">
-                  {Array.from({ length: TOTAL_SLOTS }, (_, i) => {
-                    const hour = 6 + i;
-                    const isBooked = bookedSlots.has(i);
-                    const isBlocked = !isBooked && blocked.has(i);
-                    const h = hour > 12 ? hour - 12 : hour === 12 ? 12 : hour;
-                    const ampm = hour >= 12 ? "PM" : "AM";
-                    const isPeak = hour >= 17;
+                  {slots.map((slot) => {
+                    const isBooked = slot.status === "booked";
+                    const isBlocked = slot.status === "blocked";
+                    const isMaintenance = slot.status === "maintenance";
+                    const isHeld = slot.status === "held";
+                    const isReserved = slot.status === "reserved";
+                    const isPatchingThis = isPatching === slot.slotId;
 
                     return (
                       <button
-                        key={i}
-                        disabled={isBooked}
-                        onClick={() => toggleBlock(i)}
-                        className={`rounded-xl py-2.5 text-center flex flex-col items-center gap-0.5 transition-all ${
+                        key={slot.slotId}
+                        disabled={isPatchingThis}
+                        onClick={() => handleSlotClick(slot)}
+                        className={`relative rounded-xl py-2.5 text-center flex flex-col items-center gap-0.5 transition-all ${
                           isBooked
-                            ? "cursor-default"
+                            ? "hover:opacity-90"
                             : isBlocked
                               ? "bg-red-50 border border-red-200 hover:bg-red-100"
-                              : "bg-gray-50 border border-gray-100 hover:border-gray-300 hover:bg-white"
+                              : isMaintenance
+                                ? "bg-amber-50 border border-amber-200 hover:bg-amber-100"
+                                : isHeld
+                                  ? "bg-blue-50 border border-blue-200 hover:bg-blue-100"
+                                  : isReserved
+                                    ? "bg-purple-50 border border-purple-200 hover:bg-purple-100"
+                                    : "bg-gray-50 border border-gray-100 hover:border-gray-300 hover:bg-white"
                         }`}
                         style={isBooked ? { backgroundColor: "#8a9e60" } : {}}
                       >
+                        {isPatchingThis && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-xl z-10">
+                            <CircleNotch
+                              size={14}
+                              className="animate-spin text-gray-400"
+                            />
+                          </div>
+                        )}
                         <span
                           className={`text-[10px] font-bold ${
                             isBooked
                               ? "text-white"
                               : isBlocked
                                 ? "text-red-500"
-                                : "text-gray-500"
+                                : isMaintenance
+                                  ? "text-amber-600"
+                                  : isHeld
+                                    ? "text-blue-600"
+                                    : isReserved
+                                      ? "text-purple-600"
+                                      : "text-gray-500"
                           }`}
                         >
-                          {h}
-                          {ampm}
+                          {slot.startTime}
                         </span>
-                        {isPeak && !isBooked && (
+                        {slot.isPriceOverridden && (
                           <span
-                            className={`text-[8px] font-semibold ${isBlocked ? "text-red-400" : "text-amber-500"}`}
-                          >
-                            PEAK
-                          </span>
+                            className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm"
+                            title="Price Overridden"
+                          />
                         )}
+                        <span
+                          className={`text-[9px] ${isBooked ? "text-white/70" : "text-gray-400"}`}
+                        >
+                          ₹{slot.pricePaise / 100}
+                        </span>
+
                         {isBooked && (
                           <CheckCircle
                             size={10}
@@ -1150,10 +1245,26 @@ function FieldDetailPanel({
                             weight="fill"
                           />
                         )}
-                        {isBlocked && (
+                        {(isBlocked || isMaintenance) && (
                           <LockSimple
                             size={10}
-                            className="text-red-400"
+                            className={
+                              isBlocked ? "text-red-400" : "text-amber-500"
+                            }
+                            weight="fill"
+                          />
+                        )}
+                        {isHeld && (
+                          <Timer
+                            size={10}
+                            className="text-blue-500 animate-pulse"
+                            weight="fill"
+                          />
+                        )}
+                        {isReserved && (
+                          <LockSimple
+                            size={10}
+                            className="text-purple-500"
                             weight="fill"
                           />
                         )}
@@ -1165,25 +1276,11 @@ function FieldDetailPanel({
                 {/* ── Quick actions ── */}
                 <div className="flex gap-2 flex-wrap">
                   <button
-                    onClick={blockAllAvailable}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-[11px] font-semibold hover:bg-red-100 transition-colors"
+                    onClick={handleGenerate}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 text-[11px] font-semibold hover:bg-gray-100 transition-colors border border-gray-200"
                   >
-                    <LockSimple size={12} weight="fill" /> Block All
+                    <ArrowsClockwise size={12} /> Regenerate / Sync
                   </button>
-                  <button
-                    onClick={blockPeak}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-[11px] font-semibold hover:bg-amber-100 transition-colors"
-                  >
-                    <LockSimple size={12} /> Block Peak (5PM+)
-                  </button>
-                  {blockedCount > 0 && (
-                    <button
-                      onClick={unblockAll}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 text-[11px] font-semibold hover:bg-green-100 transition-colors"
-                    >
-                      <LockSimpleOpen size={12} /> Unblock All
-                    </button>
-                  )}
                 </div>
 
                 {/* ── Day summary ── */}
@@ -1230,38 +1327,37 @@ function FieldDetailPanel({
                     />
                     <div
                       style={{
-                        width: `${Math.round((blockedCount / TOTAL_SLOTS) * 100)}%`,
+                        width:
+                          totalSlotsCount > 0
+                            ? `${Math.round((blockedCount / totalSlotsCount) * 100)}%`
+                            : "0%",
                         backgroundColor: "#fca5a5",
                       }}
                     />
                   </div>
-                  <div className="flex justify-between text-[9px] text-gray-400 mt-1">
-                    <span>Booked</span>
-                    <span>Blocked</span>
-                    <span>Available</span>
-                  </div>
                 </div>
 
-                {/* ── Pricing note ── */}
+                {/* ── Pricing Note ── */}
                 <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
                   <p className="text-[11px] font-bold text-amber-700 mb-1.5">
-                    Pricing Tiers
+                    Standard Pricing
                   </p>
-                  <div className="space-y-1 text-xs text-amber-700">
-                    <div className="flex justify-between">
-                      <span className="text-amber-600">
-                        Standard (6AM – 5PM)
-                      </span>
-                      <span className="font-semibold">
-                        ₹{(field as any).pricePerHour}/hr
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-amber-600">Peak (5PM – close)</span>
-                      <span className="font-semibold">
-                        ₹{(field as any).peakPricePerHour}/hr
-                      </span>
-                    </div>
+                  <div className="flex justify-between items-center text-xs text-amber-700">
+                    <span>
+                      {scheduleDate.toLocaleDateString("en-IN", {
+                        weekday: "long",
+                      })}{" "}
+                      Rate
+                    </span>
+                    <span className="font-semibold">
+                      ₹
+                      {(
+                        config?.dailyConfigs?.find(
+                          (dc) => dc.dayOfWeek === scheduleDate.getDay(),
+                        )?.pricePaise ?? (field.standardPricePaise || 0) / 100
+                      ).toLocaleString()}
+                      /hr
+                    </span>
                   </div>
                 </div>
               </>
@@ -1428,13 +1524,29 @@ function FieldDetailPanel({
           {statusOpen && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-10">
               {(Object.entries(STATUS_CONFIG) as [FieldStatus, any][])
-                .filter(([s]) => s !== "banned" && s !== "active" && s !== "pending")
+                .filter(
+                  ([s]) => s !== "banned" && s !== "active" && s !== "pending",
+                )
                 .map(([s, cfg]) => (
                   <button
                     key={s}
                     onClick={() => {
-                      handleStatusUpdate(s);
                       setStatusOpen(false);
+                      setConfirm({
+                        title: `Set to ${cfg.label}?`,
+                        message: `Are you sure you want to change the field status to ${cfg.label}?`,
+                        type:
+                          s === "maintenance" || s === "suspended"
+                            ? "warning"
+                            : "success",
+                        icon:
+                          s === "maintenance" ? (
+                            <Wrench size={24} weight="bold" />
+                          ) : (
+                            <ArrowsClockwise size={24} weight="bold" />
+                          ),
+                        onConfirm: () => handleStatusUpdate(s),
+                      });
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
                   >
@@ -1446,55 +1558,514 @@ function FieldDetailPanel({
                 ))}
             </div>
           )}
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <button
-              onClick={() => setStatusOpen(!statusOpen)}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all hover:shadow-sm"
-            >
-              <ArrowsClockwise size={18} /> SET STATUS
-            </button>
-            <button
-              onClick={() => onReviewKyc(field)}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-all hover:shadow-sm shadow-md"
-              style={{ backgroundColor: "#8a9e60" }}
-            >
-              <ShieldCheck size={18} weight="fill" /> REVIEW KYC
-            </button>
-          </div>
-
           {/* Management Zone */}
-          <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100">
-            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">
               Management & Controls
             </h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setStatusOpen(!statusOpen)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-all"
+              >
+                <ArrowsClockwise size={15} /> Set Field Status
+              </button>
+
+              <button
+                onClick={() => onReviewKyc(field)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold text-white hover:opacity-95 transition-all shadow-sm"
+                style={{ backgroundColor: "#8a9e60" }}
+              >
+                <ShieldCheck size={15} weight="fill" /> Review KYC Documents
+              </button>
+
+              <div className="h-px bg-gray-50 my-1" />
+
               <button
                 onClick={() => onEdit(field)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-all"
               >
-                <PencilSimple size={14} /> Edit Field
+                <PencilSimple size={15} /> Edit Field Details
               </button>
 
               {field.status === "banned" ? (
                 <button
                   onClick={() => onConfirmAction("unban", field)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-all"
                 >
-                  <CheckCircle size={14} /> Unban Field
+                  <CheckCircle size={15} /> Unban This Field
                 </button>
               ) : (
                 <button
                   onClick={() => onConfirmAction("ban", field)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-all"
                 >
-                  <XCircle size={14} /> Ban Field
+                  <XCircle size={15} /> Ban This Field
                 </button>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Slot Action Modal (Scoped inside panel) ── */}
+      {slotToEdit && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Manage Slot</h3>
+                <p className="text-[10px] text-gray-400 font-medium">
+                  {slotToEdit.slotDate} · {slotToEdit.startTime} -{" "}
+                  {slotToEdit.endTime}
+                </p>
+              </div>
+              <button
+                onClick={() => setSlotToEdit(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {/* Force Release UI for Protected Slots (Booked, Held, Reserved) */}
+              {(slotToEdit.status === "booked" ||
+                slotToEdit.status === "held" ||
+                slotToEdit.status === "reserved") && (
+                <div
+                  className={`border rounded-xl p-4 space-y-3 ${
+                    slotToEdit.status === "booked"
+                      ? "bg-blue-50 border-blue-200"
+                      : "bg-amber-50 border-amber-200"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`p-2 rounded-lg ${
+                        slotToEdit.status === "booked"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-amber-100 text-amber-600"
+                      }`}
+                    >
+                      {slotToEdit.status === "booked" ? (
+                        <ShieldCheck size={20} weight="bold" />
+                      ) : (
+                        <Timer
+                          size={20}
+                          weight="bold"
+                          className={
+                            slotToEdit.status === "held" ? "animate-pulse" : ""
+                          }
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <h4
+                        className={`text-xs font-bold ${
+                          slotToEdit.status === "booked"
+                            ? "text-blue-900"
+                            : "text-amber-900"
+                        }`}
+                      >
+                        {slotToEdit.status === "booked"
+                          ? "Protected Slot"
+                          : slotToEdit.status === "held"
+                            ? "Transaction in Progress"
+                            : "Slot Reserved"}
+                      </h4>
+                      <p
+                        className={`text-[10px] leading-relaxed mt-0.5 ${
+                          slotToEdit.status === "booked"
+                            ? "text-blue-700"
+                            : "text-amber-700"
+                        }`}
+                      >
+                        {slotToEdit.status === "booked"
+                          ? "This slot is active. To modify it, you must perform a **Force Release**, which will cancel the associated booking."
+                          : slotToEdit.status === "held"
+                            ? "This slot is strictly locked for an active payment session. No administrative overrides are permitted until the hold expires."
+                            : (() => {
+                                const [h, m] = slotToEdit.startTime
+                                  .split(":")
+                                  .map(Number);
+                                const sd = new Date(slotToEdit.slotDate);
+                                sd.setHours(h, m, 0, 0);
+                                const canCancel =
+                                  sd.getTime() - Date.now() >=
+                                  2 * 60 * 60 * 1000;
+
+                                if (!canCancel) {
+                                  return "This slot is reserved. Administrative overrides are disabled as the slot starts in less than 2 hours.";
+                                }
+                                return "This slot is reserved. Admins can override this if necessary.";
+                              })()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const [h, m] = slotToEdit.startTime.split(":").map(Number);
+                    const sd = new Date(slotToEdit.slotDate);
+                    sd.setHours(h, m, 0, 0);
+                    const canCancel =
+                      sd.getTime() - Date.now() >= 2 * 60 * 60 * 1000;
+
+                    if (!canCancel) {
+                      if (
+                        slotToEdit.status === "booked" ||
+                        slotToEdit.status === "reserved"
+                      ) {
+                        return (
+                          <div className="flex items-center gap-2 text-[10px] text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
+                            <WarningCircle size={14} weight="bold" />
+                            <span>
+                              Cancellation window closed (Less than 2h
+                              remaining).
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }
+
+                    if (slotToEdit.status === "held") return null;
+
+                    return (
+                      <div className="space-y-4 pt-1">
+                        <div className="h-px bg-white/20" />
+                        <div>
+                          <p
+                            className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${
+                              slotToEdit.status === "booked"
+                                ? "text-blue-900"
+                                : "text-amber-900"
+                            }`}
+                          >
+                            Cancellation Note (Mandatory)
+                          </p>
+                          <textarea
+                            value={slotOverrideReason}
+                            onChange={(e) =>
+                              setSlotOverrideReason(e.target.value)
+                            }
+                            placeholder="Explain why this slot is being released (sent to user)..."
+                            className={`w-full px-3 py-2 border rounded-lg text-xs font-medium focus:ring-1 outline-none transition-all resize-none h-16 ${
+                              slotToEdit.status === "booked"
+                                ? "bg-white border-blue-200 focus:ring-blue-500 text-blue-900"
+                                : "bg-white border-amber-200 focus:ring-amber-500 text-amber-900"
+                            }`}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <button
+                            disabled={!slotOverrideReason.trim()}
+                            onClick={() => {
+                              setConfirm({
+                                title: "Release & Make Available?",
+                                message:
+                                  "This will cancel the booking and open the slot for new users.",
+                                type: "success",
+                                icon: (
+                                  <ArrowsClockwise size={24} weight="bold" />
+                                ),
+                                onConfirm: () =>
+                                  handleUpdateSlot({
+                                    status: "available",
+                                    overrideReason: slotOverrideReason,
+                                  }),
+                              });
+                            }}
+                            className={`w-full py-2 text-white text-[11px] font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                              slotToEdit.status === "booked"
+                                ? "bg-blue-600 hover:bg-blue-700"
+                                : "bg-amber-600 hover:bg-amber-700"
+                            }`}
+                          >
+                            <CheckCircle size={14} weight="bold" /> Release &
+                            Available
+                          </button>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              disabled={!slotOverrideReason.trim()}
+                              onClick={() => {
+                                setConfirm({
+                                  title: "Release & Block?",
+                                  message:
+                                    "This will cancel the booking and block the slot.",
+                                  type: "danger",
+                                  icon: <Prohibit size={24} weight="bold" />,
+                                  onConfirm: () =>
+                                    handleUpdateSlot({
+                                      status: "blocked",
+                                      blockReason: "other",
+                                      overrideReason: slotOverrideReason,
+                                    }),
+                                });
+                              }}
+                              className="py-2 bg-red-50 text-red-700 border border-red-100 text-[11px] font-bold rounded-lg hover:bg-red-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <LockSimple size={14} /> Force Block
+                            </button>
+                            <button
+                              disabled={!slotOverrideReason.trim()}
+                              onClick={() => {
+                                setConfirm({
+                                  title: "Release & Maintenance?",
+                                  message:
+                                    "This will cancel the booking and set to maintenance.",
+                                  type: "warning",
+                                  icon: <Wrench size={24} weight="bold" />,
+                                  onConfirm: () =>
+                                    handleUpdateSlot({
+                                      status: "maintenance",
+                                      overrideReason: slotOverrideReason,
+                                    }),
+                                });
+                              }}
+                              className="py-2 bg-amber-50 text-amber-700 border border-amber-100 text-[11px] font-bold rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Wrench size={14} /> Maintenance
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Historical Context (Metadata Overlay) */}
+              {slotToEdit.lastCancelledBooking && (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ArrowsClockwise size={12} className="text-gray-400" />
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                      Recent Activity
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-gray-600 leading-relaxed">
+                    <p className="font-semibold text-gray-900">
+                      Force Released by Admin
+                    </p>
+                    <p className="mt-0.5 text-gray-400 italic">
+                      "
+                      {slotToEdit.lastCancelledBooking.reason ||
+                        "No reason provided"}
+                      "
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Section (Hidden for Protected States) */}
+              {slotToEdit.status !== "held" &&
+                slotToEdit.status !== "reserved" &&
+                slotToEdit.status !== "booked" && (
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3">
+                      Change Status
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {slotToEdit.status !== "available" ? (
+                        <button
+                          onClick={() => {
+                            setConfirm({
+                              title: "Make Available?",
+                              message:
+                                "Are you sure you want to make this slot available for bookings?",
+                              type: "success",
+                              icon: <CheckCircle size={24} weight="bold" />,
+                              onConfirm: () =>
+                                handleUpdateSlot({ status: "available" }),
+                            });
+                          }}
+                          className="col-span-2 flex items-center justify-center gap-2 py-2 rounded-xl bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-all shadow-sm"
+                        >
+                          <CheckCircle size={15} /> Make Available
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              setConfirm({
+                                title: "Block Slot?",
+                                message: `Are you sure you want to block this slot for ${slotBlockReason.replace("_", " ")}?`,
+                                type: "danger",
+                                icon: <XCircle size={24} weight="bold" />,
+                                onConfirm: () =>
+                                  handleUpdateSlot({
+                                    status: "blocked",
+                                    blockReason: slotBlockReason,
+                                  }),
+                              });
+                            }}
+                            className="flex items-center justify-center gap-2 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-xs font-semibold hover:bg-red-100 transition-all shadow-sm"
+                          >
+                            <XCircle size={15} /> Block Slot
+                          </button>
+                          <button
+                            onClick={() => {
+                              setConfirm({
+                                title: "Maintenance Mode?",
+                                message:
+                                  "Set this slot to maintenance mode? This will prevent any bookings.",
+                                type: "warning",
+                                icon: <Wrench size={24} weight="bold" />,
+                                onConfirm: () =>
+                                  handleUpdateSlot({ status: "maintenance" }),
+                              });
+                            }}
+                            className="flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-all shadow-sm"
+                          >
+                            <Wrench size={15} /> Maintenance
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {/* Block Reason (only if available) */}
+              {slotToEdit.status === "available" && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Block Reason
+                  </p>
+                  <Select
+                    value={slotBlockReason}
+                    onChange={(val) => setSlotBlockReason(val as any)}
+                    options={[
+                      { value: "vendor_hold", label: "Vendor Hold" },
+                      { value: "private_event", label: "Private Event" },
+                      { value: "weather", label: "Weather" },
+                      { value: "maintenance", label: "Maintenance" },
+                      { value: "other", label: "Other" },
+                    ]}
+                    useFixed={true}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 focus:border-[#8a9e60] outline-none transition-all"
+                    dropdownClassName="z-[70]"
+                  />
+                </div>
+              )}
+              {/* Price Override Section (Disabled for Booked/Held/Reserved) */}
+              {slotToEdit.status !== "held" &&
+                slotToEdit.status !== "reserved" &&
+                slotToEdit.status !== "booked" && (
+                  <>
+                    <div className="h-px bg-gray-100" />
+                    <div>
+                      <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        Price Override
+                        {slotToEdit.isPriceOverridden && (
+                          <span className="text-[9px] px-2 py-0.5 bg-[#8a9e60]/10 text-[#8a9e60] rounded-full font-bold">
+                            ACTIVE
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={slotPriceInput}
+                            onChange={(e) => setSlotPriceInput(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            className="w-full pl-7 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 focus:ring-1 focus:ring-[#8a9e60] focus:border-[#8a9e60] outline-none transition-all disabled:opacity-50"
+                            placeholder="Enter amount"
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            const price = parseFloat(slotPriceInput);
+                            if (isNaN(price)) return;
+                            const newPricePaise = Math.round(price * 100);
+                            if (newPricePaise === slotToEdit.pricePaise) return;
+
+                            setConfirm({
+                              title: "Override Price?",
+                              message: `Set price to ₹${price.toLocaleString()} for this slot?`,
+                              type: "success",
+                              icon: <CheckCircle size={24} weight="bold" />,
+                              onConfirm: () =>
+                                handleUpdateSlot({ pricePaise: newPricePaise }),
+                            });
+                          }}
+                          disabled={
+                            Math.round(parseFloat(slotPriceInput) * 100) ===
+                            slotToEdit.pricePaise
+                          }
+                          className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{ backgroundColor: "#8a9e60" }}
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Internal Confirmation Modal */}
+      {confirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[320px] overflow-hidden transform animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div
+                className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4 ${
+                  confirm.type === "danger"
+                    ? "bg-red-50 text-red-500"
+                    : confirm.type === "warning"
+                      ? "bg-amber-50 text-amber-600"
+                      : "bg-green-50 text-[#8a9e60]"
+                }`}
+              >
+                {confirm.icon || <WarningCircle size={28} weight="bold" />}
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">
+                {confirm.title}
+              </h3>
+              <p className="text-xs text-gray-500 leading-relaxed px-2">
+                {confirm.message}
+              </p>
+            </div>
+            <div className="flex border-t border-gray-100">
+              <button
+                onClick={() => setConfirm(null)}
+                className="flex-1 py-4 text-xs font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all"
+              >
+                CANCEL
+              </button>
+              <div className="w-px bg-gray-100" />
+              <button
+                onClick={() => {
+                  confirm.onConfirm();
+                  setConfirm(null);
+                }}
+                className={`flex-1 py-4 text-xs font-bold transition-all ${
+                  confirm.type === "danger"
+                    ? "text-red-500 hover:bg-red-50"
+                    : confirm.type === "warning"
+                      ? "text-amber-600 hover:bg-amber-50"
+                      : "text-[#8a9e60] hover:bg-green-50"
+                }`}
+              >
+                CONFIRM
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1521,9 +2092,8 @@ function FieldDetailPanel({
 export default function FieldsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [searchBy, setSearchBy] = useState<
-    (typeof FIELD_SEARCH_OPTIONS)[number]["value"]
-  >("field_name");
+  const [searchBy, setSearchBy] =
+    useState<(typeof FIELD_SEARCH_OPTIONS)[number]["value"]>("field_name");
   const [statusTab, setStatusTab] = useState("all");
   const [sportFilter, setSportFilter] = useState("All");
   const [cityFilter, setCityFilter] = useState("All");
@@ -1552,9 +2122,9 @@ export default function FieldsPage() {
   // Edit modal
   const [editTurf, setEditTurf] = useState<Turf | null>(null);
   const [editForm, setEditForm] = useState<UpdateTurfDto | null>(null);
-  const [editTab, setEditTab] = useState<"basic" | "pricing" | "sports">(
-    "basic",
-  );
+  const [editTab, setEditTab] = useState<
+    "basic" | "pricing" | "slot-config" | "sports"
+  >("basic");
 
   // Lists
   const [fields, setFields] = useState<Turf[]>([]);
@@ -1565,7 +2135,9 @@ export default function FieldsPage() {
   // Async Vendor Selection
   const [onboardVendors, setOnboardVendors] = useState<Vendor[]>([]);
   const [onboardVendorSearch, setOnboardVendorSearch] = useState("");
-  const [onboardVendorSearchBy, setOnboardVendorSearchBy] = useState<"business_name" | "vendor_id">("business_name");
+  const [onboardVendorSearchBy, setOnboardVendorSearchBy] = useState<
+    "business_name" | "vendor_id"
+  >("business_name");
   const [onboardVendorsLoading, setOnboardVendorsLoading] = useState(false);
 
   useEffect(() => {
@@ -1585,10 +2157,15 @@ export default function FieldsPage() {
         setOnboardVendorsLoading(false);
       }
     };
-    
+
     const timeoutId = setTimeout(fetchOnboardVendors, 500);
     return () => clearTimeout(timeoutId);
   }, [onboardVendorSearch, onboardVendorSearchBy]);
+
+  // Edit State for Slot Config
+  const [editSlotConfig, setEditSlotConfig] =
+    useState<UpsertSlotConfigPayload | null>(null);
+  const [editSlotConfigLoading, setEditSlotConfigLoading] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -1598,6 +2175,34 @@ export default function FieldsPage() {
   const [showOnboard, setShowOnboard] = useState(false);
   const [onboardStep, setOnboardStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({ ...INIT_FORM });
+
+  // Sync slot config with pricing/hours
+  useEffect(() => {
+    setFormData((prev) => {
+      const dailyConfigs = generateDefaultDailyConfigs({
+        weekdayOpen: prev.weekdayFrom,
+        weekdayClose: prev.weekdayTo,
+        weekendOpen: prev.weekendFrom,
+        weekendClose: prev.weekendTo,
+        pricePerHour: parseFloat(prev.pricePerHour) || 0,
+      });
+
+      return {
+        ...prev,
+        slotConfig: {
+          ...prev.slotConfig,
+          dailyConfigs,
+        },
+      };
+    });
+  }, [
+    formData.weekdayFrom,
+    formData.weekdayTo,
+    formData.weekendFrom,
+    formData.weekendTo,
+    formData.pricePerHour,
+    formData.slotConfig.slotDurationMins,
+  ]);
   const [onboardKycFiles, setOnboardKycFiles] = useState<
     Record<string, File | File[]>
   >({});
@@ -1756,6 +2361,14 @@ export default function FieldsPage() {
 
       if (!turfId) {
         throw new Error("Failed to retrieve Field ID from response.");
+      }
+
+      // 1.5. Upsert Slot Config
+      try {
+        await upsertAdminSlotConfig(turfId, formData.slotConfig);
+      } catch (slotErr) {
+        console.error("Slot config upsert failed:", slotErr);
+        // We don't block the whole process if slot config fails
       }
 
       // 2. Sequential Uploads for KYC (if any)
@@ -1926,7 +2539,7 @@ export default function FieldsPage() {
   }
 
   // Edit Helpers
-  function onEdit(field: Turf) {
+  async function onEdit(field: Turf) {
     setEditTurf(field);
     setEditForm({
       name: field.name,
@@ -1945,6 +2558,46 @@ export default function FieldsPage() {
       },
     });
     setEditTab("basic");
+
+    // Fetch Slot Config
+    setEditSlotConfigLoading(true);
+    try {
+      const config = await getAdminSlotConfig(field.id);
+      setEditSlotConfig({
+        slotDurationMins: config.slotDurationMins,
+        dailyConfigs: config.dailyConfigs.map((p) => ({
+          dayOfWeek: p.dayOfWeek,
+          openTime: p.openTime,
+          closeTime: p.closeTime,
+          pricePaise: p.pricePaise,
+        })),
+      });
+    } catch (err: any) {
+      // If it's a 404, we just generate defaults silently
+      // For other errors, we show a warning but still allow editing with defaults
+      if (!err.message?.includes("404") && !err.toString().includes("404")) {
+        showToast({
+          title: "Config Load Warning",
+          description:
+            "Existing slot config couldn't be loaded. Using defaults.",
+          tone: "warning",
+        });
+      }
+
+      // If no config exists or failed to load, generate default
+      setEditSlotConfig({
+        slotDurationMins: 60,
+        dailyConfigs: generateDefaultDailyConfigs({
+          weekdayOpen: field.weekdayOpen,
+          weekdayClose: field.weekdayClose,
+          weekendOpen: field.weekendOpen,
+          weekendClose: field.weekendClose,
+          pricePerHour: (field.standardPricePaise || 0) / 100,
+        }),
+      });
+    } finally {
+      setEditSlotConfigLoading(false);
+    }
   }
 
   async function saveEdit() {
@@ -1976,6 +2629,12 @@ export default function FieldsPage() {
       };
 
       await updateTurf(editTurf.id, payload);
+
+      // Upsert Slot Config if available
+      if (editSlotConfig) {
+        await upsertAdminSlotConfig(editTurf.id, editSlotConfig);
+      }
+
       showToast({
         title: "Success",
         description: `${editTurf.name} updated successfully.`,
@@ -1983,6 +2642,7 @@ export default function FieldsPage() {
       });
       setEditTurf(null);
       setEditForm(null);
+      setEditSlotConfig(null);
       refreshData();
     } catch (err: any) {
       showToast({
@@ -2250,7 +2910,14 @@ export default function FieldsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusTab, sportFilter, cityFilter, debouncedSearch, searchBy, timeFilter]);
+  }, [
+    statusTab,
+    sportFilter,
+    cityFilter,
+    debouncedSearch,
+    searchBy,
+    timeFilter,
+  ]);
 
   const allSports = ["All", ...SPORTS_LIST];
   const allCities = [
@@ -2366,8 +3033,9 @@ export default function FieldsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={
-                  FIELD_SEARCH_OPTIONS.find((option) => option.value === searchBy)
-                    ?.placeholder ?? "Search fields"
+                  FIELD_SEARCH_OPTIONS.find(
+                    (option) => option.value === searchBy,
+                  )?.placeholder ?? "Search fields"
                 }
                 className="bg-transparent text-gray-700 placeholder-gray-400 text-xs flex-1 outline-none"
               />
@@ -2383,7 +3051,7 @@ export default function FieldsPage() {
                   { value: "all", label: "All Time" },
                   { value: "today", label: "Today" },
                   { value: "last7", label: "Last 7 Days" },
-                  { value: "last30", label: "Last 30 Days" }
+                  { value: "last30", label: "Last 30 Days" },
                 ]}
                 className="bg-transparent text-gray-700 text-xs font-medium outline-none min-w-[80px]"
                 dropdownClassName="w-[150px] -left-2"
@@ -3002,7 +3670,10 @@ export default function FieldsPage() {
                           onChange={(val) => setField("surface", val)}
                           options={[
                             { value: "", label: "Select surface..." },
-                            ...SURFACE_LIST.map((s) => ({ value: s, label: s }))
+                            ...SURFACE_LIST.map((s) => ({
+                              value: s,
+                              label: s,
+                            })),
                           ]}
                           useFixed
                           className={`w-full border ${errors.surface ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 bg-white`}
@@ -3021,7 +3692,6 @@ export default function FieldsPage() {
               {onboardStep === 3 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
-
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         House / Shop Number
@@ -3097,7 +3767,7 @@ export default function FieldsPage() {
                           }
                           options={[
                             { value: "", label: "Select state" },
-                            ...STATES_LIST.map((s) => ({ value: s, label: s }))
+                            ...STATES_LIST.map((s) => ({ value: s, label: s })),
                           ]}
                           searchable
                           useFixed
@@ -3206,10 +3876,13 @@ export default function FieldsPage() {
                         </span>
                         <input
                           type="number"
+                          step="0.01"
+                          min="0"
                           value={formData.pricePerHour}
                           onChange={(e) =>
                             setField("pricePerHour", e.target.value)
                           }
+                          onFocus={(e) => e.target.select()}
                           className={`w-full border ${errors.pricePerHour ? "border-red-400" : "border-gray-200"} rounded-lg pl-7 pr-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
                         />
                         {errors.pricePerHour && (
@@ -3287,6 +3960,13 @@ export default function FieldsPage() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <SlotConfigEditor
+                      config={formData.slotConfig}
+                      onChange={(cfg) => setField("slotConfig", cfg)}
+                    />
                   </div>
                 </div>
               )}
@@ -3688,20 +4368,6 @@ export default function FieldsPage() {
             <ShieldCheck size={13} className="text-blue-500" />
             Review KYC
           </button>
-          <div className="my-1 border-t border-gray-100" />
-          <button
-            onClick={() => {
-              closeActionMenu();
-              setConfirmModal({
-                type: "remove",
-                field: actionMenu.field,
-              });
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-500 hover:bg-red-50"
-          >
-            <Trash size={13} />
-            Remove
-          </button>
         </div>
       )}
 
@@ -3738,20 +4404,24 @@ export default function FieldsPage() {
                 </button>
               </div>
               <div className="flex gap-1 border-b border-gray-100 -mb-4">
-                {(["basic", "pricing", "sports"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setEditTab(tab)}
-                    className={`px-4 py-2 text-xs font-semibold capitalize transition-colors ${editTab === tab ? "border-b-2 text-[#8a9e60]" : "text-gray-400 hover:text-gray-600"}`}
-                    style={editTab === tab ? { borderColor: "#8a9e60" } : {}}
-                  >
-                    {tab === "basic"
-                      ? "Basic Info"
-                      : tab === "pricing"
-                        ? "Pricing & Schedule"
-                        : "Sports & Amenities"}
-                  </button>
-                ))}
+                {(["basic", "pricing", "slot-config", "sports"] as const).map(
+                  (tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setEditTab(tab)}
+                      className={`px-4 py-2 text-xs font-semibold capitalize transition-colors ${editTab === tab ? "border-b-2 text-[#8a9e60]" : "text-gray-400 hover:text-gray-600"}`}
+                      style={editTab === tab ? { borderColor: "#8a9e60" } : {}}
+                    >
+                      {tab === "basic"
+                        ? "Basic Info"
+                        : tab === "pricing"
+                          ? "Pricing & Schedule"
+                          : tab === "slot-config"
+                            ? "Slot Pricing"
+                            : "Sports & Amenities"}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
 
@@ -3928,6 +4598,8 @@ export default function FieldsPage() {
                     </label>
                     <input
                       type="number"
+                      step="0.01"
+                      min="0"
                       value={(editForm.standardPricePaise || 0) / 100}
                       onChange={(e) =>
                         setEditForm((p) =>
@@ -3941,6 +4613,7 @@ export default function FieldsPage() {
                             : p,
                         )
                       }
+                      onFocus={(e) => e.target.select()}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                     />
                   </div>
@@ -4011,6 +4684,30 @@ export default function FieldsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {editTab === "slot-config" && (
+                <div className="space-y-4">
+                  {editSlotConfigLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <div className="w-8 h-8 border-4 border-[#8a9e60] border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <p className="text-xs font-medium text-gray-500">
+                        Loading slot configuration...
+                      </p>
+                    </div>
+                  ) : editSlotConfig ? (
+                    <SlotConfigEditor
+                      config={editSlotConfig}
+                      onChange={(cfg) => setEditSlotConfig(cfg)}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <p className="text-xs font-medium text-gray-500">
+                        No configuration found for this field.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
