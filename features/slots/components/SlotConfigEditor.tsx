@@ -38,17 +38,7 @@ export const SlotConfigEditor: React.FC<SlotConfigEditorProps> = ({
     onChange({ ...config, dailyConfigs: newDailyConfigs });
   };
 
-  const handleBulkPriceApply = () => {
-    const price = parseInt(bulkPrice);
-    if (isNaN(price)) return;
 
-    const newDailyConfigs = config.dailyConfigs.map(dayConfig => {
-      return { ...dayConfig, pricePaise: price };
-    });
-
-    onChange({ ...config, dailyConfigs: newDailyConfigs });
-    setBulkPrice("");
-  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
@@ -111,6 +101,8 @@ export const SlotConfigEditor: React.FC<SlotConfigEditorProps> = ({
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₹</span>
               <input
                 type="number"
+                step="0.01"
+                min="0"
                 placeholder="Bulk Price"
                 value={bulkPrice}
                 onChange={(e) => setBulkPrice(e.target.value)}
@@ -118,7 +110,16 @@ export const SlotConfigEditor: React.FC<SlotConfigEditorProps> = ({
               />
             </div>
             <button
-              onClick={handleBulkPriceApply}
+              onClick={() => {
+                const price = parseFloat(bulkPrice);
+                if (isNaN(price)) return;
+                const newDailyConfigs = config.dailyConfigs.map(dayConfig => ({
+                  ...dayConfig,
+                  pricePaise: Math.round(price * 100)
+                }));
+                onChange({ ...config, dailyConfigs: newDailyConfigs });
+                setBulkPrice("");
+              }}
               disabled={!bulkPrice}
               className="px-3 py-1.5 bg-[#8a9e60] text-white text-[10px] font-bold rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
@@ -153,8 +154,13 @@ export const SlotConfigEditor: React.FC<SlotConfigEditorProps> = ({
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">₹</span>
               <input
                 type="number"
-                value={currentDayConfig.pricePaise}
-                onChange={(e) => handleDayChange("pricePaise", parseInt(e.target.value) || 0)}
+                step="0.01"
+                min="0"
+                value={currentDayConfig.pricePaise / 100}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  handleDayChange("pricePaise", isNaN(val) ? 0 : Math.round(val * 100));
+                }}
                 className="w-full pl-6 pr-3 py-2 text-xs font-bold text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[#8a9e60]"
               />
             </div>

@@ -44,7 +44,8 @@ export interface AdminSlot {
 
 export interface AdminSlotPatchPayload {
   status?: SlotStatus;
-  priceOverridePaise?: number;
+  blockReason?: BlockReason;
+  pricePaise?: number;
 }
 
 export interface SlotGenerateResponse {

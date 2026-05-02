@@ -66,6 +66,8 @@ import {
   SLOT_STATUS_COLORS,
   UpsertSlotConfigPayload,
   SlotDayConfig,
+  BlockReason,
+  AdminSlotPatchPayload,
 } from "@/features/slots";
 import { generateDefaultDailyConfigs } from "@/features/slots/utils";
 import { SlotConfigEditor } from "@/features/slots/components/SlotConfigEditor";
@@ -368,6 +370,17 @@ function FieldDetailPanel({
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [configLoading, setConfigLoading] = useState(false);
   const [isPatching, setIsPatching] = useState<string | null>(null);
+  const [slotToEdit, setSlotToEdit] = useState<AdminSlot | null>(null);
+  const [slotPriceInput, setSlotPriceInput] = useState("");
+  const [slotBlockReason, setSlotBlockReason] =
+    useState<BlockReason>("vendor_hold");
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: "danger" | "warning" | "success";
+    icon?: React.ReactNode;
+  } | null>(null);
 
   const calRef = useRef<HTMLDivElement>(null);
 
@@ -425,13 +438,25 @@ function FieldDetailPanel({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  async function handleToggleBlock(slot: AdminSlot) {
+  async function handleSlotClick(slot: AdminSlot) {
     if (slot.status === "booked") return;
-    const nextStatus = slot.status === "available" ? "blocked" : "available";
-    setIsPatching(slot.slotId);
+    setSlotToEdit(slot);
+    setSlotPriceInput((slot.pricePaise / 100).toString());
+    setSlotBlockReason(slot.blockReason || "vendor_hold");
+  }
+
+  async function handleUpdateSlot(updates: AdminSlotPatchPayload) {
+    if (!slotToEdit) return;
+    setIsPatching(slotToEdit.slotId);
     try {
-      await patchAdminSlot(slot.slotId, { status: nextStatus });
+      await patchAdminSlot(slotToEdit.slotId, updates);
+      setSlotToEdit(null);
       refreshSlots();
+      showToast({
+        title: "Success",
+        description: "Slot updated successfully",
+        tone: "success",
+      });
     } catch (err: any) {
       showToast({
         title: "Update Failed",
@@ -1125,6 +1150,10 @@ function FieldDetailPanel({
                     Blocked
                   </span>
                   <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded bg-amber-50 border border-amber-200" />{" "}
+                    Maintenance
+                  </span>
+                  <span className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded bg-gray-50 border border-gray-100" />{" "}
                     Available
                   </span>
@@ -1142,13 +1171,15 @@ function FieldDetailPanel({
                       <button
                         key={slot.slotId}
                         disabled={isBooked || isPatchingThis}
-                        onClick={() => handleToggleBlock(slot)}
+                        onClick={() => handleSlotClick(slot)}
                         className={`relative rounded-xl py-2.5 text-center flex flex-col items-center gap-0.5 transition-all ${
                           isBooked
                             ? "cursor-default"
-                            : isBlocked || isMaintenance
+                            : isBlocked
                               ? "bg-red-50 border border-red-200 hover:bg-red-100"
-                              : "bg-gray-50 border border-gray-100 hover:border-gray-300 hover:bg-white"
+                              : isMaintenance
+                                ? "bg-amber-50 border border-amber-200 hover:bg-amber-100"
+                                : "bg-gray-50 border border-gray-100 hover:border-gray-300 hover:bg-white"
                         }`}
                         style={isBooked ? { backgroundColor: "#8a9e60" } : {}}
                       >
@@ -1164,12 +1195,25 @@ function FieldDetailPanel({
                           className={`text-[10px] font-bold ${
                             isBooked
                               ? "text-white"
-                              : isBlocked || isMaintenance
+                              : isBlocked
                                 ? "text-red-500"
-                                : "text-gray-500"
+                                : isMaintenance
+                                  ? "text-amber-600"
+                                  : "text-gray-500"
                           }`}
                         >
                           {slot.startTime}
+                        </span>
+                        {slot.isPriceOverridden && (
+                          <span
+                            className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm"
+                            title="Price Overridden"
+                          />
+                        )}
+                        <span
+                          className={`text-[9px] ${isBooked ? "text-white/70" : "text-gray-400"}`}
+                        >
+                          ₹{slot.pricePaise / 100}
                         </span>
 
                         {isBooked && (
@@ -1261,12 +1305,18 @@ function FieldDetailPanel({
                     Standard Pricing
                   </p>
                   <div className="flex justify-between items-center text-xs text-amber-700">
-                    <span>{scheduleDate.toLocaleDateString('en-IN', { weekday: 'long' })} Rate</span>
+                    <span>
+                      {scheduleDate.toLocaleDateString("en-IN", {
+                        weekday: "long",
+                      })}{" "}
+                      Rate
+                    </span>
                     <span className="font-semibold">
                       ₹
                       {(
-                        (config?.dailyConfigs?.find(dc => dc.dayOfWeek === scheduleDate.getDay())?.pricePaise ?? 
-                        (field.standardPricePaise || 0) / 100)
+                        config?.dailyConfigs?.find(
+                          (dc) => dc.dayOfWeek === scheduleDate.getDay(),
+                        )?.pricePaise ?? (field.standardPricePaise || 0) / 100
                       ).toLocaleString()}
                       /hr
                     </span>
@@ -1443,8 +1493,22 @@ function FieldDetailPanel({
                   <button
                     key={s}
                     onClick={() => {
-                      handleStatusUpdate(s);
                       setStatusOpen(false);
+                      setConfirm({
+                        title: `Set to ${cfg.label}?`,
+                        message: `Are you sure you want to change the field status to ${cfg.label}?`,
+                        type:
+                          s === "maintenance" || s === "suspended"
+                            ? "warning"
+                            : "success",
+                        icon:
+                          s === "maintenance" ? (
+                            <Wrench size={24} weight="bold" />
+                          ) : (
+                            <ArrowsClockwise size={24} weight="bold" />
+                          ),
+                        onConfirm: () => handleStatusUpdate(s),
+                      });
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
                   >
@@ -1456,55 +1520,275 @@ function FieldDetailPanel({
                 ))}
             </div>
           )}
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <button
-              onClick={() => setStatusOpen(!statusOpen)}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all hover:shadow-sm"
-            >
-              <ArrowsClockwise size={18} /> SET STATUS
-            </button>
-            <button
-              onClick={() => onReviewKyc(field)}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-all hover:shadow-sm shadow-md"
-              style={{ backgroundColor: "#8a9e60" }}
-            >
-              <ShieldCheck size={18} weight="fill" /> REVIEW KYC
-            </button>
-          </div>
-
           {/* Management Zone */}
-          <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100">
-            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">
               Management & Controls
             </h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setStatusOpen(!statusOpen)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-all"
+              >
+                <ArrowsClockwise size={15} /> Set Field Status
+              </button>
+
+              <button
+                onClick={() => onReviewKyc(field)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold text-white hover:opacity-95 transition-all shadow-sm"
+                style={{ backgroundColor: "#8a9e60" }}
+              >
+                <ShieldCheck size={15} weight="fill" /> Review KYC Documents
+              </button>
+
+              <div className="h-px bg-gray-50 my-1" />
+
               <button
                 onClick={() => onEdit(field)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-all"
               >
-                <PencilSimple size={14} /> Edit Field
+                <PencilSimple size={15} /> Edit Field Details
               </button>
 
               {field.status === "banned" ? (
                 <button
                   onClick={() => onConfirmAction("unban", field)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-all"
                 >
-                  <CheckCircle size={14} /> Unban Field
+                  <CheckCircle size={15} /> Unban This Field
                 </button>
               ) : (
                 <button
                   onClick={() => onConfirmAction("ban", field)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-all"
                 >
-                  <XCircle size={14} /> Ban Field
+                  <XCircle size={15} /> Ban This Field
                 </button>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Slot Action Modal (Scoped inside panel) ── */}
+      {slotToEdit && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Manage Slot</h3>
+                <p className="text-[10px] text-gray-400 font-medium">
+                  {slotToEdit.slotDate} · {slotToEdit.startTime} -{" "}
+                  {slotToEdit.endTime}
+                </p>
+              </div>
+              <button
+                onClick={() => setSlotToEdit(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {/* Status Section */}
+              <div>
+                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3">
+                  Change Status
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {slotToEdit.status !== "available" ? (
+                    <button
+                      onClick={() => {
+                        setConfirm({
+                          title: "Make Available?",
+                          message:
+                            "Are you sure you want to make this slot available for bookings?",
+                          type: "success",
+                          icon: <CheckCircle size={24} weight="bold" />,
+                          onConfirm: () =>
+                            handleUpdateSlot({ status: "available" }),
+                        });
+                      }}
+                      className="col-span-2 flex items-center justify-center gap-2 py-2 rounded-xl bg-green-50 text-green-700 border border-green-100 text-xs font-semibold hover:bg-green-100 transition-all shadow-sm"
+                    >
+                      <CheckCircle size={15} /> Make Available
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          setConfirm({
+                            title: "Block Slot?",
+                            message: `Are you sure you want to block this slot for ${slotBlockReason.replace("_", " ")}?`,
+                            type: "danger",
+                            icon: <XCircle size={24} weight="bold" />,
+                            onConfirm: () =>
+                              handleUpdateSlot({
+                                status: "blocked",
+                                blockReason: slotBlockReason,
+                              }),
+                          });
+                        }}
+                        className="flex items-center justify-center gap-2 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-xs font-semibold hover:bg-red-100 transition-all shadow-sm"
+                      >
+                        <XCircle size={15} /> Block Slot
+                      </button>
+                      <button
+                        onClick={() => {
+                          setConfirm({
+                            title: "Maintenance Mode?",
+                            message:
+                              "Set this slot to maintenance mode? This will prevent any bookings.",
+                            type: "warning",
+                            icon: <Wrench size={24} weight="bold" />,
+                            onConfirm: () =>
+                              handleUpdateSlot({ status: "maintenance" }),
+                          });
+                        }}
+                        className="flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-all shadow-sm"
+                      >
+                        <Wrench size={15} /> Maintenance
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Block Reason (only if available) */}
+              {slotToEdit.status === "available" && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Block Reason
+                  </p>
+                  <Select
+                    value={slotBlockReason}
+                    onChange={(val) => setSlotBlockReason(val as any)}
+                    options={[
+                      { value: "vendor_hold", label: "Vendor Hold" },
+                      { value: "private_event", label: "Private Event" },
+                      { value: "weather", label: "Weather" },
+                      { value: "maintenance", label: "Maintenance" },
+                      { value: "other", label: "Other" },
+                    ]}
+                    useFixed={true}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 focus:border-[#8a9e60] outline-none transition-all"
+                    dropdownClassName="z-[70]"
+                  />
+                </div>
+              )}
+
+              <div className="h-px bg-gray-100" />
+
+              {/* Price Override Section */}
+              <div>
+                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                  Price Override
+                  {slotToEdit.isPriceOverridden && (
+                    <span className="text-[9px] px-2 py-0.5 bg-[#8a9e60]/10 text-[#8a9e60] rounded-full font-bold">
+                      ACTIVE
+                    </span>
+                  )}
+                </p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={slotPriceInput}
+                      onChange={(e) => setSlotPriceInput(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      className="w-full pl-7 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 focus:ring-1 focus:ring-[#8a9e60] focus:border-[#8a9e60] outline-none transition-all"
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      const price = parseFloat(slotPriceInput);
+                      if (isNaN(price)) return;
+                      const newPricePaise = Math.round(price * 100);
+                      if (newPricePaise === slotToEdit.pricePaise) return;
+
+                      setConfirm({
+                        title: "Override Price?",
+                        message: `Set price to ₹${price.toLocaleString()} for this slot?`,
+                        type: "success",
+                        icon: <CheckCircle size={24} weight="bold" />,
+                        onConfirm: () =>
+                          handleUpdateSlot({ pricePaise: newPricePaise }),
+                      });
+                    }}
+                    disabled={
+                      Math.round(parseFloat(slotPriceInput) * 100) ===
+                      slotToEdit.pricePaise
+                    }
+                    className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-sm hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: "#8a9e60" }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Internal Confirmation Modal */}
+      {confirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[320px] overflow-hidden transform animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div
+                className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4 ${
+                  confirm.type === "danger"
+                    ? "bg-red-50 text-red-500"
+                    : confirm.type === "warning"
+                      ? "bg-amber-50 text-amber-600"
+                      : "bg-green-50 text-[#8a9e60]"
+                }`}
+              >
+                {confirm.icon || <WarningCircle size={28} weight="bold" />}
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">
+                {confirm.title}
+              </h3>
+              <p className="text-xs text-gray-500 leading-relaxed px-2">
+                {confirm.message}
+              </p>
+            </div>
+            <div className="flex border-t border-gray-100">
+              <button
+                onClick={() => setConfirm(null)}
+                className="flex-1 py-4 text-xs font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all"
+              >
+                CANCEL
+              </button>
+              <div className="w-px bg-gray-100" />
+              <button
+                onClick={() => {
+                  confirm.onConfirm();
+                  setConfirm(null);
+                }}
+                className={`flex-1 py-4 text-xs font-bold transition-all ${
+                  confirm.type === "danger"
+                    ? "text-red-500 hover:bg-red-50"
+                    : confirm.type === "warning"
+                      ? "text-amber-600 hover:bg-amber-50"
+                      : "text-[#8a9e60] hover:bg-green-50"
+                }`}
+              >
+                CONFIRM
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1561,9 +1845,9 @@ export default function FieldsPage() {
   // Edit modal
   const [editTurf, setEditTurf] = useState<Turf | null>(null);
   const [editForm, setEditForm] = useState<UpdateTurfDto | null>(null);
-  const [editTab, setEditTab] = useState<"basic" | "pricing" | "slot-config" | "sports">(
-    "basic",
-  );
+  const [editTab, setEditTab] = useState<
+    "basic" | "pricing" | "slot-config" | "sports"
+  >("basic");
 
   // Lists
   const [fields, setFields] = useState<Turf[]>([]);
@@ -1602,7 +1886,8 @@ export default function FieldsPage() {
   }, [onboardVendorSearch, onboardVendorSearchBy]);
 
   // Edit State for Slot Config
-  const [editSlotConfig, setEditSlotConfig] = useState<UpsertSlotConfigPayload | null>(null);
+  const [editSlotConfig, setEditSlotConfig] =
+    useState<UpsertSlotConfigPayload | null>(null);
   const [editSlotConfigLoading, setEditSlotConfigLoading] = useState(false);
 
   // Pagination
@@ -2016,11 +2301,12 @@ export default function FieldsPage() {
       if (!err.message?.includes("404") && !err.toString().includes("404")) {
         showToast({
           title: "Config Load Warning",
-          description: "Existing slot config couldn't be loaded. Using defaults.",
+          description:
+            "Existing slot config couldn't be loaded. Using defaults.",
           tone: "warning",
         });
       }
-      
+
       // If no config exists or failed to load, generate default
       setEditSlotConfig({
         slotDurationMins: 60,
@@ -3313,10 +3599,13 @@ export default function FieldsPage() {
                         </span>
                         <input
                           type="number"
+                          step="0.01"
+                          min="0"
                           value={formData.pricePerHour}
                           onChange={(e) =>
                             setField("pricePerHour", e.target.value)
                           }
+                          onFocus={(e) => e.target.select()}
                           className={`w-full border ${errors.pricePerHour ? "border-red-400" : "border-gray-200"} rounded-lg pl-7 pr-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
                         />
                         {errors.pricePerHour && (
@@ -3802,20 +4091,6 @@ export default function FieldsPage() {
             <ShieldCheck size={13} className="text-blue-500" />
             Review KYC
           </button>
-          <div className="my-1 border-t border-gray-100" />
-          <button
-            onClick={() => {
-              closeActionMenu();
-              setConfirmModal({
-                type: "remove",
-                field: actionMenu.field,
-              });
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-500 hover:bg-red-50"
-          >
-            <Trash size={13} />
-            Remove
-          </button>
         </div>
       )}
 
@@ -3852,22 +4127,24 @@ export default function FieldsPage() {
                 </button>
               </div>
               <div className="flex gap-1 border-b border-gray-100 -mb-4">
-                {(["basic", "pricing", "slot-config", "sports"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setEditTab(tab)}
-                    className={`px-4 py-2 text-xs font-semibold capitalize transition-colors ${editTab === tab ? "border-b-2 text-[#8a9e60]" : "text-gray-400 hover:text-gray-600"}`}
-                    style={editTab === tab ? { borderColor: "#8a9e60" } : {}}
-                  >
-                    {tab === "basic"
-                      ? "Basic Info"
-                      : tab === "pricing"
-                        ? "Pricing & Schedule"
-                        : tab === "slot-config"
-                          ? "Slot Pricing"
-                          : "Sports & Amenities"}
-                  </button>
-                ))}
+                {(["basic", "pricing", "slot-config", "sports"] as const).map(
+                  (tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setEditTab(tab)}
+                      className={`px-4 py-2 text-xs font-semibold capitalize transition-colors ${editTab === tab ? "border-b-2 text-[#8a9e60]" : "text-gray-400 hover:text-gray-600"}`}
+                      style={editTab === tab ? { borderColor: "#8a9e60" } : {}}
+                    >
+                      {tab === "basic"
+                        ? "Basic Info"
+                        : tab === "pricing"
+                          ? "Pricing & Schedule"
+                          : tab === "slot-config"
+                            ? "Slot Pricing"
+                            : "Sports & Amenities"}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
 
@@ -4044,6 +4321,8 @@ export default function FieldsPage() {
                     </label>
                     <input
                       type="number"
+                      step="0.01"
+                      min="0"
                       value={(editForm.standardPricePaise || 0) / 100}
                       onChange={(e) =>
                         setEditForm((p) =>
@@ -4057,6 +4336,7 @@ export default function FieldsPage() {
                             : p,
                         )
                       }
+                      onFocus={(e) => e.target.select()}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                     />
                   </div>

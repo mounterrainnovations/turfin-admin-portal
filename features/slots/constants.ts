@@ -32,5 +32,5 @@ export const SLOT_STATUS_COLORS: Record<SlotStatus, string> = {
   available: "bg-gray-50 border-gray-100 text-gray-500",
   booked: "bg-[#8a9e60] text-white",
   blocked: "bg-red-50 border-red-200 text-red-500",
-  maintenance: "bg-blue-50 border-blue-200 text-blue-600",
+  maintenance: "bg-amber-50 border-amber-200 text-amber-600",
 };
