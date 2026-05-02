@@ -53,7 +53,11 @@ export async function getAdminSlots(turfId: string, date: string): Promise<Admin
     cache: "no-store",
   });
   const data = await handleResponse(response);
-  return Array.isArray(data) ? data : data.slots || [];
+  
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.data)) return data.data;
+  if (data && Array.isArray(data.slots)) return data.slots;
+  return [];
 }
 
 export async function getAdminSlotConfig(turfId: string): Promise<SlotConfig> {
@@ -125,5 +129,6 @@ export async function patchAdminSlot(
       body: JSON.stringify(payload),
     }
   );
-  return handleResponse(response);
+  const data = await handleResponse(response);
+  return extractObject(data);
 }

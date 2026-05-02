@@ -1261,10 +1261,13 @@ function FieldDetailPanel({
                     Standard Pricing
                   </p>
                   <div className="flex justify-between items-center text-xs text-amber-700">
-                    <span>Hourly Rate</span>
+                    <span>{scheduleDate.toLocaleDateString('en-IN', { weekday: 'long' })} Rate</span>
                     <span className="font-semibold">
                       ₹
-                      {((field.standardPricePaise || 0) / 100).toLocaleString()}
+                      {(
+                        (config?.dailyConfigs?.find(dc => dc.dayOfWeek === scheduleDate.getDay())?.pricePaise ?? 
+                        (field.standardPricePaise || 0) / 100)
+                      ).toLocaleString()}
                       /hr
                     </span>
                   </div>
