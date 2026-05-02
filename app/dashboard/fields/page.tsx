@@ -2254,6 +2254,10 @@ export default function FieldsPage() {
     }
 
     if (step === 3) {
+      if (!formData.address.houseNumber?.trim())
+        newErrors.houseNumber = "House number is required";
+      if (!formData.address.landmark?.trim())
+        newErrors.landmark = "Landmark is required";
       if (!formData.address.city.trim()) newErrors.city = "City is required";
       if (!formData.address.state) newErrors.state = "State is required";
       if (!formData.address.country.trim())
@@ -3694,38 +3698,55 @@ export default function FieldsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        House / Shop Number
+                        House / Shop Number *
                       </label>
-                      <input
-                        value={formData.address.houseNumber}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: {
-                              ...p.address,
-                              houseNumber: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="e.g. 402, Building A"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.houseNumber}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: {
+                                ...p.address,
+                                houseNumber: e.target.value,
+                              },
+                            }))
+                          }
+                          className={`w-full border ${errors.houseNumber ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="e.g. 402, Building A"
+                        />
+                        {errors.houseNumber && (
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.houseNumber}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        Landmark
+                        Landmark *
                       </label>
-                      <input
-                        value={formData.address.landmark}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            address: { ...p.address, landmark: e.target.value },
-                          }))
-                        }
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
-                        placeholder="e.g. Near City Mall"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <input
+                          value={formData.address.landmark}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              address: {
+                                ...p.address,
+                                landmark: e.target.value,
+                              },
+                            }))
+                          }
+                          className={`w-full border ${errors.landmark ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
+                          placeholder="e.g. Near City Mall"
+                        />
+                        {errors.landmark && (
+                          <p className="text-[10px] text-red-500 font-medium">
+                            {errors.landmark}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -4486,7 +4507,7 @@ export default function FieldsPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            House/Plot Number
+                            House/Plot Number *
                           </label>
                           <input
                             value={
@@ -4509,6 +4530,29 @@ export default function FieldsPage() {
                             }
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                             placeholder="e.g. Plot 12"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            Landmark *
+                          </label>
+                          <input
+                            value={editForm.address?.landmark || ""}
+                            onChange={(e) =>
+                              setEditForm((p) =>
+                                p
+                                  ? {
+                                      ...p,
+                                      address: {
+                                        ...p.address!,
+                                        landmark: e.target.value,
+                                      },
+                                    }
+                                  : p,
+                              )
+                            }
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
+                            placeholder="e.g. Near City Mall"
                           />
                         </div>
                         <div className="col-span-2">
