@@ -45,7 +45,10 @@ function extractObject(payload: any): any {
   return payload;
 }
 
-export async function getAdminSlots(turfId: string, date: string): Promise<AdminSlot[]> {
+export async function getAdminSlots(
+  turfId: string,
+  date: string,
+): Promise<AdminSlot[]> {
   const url = new URL(`${getApiUrl()}/admin/turfs/${turfId}/slots`);
   url.searchParams.set("date", date);
 
@@ -53,7 +56,7 @@ export async function getAdminSlots(turfId: string, date: string): Promise<Admin
     cache: "no-store",
   });
   const data = await handleResponse(response);
-  
+
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.data)) return data.data;
   if (data && Array.isArray(data.slots)) return data.slots;
@@ -61,36 +64,22 @@ export async function getAdminSlots(turfId: string, date: string): Promise<Admin
 }
 
 export async function getAdminSlotConfig(turfId: string): Promise<SlotConfig> {
-  const response = await authenticatedFetch(`${getApiUrl()}/vendors/turfs/${turfId}/slot-config`, {
-    cache: "no-store",
-  });
+  const response = await authenticatedFetch(
+    `${getApiUrl()}/vendors/turfs/${turfId}/slot-config`,
+    {
+      cache: "no-store",
+    },
+  );
   const payload = await handleResponse(response);
   const config = extractObject(payload);
-  
-  // Convert Paise to Rupees for UI
-  if (config && config.dailyConfigs) {
-    config.dailyConfigs = config.dailyConfigs.map((p: any) => ({
-      ...p,
-      pricePaise: p.pricePaise / 100
-    }));
-  }
-  
+
   return config;
 }
 
 export async function upsertAdminSlotConfig(
   turfId: string,
-  payload: UpsertSlotConfigPayload
+  payload: UpsertSlotConfigPayload,
 ): Promise<SlotConfig> {
-  // Convert Rupees to Paise for backend
-  const payloadWithPaise = {
-    ...payload,
-    dailyConfigs: payload.dailyConfigs.map(p => ({
-      ...p,
-      pricePaise: Math.round(p.pricePaise * 100)
-    }))
-  };
-
   const response = await authenticatedFetch(
     `${getApiUrl()}/vendors/turfs/${turfId}/slot-config`,
     {
@@ -98,26 +87,28 @@ export async function upsertAdminSlotConfig(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payloadWithPaise),
-    }
+      body: JSON.stringify(payload),
+    },
   );
   const data = await handleResponse(response);
   return extractObject(data);
 }
 
-export async function generateAdminSlots(turfId: string): Promise<SlotGenerateResponse> {
+export async function generateAdminSlots(
+  turfId: string,
+): Promise<SlotGenerateResponse> {
   const response = await authenticatedFetch(
     `${getApiUrl()}/admin/turfs/${turfId}/slots/generate`,
     {
       method: "POST",
-    }
+    },
   );
   return handleResponse(response);
 }
 
 export async function patchAdminSlot(
   slotId: string,
-  payload: AdminSlotPatchPayload
+  payload: AdminSlotPatchPayload,
 ): Promise<AdminSlot> {
   const response = await authenticatedFetch(
     `${getApiUrl()}/admin/slots/${slotId}`,
@@ -127,7 +118,7 @@ export async function patchAdminSlot(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-    }
+    },
   );
   const data = await handleResponse(response);
   return extractObject(data);

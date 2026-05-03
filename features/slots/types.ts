@@ -34,7 +34,7 @@ export interface AdminSlot {
   pricePaise: number;
   availability: "available" | "unavailable";
   status: SlotStatus;
-  blockReason: BlockReason | null;
+  blockReason: string | null;
   holdExpiresAt: string | null;
   isPriceOverridden: boolean;
   configVersion: number;
@@ -49,7 +49,7 @@ export interface AdminSlot {
 
 export interface AdminSlotPatchPayload {
   status?: SlotStatus;
-  blockReason?: BlockReason;
+  blockReason?: string;
   pricePaise?: number;
   overrideReason?: string;
 }

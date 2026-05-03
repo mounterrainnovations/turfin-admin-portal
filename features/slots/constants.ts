@@ -1,6 +1,12 @@
-export type SlotStatus = 'available' | 'booked' | 'blocked' | 'maintenance' | 'held' | 'reserved';
+export type SlotStatus =
+  | "available"
+  | "booked"
+  | "blocked"
+  | "maintenance"
+  | "held"
+  | "reserved";
 
-export type BlockReason = 'maintenance' | 'private_event' | 'weather' | 'vendor_hold' | 'other';
+export type BlockReason = string;
 
 export const SLOT_CONFIG_LIMITS = {
   MIN_DURATION: 30,
