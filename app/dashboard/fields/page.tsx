@@ -331,9 +331,13 @@ function fmtDate(d: Date): string {
   });
 }
 
-/** Format a Date to a key string YYYY-MM-DD */
+/** Format a Date to a key string YYYY-MM-DD in local time */
 function dateKey(d: Date): string {
-  return d.toISOString().split("T")[0];
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 function FieldDetailPanel({
