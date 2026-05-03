@@ -45,9 +45,9 @@ const navItems: any[] = [
     href: "/dashboard/vendors",
   },
   {
-    label: "Fields",
+    label: "Arenas",
     icon: MapPin,
-    href: "/dashboard/fields",
+    href: "/dashboard/arenas",
   },
   {
     label: "Users",

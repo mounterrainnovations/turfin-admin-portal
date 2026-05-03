@@ -1,5 +1,5 @@
 import { KycStatus, SportType } from "../vendors/constants";
-import { FieldStatus } from "../turfs/constants";
+import { TurfStatus } from "../turfs/constants";
 import { BlockReason, SlotStatus } from "@/features/slots/constants";
 
 export interface SlotDayConfig {
@@ -10,7 +10,7 @@ export interface SlotDayConfig {
 }
 
 export interface SlotConfig {
-  fieldId: string;
+  turfId: string;
   slotDurationMins: number;
   bookingWindowDays: number;
   generationWindowDays: number;

@@ -36,7 +36,7 @@ const KYC_DOCS_FIELD = [
     hint: "Active public liability insurance",
   },
   {
-    key: "fieldPhotos",
+    key: "turfPhotos",
     label: "Field Photos",
     hint: "High-resolution facility images (Max 5)",
   },
@@ -156,15 +156,15 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
     if (!file || !uploadingDoc) return;
 
     const docKey = uploadingDoc;
-    const isPhoto = docKey === "fieldPhotos";
+    const isPhoto = docKey === "turfPhotos";
 
     // Store locally for immediate preview
     if (isPhoto) {
       setLocalFiles((prev) => {
-        const existing = Array.isArray(prev.fieldPhotos)
-          ? prev.fieldPhotos
+        const existing = Array.isArray(prev.turfPhotos)
+          ? prev.turfPhotos
           : [];
-        return { ...prev, fieldPhotos: [...existing, file].slice(-5) };
+        return { ...prev, turfPhotos: [...existing, file].slice(-5) };
       });
     } else {
       setLocalFiles((prev) => ({ ...prev, [docKey]: file }));
@@ -178,13 +178,13 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
       let updatedDocuments: any = { [docKey]: path };
 
       if (isPhoto) {
-        const existingPhotos = Array.isArray(documentPaths.fieldPhotos)
-          ? (documentPaths.fieldPhotos as string[])
+        const existingPhotos = Array.isArray(documentPaths.turfPhotos)
+          ? (documentPaths.turfPhotos as string[])
           : [];
         // Append new photo (up to 5)
         const newPhotos = [...existingPhotos, path].slice(-5);
-        updatedDocuments = { fieldPhotos: newPhotos };
-        setDocumentPaths((prev) => ({ ...prev, fieldPhotos: newPhotos }));
+        updatedDocuments = { turfPhotos: newPhotos };
+        setDocumentPaths((prev) => ({ ...prev, turfPhotos: newPhotos }));
       } else {
         setDocumentPaths((prev) => ({ ...prev, [docKey]: path }));
       }
@@ -196,7 +196,7 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
       setDocumentPaths((prev) => ({
         ...prev,
         ...(isPhoto
-          ? { fieldPhotos: updatedDocuments.fieldPhotos }
+          ? { turfPhotos: updatedDocuments.turfPhotos }
           : { [docKey]: path }),
       }));
 
@@ -274,15 +274,15 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
 
   const handleRemovePhoto = async (photoPath: string) => {
     try {
-      const existingPhotos = Array.isArray(documentPaths.fieldPhotos)
-        ? documentPaths.fieldPhotos
+      const existingPhotos = Array.isArray(documentPaths.turfPhotos)
+        ? documentPaths.turfPhotos
         : [];
       const newPhotos = (existingPhotos as any[])
         .map((p: any) => (typeof p === "string" ? p : p.path))
         .filter((p: string) => p !== photoPath && !p.includes(photoPath));
 
       await uploadTurfDocuments(turf.id, {
-        documents: { fieldPhotos: newPhotos } as any,
+        documents: { turfPhotos: newPhotos } as any,
       });
 
       showToast({
@@ -290,7 +290,7 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
         description: "Field photo has been removed successfully.",
         tone: "success",
       });
-      setDocumentPaths((prev) => ({ ...prev, fieldPhotos: newPhotos }));
+      setDocumentPaths((prev) => ({ ...prev, turfPhotos: newPhotos }));
       onSuccess();
     } catch (err: any) {
       showToast({
@@ -458,13 +458,13 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
             ref={fileInputRef}
             className="hidden"
             onChange={handleFileUpload}
-            accept={uploadingDoc === "fieldPhotos" ? "image/*" : ".pdf,image/*"}
+            accept={uploadingDoc === "turfPhotos" ? "image/*" : ".pdf,image/*"}
           />
 
           {KYC_DOCS_FIELD.map(({ key, label, hint }) => {
             const s = kycDocs[key] ?? "pending";
             const docData = getDocPath(key);
-            const isPhotoField = key === "fieldPhotos";
+            const isPhotoField = key === "turfPhotos";
             const photoList =
               isPhotoField && Array.isArray(docData) ? docData : [];
 
@@ -537,7 +537,7 @@ export const TurfKycUpload: React.FC<TurfKycUploadProps> = ({
                               <button
                                 onClick={() =>
                                   handleViewDocument(
-                                    localFiles.fieldPhotos?.[index] || path,
+                                    localFiles.turfPhotos?.[index] || path,
                                   )
                                 }
                                 className="text-gray-500 hover:text-[#8a9e60] transition-colors"

@@ -65,7 +65,7 @@ export async function getAdminSlots(
 
 export async function getAdminSlotConfig(turfId: string): Promise<SlotConfig> {
   const response = await authenticatedFetch(
-    `${getApiUrl()}/vendors/turfs/${turfId}/slot-config`,
+    `${getApiUrl()}/admin/turfs/${turfId}/slot-config`,
     {
       cache: "no-store",
     },
@@ -81,7 +81,7 @@ export async function upsertAdminSlotConfig(
   payload: UpsertSlotConfigPayload,
 ): Promise<SlotConfig> {
   const response = await authenticatedFetch(
-    `${getApiUrl()}/vendors/turfs/${turfId}/slot-config`,
+    `${getApiUrl()}/admin/turfs/${turfId}/slot-config`,
     {
       method: "PUT",
       headers: {

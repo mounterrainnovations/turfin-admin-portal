@@ -119,7 +119,7 @@ function normalizeReview(review: any): TurfReview {
   return {
     id: String(review?.id || ""),
     userId: String(review?.userId || ""),
-    fieldId: String(review?.fieldId || ""),
+    turfId: String(review?.turfId || ""),
     bookingId: String(review?.bookingId || ""),
     score:
       typeof review?.score === "number" ? review.score : Number(review?.score || 0),
@@ -145,13 +145,14 @@ export async function listTurfs(
     city?: string;
     search?: string;
     searchBy?:
-      | "field_name"
-      | "field_id"
+      | "turf_name"
+      | "turf_id"
       | "vendor_business_name"
       | "city"
       | "state";
     startDate?: string;
     endDate?: string;
+    arenaId?: string;
   } = {},
 ): Promise<TurfListResult> {
   const url = new URL(`${getApiUrl()}/admin/turfs`);
@@ -162,6 +163,7 @@ export async function listTurfs(
   if (params.sportType) url.searchParams.set("sportType", params.sportType);
   if (params.city) url.searchParams.set("city", params.city);
   if (params.search) url.searchParams.set("search", params.search);
+  if (params.arenaId) url.searchParams.set("arenaId", params.arenaId);
   if (params.searchBy && params.search)
     url.searchParams.set("searchBy", params.searchBy);
   if (params.startDate) url.searchParams.set("startDate", params.startDate);

@@ -18,18 +18,18 @@ The following are the available enums parsed across the codebase:
 - **KycStatus**: `not_started, pending, in_review, verified, rejected`
 - **SurfaceType**: `artificial_turf, natural_grass, concrete, wooden, synthetic`
 - **AmenityType**: `parking, flood_lights, washrooms, changing_rooms, showers, drinking_water, cafeteria, equipment_rental, first_aid, wifi, cctv, power_backup, locker_facility, seating_area, practice_nets, scoreboard, warm_up_area, music_system, coaching, referee, covered_turf, indoor_facility, outdoor_facility, bibs_available, prayer_room`
-- **FieldStatus**: `active, inactive, pending, maintenance, suspended, banned`
+- **TurfStatus**: `active, inactive, pending, maintenance, suspended, banned`
 - **PayoutCycle**: `daily, weekly, monthly`
 - **BookingStatus**: `pending, confirmed, cancelled, completed, no_show`
 - **SlotStatus**: `available, booked, blocked, maintenance`
 - **PaymentStatus**: `created, pending, authorized, captured, failed, refunded, partially_refunded`
 - **AuditCategory**: `auth, kyc, booking, payment, slot, admin, vendor, turf, user`
-- **AuditAction**: `AUTH_LOGIN, AUTH_LOGOUT, AUTH_SIGNUP, KYC_SUBMIT, KYC_VERIFY, KYC_REJECT, TURF_CREATE, TURF_UPDATE, TURF_DELETE, BOOKING_CREATE, BOOKING_CANCEL, PAYMENT_REFUND, USER_BAN, USER_UNBAN, VENDOR_CREATED, VENDOR_UPDATE, VENDOR_BAN, VENDOR_UNBAN, TURF_DOCS_UPDATE, TURF_DOCS_REVIEW, FIELD_BAN, FIELD_UNBAN, FIELD_STATUS_UPDATE, SUB_ADMIN_CREATE, SUB_ADMIN_DELETE, SUB_ADMIN_PASSWORD_UPDATE, ROLE_ASSIGN, ROLE_REVOKE, USER_ADDRESS_ADD, USER_ADDRESS_UPDATE, USER_ADDRESS_SET_PRIMARY, USER_ADDRESS_DELETE, USER_FAVOURITE_ADD, USER_FAVOURITE_REMOVE, AUTH_PASSWORD_RESET, ADMIN_MANUAL_PASSWORD_UPDATE, ADMIN_TRIGGER_PASSWORD_RESET`
-- **NotificationType**: `booking_confirmed, booking_cancelled, booking_reminder, slot_booked, slot_cancelled, payment_received, payment_failed, payment_refunded, kyc_submitted, kyc_verified, kyc_rejected, field_approved, field_rejected, account_banned, account_reinstated, general`
+- **AuditAction**: `AUTH_LOGIN, AUTH_LOGOUT, AUTH_SIGNUP, KYC_SUBMIT, KYC_VERIFY, KYC_REJECT, TURF_CREATE, TURF_UPDATE, TURF_DELETE, BOOKING_CREATE, BOOKING_CANCEL, PAYMENT_REFUND, USER_BAN, USER_UNBAN, VENDOR_CREATED, VENDOR_UPDATE, VENDOR_BAN, VENDOR_UNBAN, TURF_DOCS_UPDATE, TURF_DOCS_REVIEW, TURF_BAN, TURF_UNBAN, TURF_STATUS_UPDATE, SUB_ADMIN_CREATE, SUB_ADMIN_DELETE, SUB_ADMIN_PASSWORD_UPDATE, ROLE_ASSIGN, ROLE_REVOKE, USER_ADDRESS_ADD, USER_ADDRESS_UPDATE, USER_ADDRESS_SET_PRIMARY, USER_ADDRESS_DELETE, USER_FAVOURITE_ADD, USER_FAVOURITE_REMOVE, AUTH_PASSWORD_RESET, ADMIN_MANUAL_PASSWORD_UPDATE, ADMIN_TRIGGER_PASSWORD_RESET`
+- **NotificationType**: `booking_confirmed, booking_cancelled, booking_reminder, slot_booked, slot_cancelled, payment_received, payment_failed, payment_refunded, kyc_submitted, kyc_verified, kyc_rejected, turf_approved, turf_rejected, account_banned, account_reinstated, general`
 - **NotificationChannel**: `push, sms, email, in_app`
 - **BlockReason**: `maintenance, private_event, weather, vendor_hold, other`
 - **DiscountType**: `flat, percentage`
-- **CouponScopeType**: `platform, vendor, field`
+- **CouponScopeType**: `platform, vendor, turf`
 - **AddressType**: `home, work, other`
 
 ---
@@ -42,20 +42,20 @@ The following are the available enums parsed across the codebase:
 
 | Field       | Type     | Required | Description                     | Constraints/Decorators              |
 | ----------- | -------- | -------- | ------------------------------- | ----------------------------------- |
-| `fieldId`   | `string` | Yes      | UUID of the turf being reviewed | `@IsUUID()`                         |
+| `turfId`    | `string` | Yes      | UUID of the turf being reviewed | `@IsUUID()`                         |
 | `bookingId` | `string` | Yes      | UUID of the verified booking    | `@IsUUID()`                         |
 | `score`     | `number` | Yes      | Rating from 0.0 to 5.0          | `@IsNumber()`, `@Min(0)`, `@Max(5)` |
 | `comment`   | `string` | No       | Optional text feedback          | `@IsString()`                       |
-
-### ReviewResponseDto
-
-**File**: `src/modules/reviews/dto/review-response.dto.ts`
-
-| Field       | Type            | Required | Description                     |
+|
+| ### ReviewResponseDto
+|
+| **File**: `src/modules/reviews/dto/review-response.dto.ts`
+|
+| | Field       | Type            | Required | Description                     |
 | ----------- | --------------- | -------- | ------------------------------- |
 | `id`        | `string`        | Yes      | Unique review ID                |
 | `userId`    | `string`        | Yes      | Author's internal user ID       |
-| `fieldId`   | `string`        | Yes      | Target turf ID                  |
+| `turfId`    | `string`        | Yes      | Target turf ID                  |
 | `bookingId` | `string`        | Yes      | Linked booking ID               |
 | `score`     | `number`        | Yes      | Numeric score (float)           |
 | `comment`   | `string`        | No       | Feedback text                   |
@@ -130,7 +130,7 @@ The following are the available enums parsed across the codebase:
 
 | Field    | Type          | Required | Constraints/Decorators                                                                                        |
 | -------- | ------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| `status` | `FieldStatus` | Yes      | `@IsEnum(FieldStatus)`<br><br>**Allowed values:** `active, inactive, pending, maintenance, suspended, banned` |
+| `status` | `TurfStatus` | Yes      | `@IsEnum(TurfStatus)`<br><br>**Allowed values:** `active, inactive, pending, maintenance, suspended, banned` |
 
 ### UserFilterQueryDto
 
@@ -432,7 +432,7 @@ The following are the available enums parsed across the codebase:
 | Field           | Type                      | Required | Constraints/Decorators                                                                       |
 | --------------- | ------------------------- | -------- | -------------------------------------------------------------------------------------------- | ------------ |
 | `id`            | `string`                  | Yes      | `@Expose()`                                                                                  |
-| `fieldId`       | `string`                  | Yes      | `@Expose()`                                                                                  |
+| `turfId`        | `string`                  | Yes      | `@Expose()`                                                                                  |
 | `status`        | `KycStatus`               | Yes      | `@Expose()`<br><br>**Allowed values:** `not_started, pending, in_review, verified, rejected` |
 | `documents`     | `TurfDocumentsDto`        | Yes      | `@Expose()`, `@Type(()`                                                                      |
 | `verification`  | `Record<string, boolean>` | Yes      | `@Expose()`                                                                                  |
@@ -452,7 +452,7 @@ The following are the available enums parsed across the codebase:
 | `propertyDocument`   | `string`   | No       | `@IsString()`                                                 |
 | `municipalNoc`       | `string`   | No       | `@IsString()`                                                 |
 | `liabilityInsurance` | `string`   | No       | `@IsString()`                                                 |
-| `fieldPhotos`        | `string[]` | No       | `@IsArray()`, `@ArrayMaxSize(5)`, `@IsString({ each: true })` |
+| `turfPhotos`         | `string[]` | No       | `@IsArray()`, `@ArrayMaxSize(5)`, `@IsString({ each: true })` |
 
 ### TurfFilterQueryDto
 
@@ -460,7 +460,7 @@ The following are the available enums parsed across the codebase:
 
 | Field       | Type          | Required | Constraints/Decorators                                                                                                                                                                                    |
 | ----------- | ------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`    | `FieldStatus` | No       | `@IsEnum(FieldStatus)`<br><br>**Allowed values:** `active, inactive, pending, maintenance, suspended, banned`                                                                                             |
+| `status`    | `TurfStatus` | No       | `@IsEnum(TurfStatus)`<br><br>**Allowed values:** `active, inactive, pending, maintenance, suspended, banned`                                                                                             |
 | `sportType` | `SportType`   | No       | `@IsEnum(SportType)`<br><br>**Allowed values:** `football, cricket, tennis, badminton, basketball, hockey, volleyball, kabaddi, box_cricket, futsal, pickleball, throwball, netball, handball, dodgeball` |
 | `city`      | `string`      | No       | `@IsString()`                                                                                                                                                                                             |
 
@@ -485,7 +485,7 @@ The following are the available enums parsed across the codebase:
 | `weekendClose`          | `string`                   | Yes      | `@Expose()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `standardPricePaise`    | `number`                   | Yes      | `@Expose()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `cancellationWindowHrs` | `number`                   | Yes      | `@Expose()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `status`                | `FieldStatus`              | Yes      | `@Expose()`<br><br>**Allowed values:** `active, inactive, pending, maintenance, suspended, banned`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `status`                | `TurfStatus`              | Yes      | `@Expose()`<br><br>**Allowed values:** `active, inactive, pending, maintenance, suspended, banned`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `vendorBusinessName`    | `string`                   | No       | `@Expose()`, `@Expose()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `vendorPhone`           | `string`                   | No       | `@Expose()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `vendorWhatsapp`        | `string`                   | No       | `@Expose()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -501,7 +501,7 @@ The following are the available enums parsed across the codebase:
 
 | Field    | Type          | Required | Constraints/Decorators                                                                                        |
 | -------- | ------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| `status` | `FieldStatus` | Yes      | `@IsEnum(FieldStatus)`<br><br>**Allowed values:** `active, inactive, pending, maintenance, suspended, banned` |
+| `status` | `TurfStatus` | Yes      | `@IsEnum(TurfStatus)`<br><br>**Allowed values:** `active, inactive, pending, maintenance, suspended, banned` |
 
 ### UpdateTurfDto
 
@@ -728,6 +728,6 @@ Matches `UpsertSlotConfigDto` structure plus:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `fieldId` | `string` | parent field UUID |
+| `turfId` | `string` | parent turf UUID |
 | `configVersion` | `number` | config version |
 | `updatedAt` | `string` | last update timestamp |
