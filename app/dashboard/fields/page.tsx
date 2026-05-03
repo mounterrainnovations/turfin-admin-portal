@@ -379,8 +379,7 @@ function FieldDetailPanel({
   const [isPatching, setIsPatching] = useState<string | null>(null);
   const [slotToEdit, setSlotToEdit] = useState<AdminSlot | null>(null);
   const [slotPriceInput, setSlotPriceInput] = useState("");
-  const [slotBlockReason, setSlotBlockReason] =
-    useState<BlockReason>("vendor_hold");
+  const [slotBlockReason, setSlotBlockReason] = useState<BlockReason>("");
   const [slotOverrideReason, setSlotOverrideReason] = useState("");
   const [confirm, setConfirm] = useState<{
     title: string;
@@ -449,7 +448,7 @@ function FieldDetailPanel({
   async function handleSlotClick(slot: AdminSlot) {
     setSlotToEdit(slot);
     setSlotPriceInput((slot.pricePaise / 100).toString());
-    setSlotBlockReason(slot.blockReason || "vendor_hold");
+    setSlotBlockReason(slot.blockReason || "");
     setSlotOverrideReason(""); // Reset on click
   }
 
@@ -503,10 +502,12 @@ function FieldDetailPanel({
   }
 
   const bookedCount = slots.filter((s) => s.status === "booked").length;
-  const blockedCount = slots.filter(
-    (s) => s.status === "blocked" || s.status === "maintenance",
+  const maintenanceCount = slots.filter(
+    (s) => s.status === "maintenance",
   ).length;
   const availableCount = slots.filter((s) => s.status === "available").length;
+  const heldCount = slots.filter((s) => s.status === "held").length;
+  const reservedCount = slots.filter((s) => s.status === "reserved").length;
   const totalSlotsCount = slots.length;
   const occupancyPct =
     totalSlotsCount > 0 ? Math.round((bookedCount / totalSlotsCount) * 100) : 0;
@@ -1154,10 +1155,6 @@ function FieldDetailPanel({
                     Booked
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-red-50 border border-red-200" />{" "}
-                    Blocked
-                  </span>
-                  <span className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded bg-amber-50 border border-amber-200" />{" "}
                     Maintenance
                   </span>
@@ -1292,33 +1289,45 @@ function FieldDetailPanel({
                   <p className="text-xs font-semibold text-gray-700 mb-3">
                     {fmtDate(scheduleDate)} — Summary
                   </p>
-                  <div className="grid grid-cols-4 gap-2 text-center mb-3">
+                  <div className="grid grid-cols-6 gap-1 text-center mb-3">
                     <div>
-                      <p className="text-base font-bold text-gray-800">
+                      <p className="text-sm font-bold text-gray-800">
                         {bookedCount}
                       </p>
-                      <p className="text-[10px] text-gray-400">Booked</p>
+                      <p className="text-[9px] text-gray-400">Booked</p>
                     </div>
                     <div>
-                      <p className="text-base font-bold text-red-500">
-                        {blockedCount}
+                      <p className="text-sm font-bold text-amber-600">
+                        {maintenanceCount}
                       </p>
-                      <p className="text-[10px] text-gray-400">Blocked</p>
+                      <p className="text-[9px] text-gray-400">Maint.</p>
                     </div>
                     <div>
-                      <p className="text-base font-bold text-gray-600">
+                      <p className="text-sm font-bold text-gray-600">
                         {availableCount}
                       </p>
-                      <p className="text-[10px] text-gray-400">Available</p>
+                      <p className="text-[9px] text-gray-400">Avail.</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-blue-500">
+                        {heldCount}
+                      </p>
+                      <p className="text-[9px] text-gray-400">Held</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-purple-500">
+                        {reservedCount}
+                      </p>
+                      <p className="text-[9px] text-gray-400">Resv.</p>
                     </div>
                     <div>
                       <p
-                        className="text-base font-bold"
+                        className="text-sm font-bold"
                         style={{ color: "#8a9e60" }}
                       >
                         {occupancyPct}%
                       </p>
-                      <p className="text-[10px] text-gray-400">Booked%</p>
+                      <p className="text-[9px] text-gray-400">Book%</p>
                     </div>
                   </div>
                   {/* Stacked bar */}
@@ -1333,9 +1342,27 @@ function FieldDetailPanel({
                       style={{
                         width:
                           totalSlotsCount > 0
-                            ? `${Math.round((blockedCount / totalSlotsCount) * 100)}%`
+                            ? `${Math.round((maintenanceCount / totalSlotsCount) * 100)}%`
                             : "0%",
-                        backgroundColor: "#fca5a5",
+                        backgroundColor: "#fbbf24", // amber-400
+                      }}
+                    />
+                    <div
+                      style={{
+                        width:
+                          totalSlotsCount > 0
+                            ? `${Math.round((heldCount / totalSlotsCount) * 100)}%`
+                            : "0%",
+                        backgroundColor: "#60a5fa", // blue-400
+                      }}
+                    />
+                    <div
+                      style={{
+                        width:
+                          totalSlotsCount > 0
+                            ? `${Math.round((reservedCount / totalSlotsCount) * 100)}%`
+                            : "0%",
+                        backgroundColor: "#a855f7", // purple-500
                       }}
                     />
                   </div>
@@ -1356,9 +1383,10 @@ function FieldDetailPanel({
                     <span className="font-semibold">
                       ₹
                       {(
-                        config?.dailyConfigs?.find(
+                        (config?.dailyConfigs?.find(
                           (dc) => dc.dayOfWeek === scheduleDate.getDay(),
-                        )?.pricePaise ?? (field.standardPricePaise || 0) / 100
+                        )?.pricePaise ??
+                          (field.standardPricePaise || 0)) / 100
                       ).toLocaleString()}
                       /hr
                     </span>
@@ -1563,7 +1591,7 @@ function FieldDetailPanel({
             </div>
           )}
           {/* Management Zone */}
-          <div className="mt-8 pt-6 border-t border-gray-100">
+          <div>
             <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4">
               Management & Controls
             </h4>
@@ -1797,27 +1825,6 @@ function FieldDetailPanel({
                               disabled={!slotOverrideReason.trim()}
                               onClick={() => {
                                 setConfirm({
-                                  title: "Release & Block?",
-                                  message:
-                                    "This will cancel the booking and block the slot.",
-                                  type: "danger",
-                                  icon: <Prohibit size={24} weight="bold" />,
-                                  onConfirm: () =>
-                                    handleUpdateSlot({
-                                      status: "blocked",
-                                      blockReason: "other",
-                                      overrideReason: slotOverrideReason,
-                                    }),
-                                });
-                              }}
-                              className="py-2 bg-red-50 text-red-700 border border-red-100 text-[11px] font-bold rounded-lg hover:bg-red-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <LockSimple size={14} /> Force Block
-                            </button>
-                            <button
-                              disabled={!slotOverrideReason.trim()}
-                              onClick={() => {
-                                setConfirm({
                                   title: "Release & Maintenance?",
                                   message:
                                     "This will cancel the booking and set to maintenance.",
@@ -1826,11 +1833,12 @@ function FieldDetailPanel({
                                   onConfirm: () =>
                                     handleUpdateSlot({
                                       status: "maintenance",
+                                      blockReason: "Maintenance Override", // Default for released bookings
                                       overrideReason: slotOverrideReason,
                                     }),
                                 });
                               }}
-                              className="py-2 bg-amber-50 text-amber-700 border border-amber-100 text-[11px] font-bold rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="col-span-2 py-2 bg-amber-50 text-amber-700 border border-amber-100 text-[11px] font-bold rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Wrench size={14} /> Maintenance
                             </button>
@@ -1896,36 +1904,23 @@ function FieldDetailPanel({
                           <button
                             onClick={() => {
                               setConfirm({
-                                title: "Block Slot?",
-                                message: `Are you sure you want to block this slot for ${slotBlockReason.replace("_", " ")}?`,
-                                type: "danger",
-                                icon: <XCircle size={24} weight="bold" />,
-                                onConfirm: () =>
-                                  handleUpdateSlot({
-                                    status: "blocked",
-                                    blockReason: slotBlockReason,
-                                  }),
-                              });
-                            }}
-                            className="flex items-center justify-center gap-2 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100 text-xs font-semibold hover:bg-red-100 transition-all shadow-sm"
-                          >
-                            <XCircle size={15} /> Block Slot
-                          </button>
-                          <button
-                            onClick={() => {
-                              setConfirm({
                                 title: "Maintenance Mode?",
                                 message:
                                   "Set this slot to maintenance mode? This will prevent any bookings.",
                                 type: "warning",
                                 icon: <Wrench size={24} weight="bold" />,
                                 onConfirm: () =>
-                                  handleUpdateSlot({ status: "maintenance" }),
+                                  handleUpdateSlot({
+                                    status: "maintenance",
+                                    blockReason:
+                                      slotBlockReason ||
+                                      "Scheduled Maintenance",
+                                  }),
                               });
                             }}
-                            className="flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-all shadow-sm"
+                            className="col-span-2 flex items-center justify-center gap-2 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold hover:bg-amber-100 transition-all shadow-sm"
                           >
-                            <Wrench size={15} /> Maintenance
+                            <Wrench size={15} /> Set to Maintenance
                           </button>
                         </>
                       )}
@@ -1939,19 +1934,11 @@ function FieldDetailPanel({
                   <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
                     Block Reason
                   </p>
-                  <Select
+                  <textarea
                     value={slotBlockReason}
-                    onChange={(val) => setSlotBlockReason(val as any)}
-                    options={[
-                      { value: "vendor_hold", label: "Vendor Hold" },
-                      { value: "private_event", label: "Private Event" },
-                      { value: "weather", label: "Weather" },
-                      { value: "maintenance", label: "Maintenance" },
-                      { value: "other", label: "Other" },
-                    ]}
-                    useFixed={true}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 focus:border-[#8a9e60] outline-none transition-all"
-                    dropdownClassName="z-[70]"
+                    onChange={(e) => setSlotBlockReason(e.target.value)}
+                    placeholder="Enter reason for maintenance..."
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-900 focus:ring-1 focus:ring-amber-500 outline-none transition-all resize-none h-16"
                   />
                 </div>
               )}
