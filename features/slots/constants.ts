@@ -36,11 +36,44 @@ export const SLOT_STATUS_LABELS: Record<SlotStatus, string> = {
   reserved: "Reserved",
 };
 
-export const SLOT_STATUS_COLORS: Record<SlotStatus, string> = {
-  available: "bg-gray-50 border-gray-100 text-gray-500",
-  booked: "bg-[#8a9e60] text-white",
-  blocked: "bg-red-50 border-red-200 text-red-500",
-  maintenance: "bg-amber-50 border-amber-200 text-amber-600",
-  held: "bg-blue-50 border-blue-200 text-blue-600",
-  reserved: "bg-purple-50 border-purple-200 text-purple-600",
+export const SLOT_STATUS_COLORS: Record<
+  SlotStatus,
+  { bg: string; text: string; dot: string; label: string }
+> = {
+  available: {
+    bg: "bg-gray-50 border-gray-100",
+    text: "text-gray-500",
+    dot: "bg-gray-400",
+    label: "Available",
+  },
+  booked: {
+    bg: "bg-[#8a9e60]",
+    text: "text-white",
+    dot: "bg-white",
+    label: "Booked",
+  },
+  blocked: {
+    bg: "bg-red-50 border-red-200",
+    text: "text-red-500",
+    dot: "bg-red-500",
+    label: "Blocked",
+  },
+  maintenance: {
+    bg: "bg-amber-50 border-amber-200",
+    text: "text-amber-600",
+    dot: "bg-amber-500",
+    label: "Maintenance",
+  },
+  held: {
+    bg: "bg-blue-50 border-blue-200",
+    text: "text-blue-600",
+    dot: "bg-blue-500",
+    label: "Held",
+  },
+  reserved: {
+    bg: "bg-purple-50 border-purple-200",
+    text: "text-purple-600",
+    dot: "bg-purple-500",
+    label: "Reserved",
+  },
 };

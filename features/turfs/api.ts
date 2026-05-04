@@ -5,8 +5,6 @@ import {
   TurfListResult,
   CreateTurfDto,
   UpdateTurfDto,
-  TurfReviewDto,
-  SubmitTurfDocumentsDto,
 } from "./types";
 
 function getApiUrl() {
@@ -96,21 +94,14 @@ function normalizeTurf(t: any): Turf {
   return {
     ...t,
     status: (t.status || "pending").toLowerCase(),
-    kycStatus: (t.kyc?.status || t.kycStatus || "not_started").toLowerCase(),
-    verification: t.kyc?.verification || t.verification || {},
     address: t.address || {},
     vendor: t.vendor || {},
     rating: avgScore,
     totalReviews,
     ratingSummary,
-    kyc: t.kyc
-      ? {
-          ...t.kyc,
-          status: (t.kyc.status || "not_started").toLowerCase(),
-          verification: t.kyc.verification || {},
-          documents: t.kyc.documents || {},
-        }
-      : undefined,
+    arenaStatus: t.arenaStatus || undefined,
+    arenaKycStatus: t.arenaKycStatus || undefined,
+    arenaName: t.arenaName || undefined,
     listedAt: t.createdAt || t.listedAt || new Date().toISOString(),
   };
 }
@@ -205,7 +196,7 @@ export async function createTurfForVendor(
       body: JSON.stringify(dto),
     },
   );
-  return handleResponse(response);
+  return normalizeTurf(extractObject(await handleResponse(response)));
 }
 
 export async function updateTurfStatus(
@@ -219,24 +210,7 @@ export async function updateTurfStatus(
     },
     body: JSON.stringify({ status }),
   });
-  return handleResponse(response);
-}
-
-export async function reviewTurfDocuments(
-  turfId: string,
-  dto: TurfReviewDto,
-): Promise<void> {
-  const response = await authenticatedFetch(
-    `${getApiUrl()}/admin/turfs/${turfId}/documents/review`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(dto),
-    },
-  );
-  await handleResponse(response);
+  return normalizeTurf(extractObject(await handleResponse(response)));
 }
 
 export async function banTurf(turfId: string): Promise<void> {
@@ -264,24 +238,7 @@ export async function updateTurf(
     },
     body: JSON.stringify(dto),
   });
-  return handleResponse(response);
-}
-
-export async function uploadTurfDocuments(
-  turfId: string,
-  dto: SubmitTurfDocumentsDto,
-): Promise<any> {
-  const response = await authenticatedFetch(
-    `${getApiUrl()}/admin/turfs/${turfId}/documents`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(dto),
-    },
-  );
-  return handleResponse(response);
+  return normalizeTurf(extractObject(await handleResponse(response)));
 }
 
 export async function getTurfReviews(turfId: string): Promise<TurfReview[]> {

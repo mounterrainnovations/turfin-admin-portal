@@ -36,6 +36,22 @@ export interface Arena {
   turfCount?: number;
   sports?: { sport: string; count: number }[];
   documents?: Record<string, string | string[]>;
+  verification?: Record<string, boolean>;
+  kyc?: {
+    id?: string;
+    arenaId?: string;
+    status: KycStatus;
+    verification: Record<string, boolean>;
+    documents: {
+      propertyDocument?: string;
+      municipalNoc?: string;
+      liabilityInsurance?: string;
+      arenaPhotos?: string[];
+    };
+    reviewedBy?: string | null;
+    reviewedAt?: string | null;
+    submittedAt?: string | null;
+  };
 }
 
 export interface ArenaTurfGeneration {
