@@ -256,18 +256,12 @@ export async function deleteTurfReview(
   turfId: string,
   reviewId: string,
 ): Promise<void> {
-  let response = await authenticatedFetch(
+  const response = await authenticatedFetch(
     `${getApiUrl()}/admin/turfs/${turfId}/reviews/${reviewId}`,
     {
       method: "DELETE",
     },
   );
-
-  if (response.status === 404) {
-    response = await authenticatedFetch(`${getApiUrl()}/admin/reviews/${reviewId}`, {
-      method: "DELETE",
-    });
-  }
 
   await handleResponse(response);
 }
