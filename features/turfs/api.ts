@@ -5,8 +5,6 @@ import {
   TurfListResult,
   CreateTurfDto,
   UpdateTurfDto,
-  TurfReviewDto,
-  SubmitTurfDocumentsDto,
 } from "./types";
 
 function getApiUrl() {
@@ -96,21 +94,14 @@ function normalizeTurf(t: any): Turf {
   return {
     ...t,
     status: (t.status || "pending").toLowerCase(),
-    kycStatus: (t.kyc?.status || t.kycStatus || "not_started").toLowerCase(),
-    verification: t.kyc?.verification || t.verification || {},
     address: t.address || {},
     vendor: t.vendor || {},
     rating: avgScore,
     totalReviews,
     ratingSummary,
-    kyc: t.kyc
-      ? {
-          ...t.kyc,
-          status: (t.kyc.status || "not_started").toLowerCase(),
-          verification: t.kyc.verification || {},
-          documents: t.kyc.documents || {},
-        }
-      : undefined,
+    arenaStatus: t.arenaStatus || undefined,
+    arenaKycStatus: t.arenaKycStatus || undefined,
+    arenaName: t.arenaName || undefined,
     listedAt: t.createdAt || t.listedAt || new Date().toISOString(),
   };
 }
@@ -119,7 +110,7 @@ function normalizeReview(review: any): TurfReview {
   return {
     id: String(review?.id || ""),
     userId: String(review?.userId || ""),
-    fieldId: String(review?.fieldId || ""),
+    turfId: String(review?.turfId || ""),
     bookingId: String(review?.bookingId || ""),
     score:
       typeof review?.score === "number" ? review.score : Number(review?.score || 0),
@@ -145,13 +136,14 @@ export async function listTurfs(
     city?: string;
     search?: string;
     searchBy?:
-      | "field_name"
-      | "field_id"
+      | "turf_name"
+      | "turf_id"
       | "vendor_business_name"
       | "city"
       | "state";
     startDate?: string;
     endDate?: string;
+    arenaId?: string;
   } = {},
 ): Promise<TurfListResult> {
   const url = new URL(`${getApiUrl()}/admin/turfs`);
@@ -162,6 +154,7 @@ export async function listTurfs(
   if (params.sportType) url.searchParams.set("sportType", params.sportType);
   if (params.city) url.searchParams.set("city", params.city);
   if (params.search) url.searchParams.set("search", params.search);
+  if (params.arenaId) url.searchParams.set("arenaId", params.arenaId);
   if (params.searchBy && params.search)
     url.searchParams.set("searchBy", params.searchBy);
   if (params.startDate) url.searchParams.set("startDate", params.startDate);
@@ -203,7 +196,7 @@ export async function createTurfForVendor(
       body: JSON.stringify(dto),
     },
   );
-  return handleResponse(response);
+  return normalizeTurf(extractObject(await handleResponse(response)));
 }
 
 export async function updateTurfStatus(
@@ -217,24 +210,7 @@ export async function updateTurfStatus(
     },
     body: JSON.stringify({ status }),
   });
-  return handleResponse(response);
-}
-
-export async function reviewTurfDocuments(
-  turfId: string,
-  dto: TurfReviewDto,
-): Promise<void> {
-  const response = await authenticatedFetch(
-    `${getApiUrl()}/admin/turfs/${turfId}/documents/review`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(dto),
-    },
-  );
-  await handleResponse(response);
+  return normalizeTurf(extractObject(await handleResponse(response)));
 }
 
 export async function banTurf(turfId: string): Promise<void> {
@@ -262,24 +238,7 @@ export async function updateTurf(
     },
     body: JSON.stringify(dto),
   });
-  return handleResponse(response);
-}
-
-export async function uploadTurfDocuments(
-  turfId: string,
-  dto: SubmitTurfDocumentsDto,
-): Promise<any> {
-  const response = await authenticatedFetch(
-    `${getApiUrl()}/admin/turfs/${turfId}/documents`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(dto),
-    },
-  );
-  return handleResponse(response);
+  return normalizeTurf(extractObject(await handleResponse(response)));
 }
 
 export async function getTurfReviews(turfId: string): Promise<TurfReview[]> {

@@ -61,7 +61,9 @@ export interface Vendor {
   bankingDetails: BankingDetails;
   payoutCycle: PayoutCycle;
   commissionPct: string;
-  revenue?: number; // Calculated or from separate endpoint if exists
+  revenue?: number;
+  arenaCount?: number;
+  turfCount?: number;
   joinedAt: string;
   deletedAt?: string;
   kyc?: {

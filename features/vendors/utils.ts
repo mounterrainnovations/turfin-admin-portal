@@ -16,7 +16,7 @@ export async function uploadToStorage(
   id: string,
   docKey: string,
   file: File,
-  entityType: "vendor" | "turf" = "vendor"
+  entityType: "vendor" | "turf" | "arena" = "vendor"
 ): Promise<string> {
   const extension = file.name.split(".").pop();
   // Using kyc/entityType/id/docKey prefix to keep it organized
@@ -41,12 +41,12 @@ export async function uploadToStorage(
 
 /**
  * Uploads multiple files sequentially and returns a mapped object of S3 paths.
- * Supports both single files and arrays of files (e.g. fieldPhotos).
+ * Supports both single files and arrays of files (e.g. turfPhotos).
  */
 export async function performSequentialUploads(
   id: string,
   filesMap: Record<string, File | File[] | null | undefined>,
-  entityType: "vendor" | "turf" = "vendor"
+  entityType: "vendor" | "turf" | "arena" = "vendor"
 ): Promise<Record<string, string | string[]>> {
   const result: Record<string, string | string[]> = {};
 

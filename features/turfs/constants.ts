@@ -8,7 +8,7 @@ import {
   Wrench,
 } from "@phosphor-icons/react";
 
-export type FieldStatus =
+export type TurfStatus =
   | "active"
   | "inactive"
   | "pending"
@@ -17,7 +17,7 @@ export type FieldStatus =
   | "banned";
 
 export const STATUS_CONFIG: Record<
-  FieldStatus,
+  TurfStatus,
   { label: string; cls: string; dot: string; icon: any }
 > = {
   active: {

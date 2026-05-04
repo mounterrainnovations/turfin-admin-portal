@@ -1,5 +1,5 @@
-import { SportType, SurfaceType, KycStatus } from "../vendors/constants";
-import { FieldStatus, AmenityType } from "./constants";
+import { SportType, SurfaceType } from "../vendors/constants";
+import { TurfStatus } from "./constants";
 
 export interface TurfAddress {
   label?: string;
@@ -32,7 +32,7 @@ export interface ReviewUser {
 export interface TurfReview {
   id: string;
   userId: string;
-  fieldId: string;
+  turfId: string;
   bookingId: string;
   score: number;
   comment?: string;
@@ -42,9 +42,9 @@ export interface TurfReview {
 
 export interface Turf {
   id: string;
+  arenaId: string;
   name: string;
-  sports: SportType[];
-  amenities: AmenityType[];
+  sport: SportType;
   capacity?: number;
   sizeFormat?: string;
   surfaceType: SurfaceType;
@@ -54,18 +54,18 @@ export interface Turf {
   weekendOpen: string;
   weekendClose: string;
   standardPricePaise: number;
+  cancellationWindowHrs?: number;
   pricePerHour?: number;
-  status: FieldStatus;
-  kycStatus?: KycStatus;
-  verification?: Record<string, boolean>;
-  reviewerNotes?: string;
-  
+  status: TurfStatus;
+
   // Relations/Includes
-  vendorId?: string;
+  vendorId: string;
+  arenaName?: string;
+  arenaStatus?: TurfStatus;
+  arenaKycStatus?: string;
   vendorBusinessName?: string;
   vendorPhone?: string;
   vendorWhatsapp?: string;
-  fieldPhotos?: string[];
   createdAt?: string;
   updatedAt?: string;
   
@@ -86,71 +86,25 @@ export interface Turf {
   totalRevenue?: number;
   totalRevenuePaise?: number;
   listedAt?: string;
-  description?: string;
-  // Backend returns KYC data nested under 'kyc' key (TurfResponseDto.kyc = TurfDocumentsResponseDto)
-  kyc?: {
-    id?: string;
-    fieldId?: string;
-    status: KycStatus;
-    verification: Record<string, boolean>;
-    documents: {
-      propertyDocument?: string;
-      municipalNoc?: string;
-      liabilityInsurance?: string;
-      fieldPhotos?: string[];
-    };
-    reviewedBy?: string | null;
-    reviewedAt?: string | null;
-    submittedAt?: string | null;
-  };
-  // Legacy / fallback shape (kept for compat)
-  documents?: {
-    status: KycStatus;
-    verification: Record<string, boolean>;
-    documents: {
-      propertyDocument?: string;
-      municipalNoc?: string;
-      liabilityInsurance?: string;
-      fieldPhotos?: string[];
-    };
-  };
 }
 
 export interface CreateTurfDto {
+  arenaId: string;
   name: string;
-  sports: SportType[];
+  sport: SportType;
   surfaceType: SurfaceType;
-  address: TurfAddress;
-  weekdayOpen: string;
-  weekdayClose: string;
-  weekendOpen: string;
-  weekendClose: string;
   standardPricePaise: number;
-  cancellationWindowHrs?: number;
-  amenities?: AmenityType[];
   capacity?: number;
   sizeFormat?: string;
+  weekdayOpen?: string;
+  weekdayClose?: string;
+  weekendOpen?: string;
+  weekendClose?: string;
+  cancellationWindowHrs?: number;
 }
 
 export interface UpdateTurfDto extends Partial<CreateTurfDto> {
-  status?: FieldStatus;
-}
-
-export interface TurfDocumentsDto {
-  propertyDocument?: string;
-  municipalNoc?: string;
-  liabilityInsurance?: string;
-  fieldPhotos?: string[];
-}
-
-export interface SubmitTurfDocumentsDto {
-  documents: TurfDocumentsDto;
-}
-
-export interface TurfReviewDto {
-  status: "active" | "rejected" | "pending-resubmission" | "verified" | "in_review" | "pending";
-  reviewerNotes?: string;
-  verification?: Record<string, boolean>;
+  status?: TurfStatus;
 }
 
 export interface TurfListResult {
