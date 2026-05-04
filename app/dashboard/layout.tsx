@@ -50,6 +50,11 @@ const navItems: any[] = [
     href: "/dashboard/arenas",
   },
   {
+    label: "Turfs",
+    icon: Ticket,
+    href: "/dashboard/turfs",
+  },
+  {
     label: "Users",
     icon: Users,
     href: "/dashboard/users",

@@ -21,10 +21,14 @@ import {
   PencilSimple,
   Eye,
   Check,
+  XCircle,
+  Prohibit,
+  WarningCircle,
   ChartLineUp,
   Ticket,
   CalendarBlank,
-  Handshake
+  Handshake,
+  Info
 } from "@phosphor-icons/react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { 
@@ -35,7 +39,10 @@ import {
   createArena, 
   ArenaTurfGeneration, 
   uploadArenaDocuments,
-  updateArenaStatus
+  updateArenaStatus,
+  banArena,
+  unbanArena,
+  reviewArenaDocuments
 } from "@/features/arenas";
 import { listTurfs, Turf } from "@/features/turfs";
 import { listVendors, Vendor, KycFileActions } from "@/features/vendors";
@@ -180,10 +187,13 @@ export default function ArenasPage() {
       setArenas(items);
       setTotal(res.total || 0);
 
+      // Simple stats from current list (ideally backend would provide overall stats)
+      // But for now we just use what we have or do a separate call if needed.
+      // Let's assume we want real stats, so we might need a stats endpoint later.
       if (page === 1 && search === "" && status === "all") {
         setStats({
           total: res.total || 0,
-          active: items.filter(a => a.status === 'active').length,
+          active: items.filter(a => a.status === 'active').length, // This is just local, not accurate for overall
           pending: items.filter(a => a.status === 'pending').length,
           totalTurfs: items.reduce((sum, a) => sum + (a.turfCount || 0), 0)
         });
@@ -344,122 +354,60 @@ export default function ArenasPage() {
     }
   };
 
-  const STAT_CARDS = [
-    {
-      label: "Total Arenas",
-      value: stats.total,
-      sub: "on platform",
-      color: "#8a9e60",
-      Icon: Buildings,
-    },
-    {
-      label: "Active Today",
-      value: stats.active,
-      sub: "accepting bookings",
-      color: "#22c55e",
-      Icon: CheckCircle,
-    },
-    {
-      label: "Inactive",
-      value: stats.total - stats.active - stats.pending,
-      sub: "not accepting",
-      color: "#9ca3af",
-      Icon: XCircle,
-    },
-    {
-      label: "Pending Review",
-      value: stats.pending,
-      sub: "awaiting kyc",
-      color: "#f59e0b",
-      Icon: ClockCountdown,
-    },
-    {
-      label: "Total Turfs",
-      value: stats.totalTurfs,
-      sub: "nested units",
-      color: "#3b82f6",
-      Icon: Ticket,
-    },
-  ];
-
   return (
-    <div className="p-8 max-w-[1600px] mx-auto min-h-screen bg-gray-50/30">
+    <div className="p-6 min-h-screen bg-gray-50/50">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Arena Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage physical venues, locations, and verification status.</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Arenas Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage venues, nested turfs, and operational configurations</p>
         </div>
         <button 
           onClick={() => { setFormData(INIT_FORM); setOnboardStep(1); setShowOnboard(true); }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#8a9e60] text-white rounded-xl text-sm font-semibold shadow-lg shadow-[#8a9e60]/20 hover:opacity-90 transition-all active:scale-95"
+          className="flex items-center gap-2.5 px-5 py-2.5 bg-[#8a9e60] text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-[#8a9e60]/20"
         >
-          <Plus size={18} weight="bold" />
-          Onboard New Arena
+          <Plus weight="bold" size={18} />
+          <span>Onboard New Arena</span>
         </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-5 gap-4 mb-8">
-        {STAT_CARDS.map(({ label, value, sub, color, Icon }) => (
-          <div key={label} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100/80 hover:border-[#8a9e60]/30 transition-colors group">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-gray-500 transition-colors">
-                {label}
-              </span>
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
-                style={{ backgroundColor: color + "15" }}
-              >
-                <Icon size={20} weight="fill" style={{ color }} />
-              </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {[
+          { label: "Total Arenas", value: stats.total, icon: Buildings, color: "text-[#8a9e60]", bg: "bg-[#8a9e60]/10" },
+          { label: "Active Venues", value: stats.active, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Pending KYC", value: stats.pending, icon: ClockCountdown, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Nested Turfs", value: stats.totalTurfs, icon: Ticket, color: "text-blue-600", bg: "bg-blue-50" },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center shrink-0`}>
+              <stat.icon size={24} weight="duotone" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <p className="text-2xl font-bold text-gray-900">
-                {loading ? "—" : value}
-              </p>
-              <p className="text-xs text-gray-400 font-medium">{sub}</p>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-0.5">{stat.value.toLocaleString()}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Filters & Actions */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-1 max-w-md bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 focus-within:border-[#8a9e60]/50 focus-within:bg-white transition-all">
-            <MagnifyingGlass size={18} className="text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search arenas by name or vendor..."
-              className="bg-transparent border-none outline-none text-sm w-full text-gray-700 placeholder:text-gray-400"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-48">
-              <Select 
-                options={[
-                  { value: "all", label: "All Status" },
-                  { value: "active", label: "Active Only" },
-                  { value: "pending", label: "Pending Review" },
-                  { value: "inactive", label: "Inactive" },
-                ]}
-                value={status}
-                onChange={setStatus}
-              />
-            </div>
-            <button 
-              onClick={fetchArenas}
-              className="p-2.5 rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors border border-gray-100"
-            >
-              <ArrowsClockwise size={18} className={loading ? "animate-spin" : ""} />
-            </button>
-          </div>
+      {/* Filters & Search */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center">
+        <div className="flex-1 relative min-w-[300px]">
+          <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <input 
+            type="text" 
+            placeholder="Search venues by name or vendor..." 
+            className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#8a9e60]/20 focus:border-[#8a9e60] transition-all"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-      </div>
+        <div className="w-48">
+          <Select 
+            options={[
+              { value: "all", label: "All Status" },
+              { value: "active", label: "Active Only" },
               { value: "pending", label: "Pending KYC" },
               { value: "inactive", label: "Inactive" },
               { value: "banned", label: "Banned" },
@@ -501,60 +449,56 @@ export default function ArenasPage() {
                   <tr 
                     key={arena.id} 
                     onClick={() => setSelected(arena)}
-                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-gray-50 last:border-0"
+                    className="hover:bg-gray-50/80 transition-all cursor-pointer group"
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-[#8a9e60] shrink-0 border border-gray-100 group-hover:bg-white transition-colors">
-                          <Buildings size={20} weight="duotone" />
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-[#8a9e60]/10 flex items-center justify-center text-[#8a9e60] shrink-0 border border-[#8a9e60]/20 shadow-sm group-hover:scale-105 transition-transform">
+                          <Buildings size={24} weight="duotone" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-gray-900 group-hover:text-[#8a9e60] transition-colors truncate">
-                            {arena.name}
-                          </p>
-                          <p className="text-[10px] text-gray-400 font-mono mt-0.5 uppercase tracking-tighter">
-                            ID: {arena.id.split('-')[0]}...
-                          </p>
+                          <p className="text-sm font-bold text-gray-900 group-hover:text-[#8a9e60] transition-colors">{arena.name}</p>
+                          <p className="text-[10px] text-gray-400 font-mono mt-0.5 uppercase tracking-tighter">ID: {arena.id.split('-')[0]}...</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5">
                       <div className="flex items-center gap-2 text-gray-600">
                         <MapPin size={16} className="text-gray-300 shrink-0" />
                         <p className="text-xs font-medium truncate max-w-[180px]">{arena.address.city}, {arena.address.state}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5">
                       <div className="flex flex-col gap-0.5">
                         <p className="text-xs font-bold text-gray-700">{arena.vendor?.businessName || "Direct Owner"}</p>
                         <div className="flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Enterprise Account</p>
+                          <p className="text-[10px] text-gray-400 font-medium uppercase">Premium Vendor</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="inline-flex flex-col items-center px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-100 min-w-[70px]">
+                    <td className="px-6 py-5 text-center">
+                      <div className="inline-flex flex-col items-center">
                         <span className="text-sm font-bold text-gray-900">{arena.turfCount || 0}</span>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Units</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Sports Units</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border shadow-sm ${STATUS_CONFIG[arena.status]?.cls || ""}`}>
                         {arena.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                    <td className="px-6 py-5 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={(e) => { e.stopPropagation(); setSelected(arena); }}
-                          className="p-2 bg-white border border-gray-100 rounded-xl hover:bg-[#8a9e60]/10 hover:text-[#8a9e60] transition-all text-gray-400 shadow-sm hover:border-[#8a9e60]/20"
+                          className="p-2.5 bg-white border border-gray-100 rounded-xl hover:bg-[#8a9e60]/10 hover:text-[#8a9e60] transition-all text-gray-400 shadow-sm"
                         >
                           <Eye size={18} weight="bold" />
                         </button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); }}
-                          className="p-2 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition-all text-gray-400 shadow-sm"
+                          className="p-2.5 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition-all text-gray-400 shadow-sm"
                         >
                           <DotsThreeVertical size={18} weight="bold" />
                         </button>
@@ -581,92 +525,75 @@ export default function ArenasPage() {
       {/* --- Detail Side Panel --- */}
       {selected && (
         <>
-          <div 
-            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] animate-in fade-in duration-300" 
-            onClick={() => setSelected(null)} 
-          />
-          <div className="fixed inset-y-0 right-0 w-[400px] bg-white z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500 ease-out border-l border-gray-100">
+          <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] animate-in fade-in duration-300" onClick={() => setSelected(null)} />
+          <div className="fixed inset-y-0 right-0 w-[450px] bg-white z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500 ease-out border-l border-gray-100">
             {/* Panel Header */}
-            <div 
-              className="px-6 py-8 border-b border-white/10 shrink-0 relative overflow-hidden"
-              style={{ background: "linear-gradient(135deg, #8a9e60, #6e8245)" }}
-            >
-              <div className="relative z-10">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => setSelected(null)} 
-                      className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-md"
-                    >
-                      <ArrowLeft size={20} weight="bold" />
-                    </button>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em] mb-1">Venue Profile</p>
-                      <h2 className="text-xl font-bold text-white truncate pr-4">{selected.name}</h2>
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <button 
-                      onClick={() => setStatusOpen(!statusOpen)}
-                      className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all flex items-center gap-2 bg-white/10 text-white border-white/20 hover:bg-white/20`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[selected.status]?.dot}`} />
-                      {selected.status.toUpperCase()}
-                      <CaretDown size={10} weight="bold" />
-                    </button>
-                    {statusOpen && (
-                      <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-20 animate-in fade-in zoom-in-95 duration-200">
-                        {Object.keys(STATUS_CONFIG).map((s) => (
-                          <button 
-                            key={s}
-                            onClick={() => handleStatusChange(s as ArenaStatus)}
-                            className="w-full px-4 py-2 text-left text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-2.5"
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[s as ArenaStatus].dot}`} />
-                            {s.toUpperCase()}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+            <div className="px-6 py-6 border-b border-gray-50 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setSelected(null)} className="p-2.5 rounded-xl hover:bg-gray-100 text-gray-400 transition-all">
+                    <ArrowLeft size={20} weight="bold" />
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Venue Profile</p>
+                    <h2 className="text-lg font-bold text-gray-900 truncate pr-4">{selected.name}</h2>
                   </div>
                 </div>
-
-                {/* Detail Tabs */}
-                <div className="flex items-center gap-1 bg-black/10 p-1 rounded-2xl backdrop-blur-sm">
-                  {[
-                    { id: "overview", label: "Overview", icon: Buildings },
-                    { id: "turfs", label: "Nested Turfs", icon: Ticket },
-                    { id: "analytics", label: "Analytics", icon: ChartLineUp },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setDetailTab(t.id as any)}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all ${
-                        detailTab === t.id 
-                          ? "bg-white text-[#8a9e60] shadow-lg shadow-black/5" 
-                          : "text-white/70 hover:text-white hover:bg-white/5"
-                      }`}
-                    >
-                      <t.icon size={16} weight={detailTab === t.id ? "fill" : "bold"} />
-                      {t.label}
-                    </button>
-                  ))}
+                <div className="relative">
+                  <button 
+                    onClick={() => setStatusOpen(!statusOpen)}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all flex items-center gap-2 ${STATUS_CONFIG[selected.status]?.cls}`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[selected.status]?.dot}`} />
+                    {selected.status.toUpperCase()}
+                    <CaretDown size={10} weight="bold" />
+                  </button>
+                  {statusOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-20 animate-in fade-in zoom-in-95 duration-200">
+                      {Object.keys(STATUS_CONFIG).map((s) => (
+                        <button 
+                          key={s}
+                          onClick={() => handleStatusChange(s as ArenaStatus)}
+                          className="w-full px-4 py-2 text-left text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-2.5"
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[s as ArenaStatus].dot}`} />
+                          {s.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-              
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-32 h-32 bg-black/10 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Detail Tabs */}
+              <div className="flex items-center gap-1">
+                {[
+                  { id: "overview", label: "Overview", icon: Buildings },
+                  { id: "turfs", label: "Nested Turfs", icon: Ticket },
+                  { id: "analytics", label: "Analytics", icon: ChartLineUp },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setDetailTab(t.id as any)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      detailTab === t.id ? "bg-[#8a9e60] text-white shadow-lg shadow-[#8a9e60]/20" : "text-gray-400 hover:bg-gray-50"
+                    }`}
+                  >
+                    <t.icon size={16} weight={detailTab === t.id ? "fill" : "bold"} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Panel Content */}
-            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
               {detailTab === "overview" && (
                 <div className="space-y-6">
                   {/* Rating & KYC Summary */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-[#8a9e60]/20 transition-colors group">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 group-hover:text-gray-500 transition-colors">Venue Rating</p>
+                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Venue Rating</p>
                       <div className="flex items-center gap-2">
                         <span className="text-xl font-bold text-gray-900">{selected.rating?.avgScore || "0.0"}</span>
                         <div className="flex gap-0.5">
@@ -746,56 +673,58 @@ export default function ArenasPage() {
               )}
 
               {detailTab === "turfs" && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {nestedTurfsLoading ? (
                     <div className="flex flex-col gap-3">
-                      {[1,2,3].map(i => <div key={i} className="h-24 bg-gray-100/50 animate-pulse rounded-2xl border border-gray-100" />)}
+                      {[1,2,3].map(i => <div key={i} className="h-24 bg-gray-100 animate-pulse rounded-2xl" />)}
                     </div>
                   ) : nestedTurfs.length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 border-dashed">
-                      <Ticket size={48} weight="thin" className="mx-auto text-gray-200 mb-3" />
-                      <p className="text-sm text-gray-400 font-medium">No turfs found in this arena</p>
+                    <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+                      <Ticket size={40} weight="thin" className="mx-auto text-gray-200 mb-2" />
+                      <p className="text-sm text-gray-400 font-medium italic">No turfs found in this arena</p>
                     </div>
                   ) : (
                     nestedTurfs.map(turf => (
                       <div 
                         key={turf.id}
-                        onClick={() => router.push(`/dashboard/turfs?id=${turf.id}`)}
-                        className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-[#8a9e60]/50 hover:shadow-md transition-all group cursor-pointer"
+                        className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-[#8a9e60]/30 transition-all group"
                       >
-                        <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#8a9e60]/10 flex items-center justify-center text-[#8a9e60] font-bold text-sm group-hover:scale-110 transition-transform">
+                            <div className="w-10 h-10 rounded-xl bg-[#8a9e60]/10 flex items-center justify-center text-[#8a9e60] font-bold text-sm">
                               {turf.name[0]}
                             </div>
                             <div>
                               <h5 className="text-sm font-bold text-gray-900 group-hover:text-[#8a9e60] transition-colors">{turf.name}</h5>
-                              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">{turf.sport.replace(/_/g, ' ')}</p>
+                              <p className="text-[10px] text-gray-400 uppercase font-bold">{turf.sport.replace(/_/g, ' ')}</p>
                             </div>
                           </div>
-                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border uppercase tracking-wider ${
+                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border ${
                             turf.status === 'active' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-amber-50 text-amber-600 border-amber-100'
                           }`}>
                             {turf.status}
                           </span>
                         </div>
                         <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                          <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-4">
                             <div>
-                              <p className="text-[9px] font-bold text-gray-400 uppercase mb-0.5 tracking-tighter">Base Price</p>
+                              <p className="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Base Price</p>
                               <p className="text-xs font-bold text-gray-900">₹{(turf.standardPricePaise/100).toLocaleString()}</p>
                             </div>
                             <div>
-                              <p className="text-[9px] font-bold text-gray-400 uppercase mb-0.5 tracking-tighter">Rating</p>
+                              <p className="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Rating</p>
                               <p className="text-xs font-bold text-gray-900 flex items-center gap-1">
                                 {turf.rating?.toFixed(1) || "0.0"}
                                 <Star size={10} weight="fill" className="text-amber-400" />
                               </p>
                             </div>
                           </div>
-                          <div className="p-1.5 rounded-lg bg-gray-50 text-gray-400 group-hover:text-[#8a9e60] group-hover:bg-[#8a9e60]/10 transition-all">
-                            <CaretRight size={16} weight="bold" />
-                          </div>
+                          <button 
+                            onClick={() => router.push(`/dashboard/turfs?id=${turf.id}`)}
+                            className="text-[10px] font-bold text-[#8a9e60] hover:underline"
+                          >
+                            GO TO TURF
+                          </button>
                         </div>
                       </div>
                     ))
@@ -804,48 +733,30 @@ export default function ArenasPage() {
               )}
 
               {detailTab === "analytics" && (
-                <div className="space-y-4">
-                  <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm text-center relative overflow-hidden group">
-                    <div className="relative z-10">
-                      <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-500">
-                        <ChartLineUp size={32} weight="duotone" className="text-[#8a9e60]" />
-                      </div>
-                      <h5 className="text-sm font-bold text-gray-800 mb-2 uppercase tracking-widest">Analytics Dashboard</h5>
-                      <p className="text-xs text-gray-400 leading-relaxed max-w-[220px] mx-auto font-medium">
-                        Real-time revenue and booking occupancy trends will appear here once live.
-                      </p>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#8a9e60]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: "Bookings", value: "0", sub: "this month" },
-                      { label: "Revenue", value: "₹0", sub: "this month" },
-                    ].map(s => (
-                      <div key={s.label} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm opacity-50">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{s.label}</p>
-                        <p className="text-lg font-bold text-gray-900">{s.value}</p>
-                        <p className="text-[9px] text-gray-400 font-medium">{s.sub}</p>
-                      </div>
-                    ))}
+                <div className="space-y-6">
+                  <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center">
+                    <ChartLineUp size={48} weight="thin" className="mx-auto text-gray-200 mb-4" />
+                    <h5 className="text-sm font-bold text-gray-800 mb-2">Analytics Coming Soon</h5>
+                    <p className="text-xs text-gray-400 leading-relaxed max-w-[200px] mx-auto">
+                      We're currently aggregating booking and revenue data for this venue.
+                    </p>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Panel Footer */}
-            <div className="p-6 border-t border-gray-100 bg-white shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)]">
+            <div className="p-6 border-t border-gray-100 bg-white">
               <div className="flex gap-3">
                 <button 
-                  className="flex-1 py-3 bg-[#8a9e60] text-white rounded-xl text-xs font-bold shadow-lg shadow-[#8a9e60]/20 hover:opacity-90 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                  className="flex-1 py-3 bg-[#8a9e60] text-white rounded-xl text-xs font-bold shadow-lg shadow-[#8a9e60]/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
                 >
                   <PencilSimple size={16} weight="bold" />
-                  Edit Arena
+                  Edit Arena Info
                 </button>
                 <button 
                   onClick={() => setSelected(null)}
-                  className="px-6 py-3 bg-white text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all border border-gray-200"
+                  className="px-6 py-3 bg-gray-50 text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-100 transition-all border border-gray-100"
                 >
                   Close
                 </button>
