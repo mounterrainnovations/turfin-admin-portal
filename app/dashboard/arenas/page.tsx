@@ -1879,16 +1879,7 @@ export default function ArenasPage() {
             {/* Form Body */}
             <div className="flex-1 overflow-y-auto px-8 py-6 bg-gray-50/30 custom-scrollbar">
               {onboardStep === 1 && (
-                <div className="space-y-6">
-                  <div className="bg-[#8a9e60]/5 border border-[#8a9e60]/10 rounded-xl p-4 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#8a9e60]/10 flex items-center justify-center text-[#8a9e60] shrink-0">
-                      <Handshake size={20} weight="fill" />
-                    </div>
-                    <p className="text-sm text-[#8a9e60]/80 font-medium leading-relaxed">
-                      Select the vendor who owns this venue. An Arena acts as a
-                      container for multiple sports units (Turfs).
-                    </p>
-                  </div>
+                <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
                       Select Vendor *
@@ -1904,9 +1895,10 @@ export default function ArenasPage() {
                         })),
                       ]}
                       searchable
+                      useFixed
                       loading={onboardVendorsLoading}
                       onSearchChange={setOnboardVendorSearch}
-                      className={`w-full ${errors.vendorId ? "border-red-400" : "border-gray-200"}`}
+                      className={`w-full border ${errors.vendorId ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm bg-white text-gray-800`}
                     />
                     {errors.vendorId && (
                       <p className="text-[10px] text-red-500 font-bold mt-1.5 px-1">
@@ -1926,7 +1918,7 @@ export default function ArenasPage() {
                     <input
                       value={formData.name}
                       onChange={(e) => setField("name", e.target.value)}
-                      className={`w-full border ${errors.name ? "border-red-400" : "border-gray-200"} rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#8a9e60]/20 focus:border-[#8a9e60] transition-all outline-none shadow-sm`}
+                      className={`w-full border ${errors.name ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60] transition-colors`}
                       placeholder="e.g. Dream Sports Complex, Mumbai"
                     />
                     {errors.name && (
@@ -2022,10 +2014,14 @@ export default function ArenasPage() {
                                   }))}
                                   value={t.sport}
                                   onChange={(v) => {
-                                    const next = [...formData.turfs];
-                                    next[idx].sport = v;
-                                    setFormData((p) => ({ ...p, turfs: next }));
+                                    setFormData((p) => ({
+                                      ...p,
+                                      turfs: p.turfs.map((t, i) =>
+                                        i === idx ? { ...t, sport: v } : t
+                                      ),
+                                    }));
                                   }}
+                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-800"
                                 />
                               </div>
                               <div>
@@ -2039,10 +2035,14 @@ export default function ArenasPage() {
                                   }))}
                                   value={t.surfaceType}
                                   onChange={(v) => {
-                                    const next = [...formData.turfs];
-                                    next[idx].surfaceType = v;
-                                    setFormData((p) => ({ ...p, turfs: next }));
+                                    setFormData((p) => ({
+                                      ...p,
+                                      turfs: p.turfs.map((t, i) =>
+                                        i === idx ? { ...t, surfaceType: v } : t
+                                      ),
+                                    }));
                                   }}
+                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-800"
                                 />
                               </div>
                             </div>
@@ -2057,12 +2057,15 @@ export default function ArenasPage() {
                                   min="1"
                                   value={t.count}
                                   onChange={(e) => {
-                                    const next = [...formData.turfs];
-                                    next[idx].count =
-                                      parseInt(e.target.value) || 1;
-                                    setFormData((p) => ({ ...p, turfs: next }));
+                                    const val = parseInt(e.target.value) || 1;
+                                    setFormData((p) => ({
+                                      ...p,
+                                      turfs: p.turfs.map((t, i) =>
+                                        i === idx ? { ...t, count: val } : t
+                                      ),
+                                    }));
                                   }}
-                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#8a9e60] outline-none"
+                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:border-[#8a9e60] outline-none"
                                 />
                               </div>
                               <div>
@@ -2073,12 +2076,15 @@ export default function ArenasPage() {
                                   type="number"
                                   value={t.standardPricePaise / 100}
                                   onChange={(e) => {
-                                    const next = [...formData.turfs];
-                                    next[idx].standardPricePaise =
-                                      (parseInt(e.target.value) || 0) * 100;
-                                    setFormData((p) => ({ ...p, turfs: next }));
+                                    const val = (parseInt(e.target.value) || 0) * 100;
+                                    setFormData((p) => ({
+                                      ...p,
+                                      turfs: p.turfs.map((t, i) =>
+                                        i === idx ? { ...t, standardPricePaise: val } : t
+                                      ),
+                                    }));
                                   }}
-                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#8a9e60] outline-none"
+                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:border-[#8a9e60] outline-none"
                                 />
                               </div>
                               <div>
@@ -2088,11 +2094,15 @@ export default function ArenasPage() {
                                 <input
                                   value={t.sizeFormat}
                                   onChange={(e) => {
-                                    const next = [...formData.turfs];
-                                    next[idx].sizeFormat = e.target.value;
-                                    setFormData((p) => ({ ...p, turfs: next }));
+                                    const val = e.target.value;
+                                    setFormData((p) => ({
+                                      ...p,
+                                      turfs: p.turfs.map((t, i) =>
+                                        i === idx ? { ...t, sizeFormat: val } : t
+                                      ),
+                                    }));
                                   }}
-                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#8a9e60] outline-none"
+                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:border-[#8a9e60] outline-none"
                                   placeholder="e.g. 5-a-side"
                                 />
                               </div>
@@ -2128,7 +2138,7 @@ export default function ArenasPage() {
                             },
                           }))
                         }
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#8a9e60] outline-none shadow-sm"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="Suite 402, Building A"
                       />
                     </div>
@@ -2144,7 +2154,7 @@ export default function ArenasPage() {
                             address: { ...p.address, city: e.target.value },
                           }))
                         }
-                        className={`w-full border ${errors.city ? "border-red-400" : "border-gray-200"} rounded-xl px-4 py-3 text-sm focus:border-[#8a9e60] outline-none`}
+                        className={`w-full border ${errors.city ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]`}
                         placeholder="Mumbai"
                       />
                     </div>
@@ -2165,6 +2175,8 @@ export default function ArenasPage() {
                           }))
                         }
                         searchable
+                        useFixed
+                        className={`w-full border ${errors.state ? "border-red-400" : "border-gray-200"} rounded-lg px-3 py-2.5 text-sm bg-white text-gray-800`}
                       />
                     </div>
                     <div>
@@ -2179,7 +2191,7 @@ export default function ArenasPage() {
                             address: { ...p.address, pinCode: e.target.value },
                           }))
                         }
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#8a9e60] outline-none"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         maxLength={6}
                       />
                     </div>
@@ -2195,7 +2207,7 @@ export default function ArenasPage() {
                             address: { ...p.address, landmark: e.target.value },
                           }))
                         }
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#8a9e60] outline-none"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-[#8a9e60]"
                         placeholder="Near Metro Station"
                       />
                     </div>
@@ -2237,57 +2249,48 @@ export default function ArenasPage() {
               )}
 
               {onboardStep === 5 && (
-                <div className="space-y-6">
-                  <div className="bg-[#8a9e60]/5 border border-[#8a9e60]/20 rounded-2xl p-5 flex items-start gap-4 shadow-sm">
-                    <ShieldCheck
-                      size={28}
-                      className="text-[#8a9e60] shrink-0"
-                      weight="fill"
-                    />
-                    <div>
-                      <p className="text-sm text-[#8a9e60] font-bold uppercase tracking-wider">
-                        Verification Documents
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                        Arena-level documents for safety, ownership, and
-                        facility compliance.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
                     {KYC_DOCS_ARENA.map((doc) => {
                       const files = onboardKycFiles[doc.key];
                       const hasFiles = Array.isArray(files)
                         ? files.length > 0
                         : !!files;
                       const isPhotoField = doc.key === "arenaPhotos";
+                      const fileList = hasFiles
+                        ? Array.isArray(files)
+                          ? files
+                          : [files]
+                        : [];
 
                       return (
                         <div
                           key={doc.key}
-                          className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3"
+                          className="bg-white border border-gray-100 rounded-lg px-4 py-3 flex items-center gap-4"
                         >
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                              {doc.label}
-                            </label>
-                            {isPhotoField && Array.isArray(files) && (
-                              <span className="text-[10px] font-bold text-[#8a9e60] bg-[#8a9e60]/10 px-1.5 py-0.5 rounded">
-                                {files.length}/5
+                          {/* Left: label + hint */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-gray-700">
+                                {doc.label}
                               </span>
-                            )}
-                          </div>
-
-                          {hasFiles && (
-                            <div className="space-y-1.5">
-                              {(Array.isArray(files) ? files : [files]).map(
-                                (f, i) => (
+                              {isPhotoField && Array.isArray(files) && (
+                                <span className="text-[10px] font-bold text-[#8a9e60] bg-[#8a9e60]/10 px-1.5 py-0.5 rounded">
+                                  {files.length}/5
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {doc.hint}
+                            </p>
+                            {fileList.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {fileList.map((f, i) => (
                                   <div
                                     key={i}
-                                    className="flex items-center justify-between p-2 rounded-xl bg-gray-50 border border-gray-100 group/item"
+                                    className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded px-2 py-1"
                                   >
-                                    <span className="text-[10px] text-gray-600 font-bold truncate max-w-[150px]">
+                                    <span className="text-[10px] text-gray-600 font-medium truncate max-w-[140px]">
                                       {f.name}
                                     </span>
                                     <KycFileActions
@@ -2309,11 +2312,12 @@ export default function ArenasPage() {
                                       }}
                                     />
                                   </div>
-                                ),
-                              )}
-                            </div>
-                          )}
+                                ))}
+                              </div>
+                            )}
+                          </div>
 
+                          {/* Right: upload button */}
                           {(!hasFiles ||
                             (isPhotoField &&
                               Array.isArray(files) &&
@@ -2323,20 +2327,12 @@ export default function ArenasPage() {
                                 setUploadingDocKey(doc.key);
                                 onboardingFileInputRef.current?.click();
                               }}
-                              className="w-full py-4 border-2 border-dashed border-gray-100 rounded-xl bg-gray-50/30 flex flex-col items-center justify-center gap-1 hover:border-[#8a9e60] hover:bg-white transition-all group"
+                              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:border-[#8a9e60] hover:text-[#8a9e60] transition-colors"
                             >
-                              <UploadSimple
-                                size={20}
-                                className="text-gray-300 group-hover:text-[#8a9e60]"
-                              />
-                              <span className="text-[10px] font-bold text-gray-400 group-hover:text-gray-600">
-                                {isPhotoField ? "Add Photo" : "Upload File"}
-                              </span>
+                              <UploadSimple size={14} />
+                              {isPhotoField ? "Add Photo" : "Upload"}
                             </button>
                           )}
-                          <p className="text-[9px] text-gray-400 italic font-medium leading-tight">
-                            {doc.hint}
-                          </p>
                         </div>
                       );
                     })}
